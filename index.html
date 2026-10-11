@@ -27853,12 +27853,14 @@ const DR=(()=>{
  const SPBOX=[10-18,12-17,26-18+1,22-17+1],CFBOX=[10-19,16-19,28-19+1,26-19+1],CPBOX=[7-14,5-5,21-14+1,6-5+1];
  // A box sprite used as a precise mask: only its 2px border counts (spr_battlebg_* frame 0).
  function ringHit(cx,cy,spr,sc){
-  const h=S.heart;if(!h)return false;const [w,hh]=meta(spr),ox=w/2*sc,oy=hh/2*sc,ix=(w/2-2)*sc,iy=(hh/2-2)*sc;
+  // nothing hurts while the SOUL is still flying in or the box is still growing:
+  // the full-size spike ring used to catch the SOUL on its way to the middle
+  const h=S.heart;if(!h||h.fly>0||(S.box&&S.box.grow!==2))return false;const [w,hh]=meta(spr),ox=w/2*sc,oy=hh/2*sc,ix=(w/2-2)*sc,iy=(hh/2-2)*sc;
   for(const [mx,my] of masks.heart||[]){const dx=Math.abs(h.x+mx+.5-cx),dy=Math.abs(h.y+my+.5-cy);if(dx<=ox&&dy<=oy&&(dx>=ix||dy>=iy))return true}
   return false;
  }
  function ringGraze(b,cx,cy,spr,sc){
-  const h=S.heart;if(!h||S.inv>0)return;const [w,hh]=meta(spr),ox=w/2*sc,oy=hh/2*sc,gx=h.x+10,gy=h.y+10;
+  const h=S.heart;if(!h||S.inv>0||h.fly>0||(S.box&&S.box.grow!==2))return;const [w,hh]=meta(spr),ox=w/2*sc,oy=hh/2*sc,gx=h.x+10,gy=h.y+10;
   if(Math.abs(gx-cx)>ox-25-2*sc||Math.abs(gy-cy)>oy-25-2*sc)grazeHit(b);
  }
  const chainHist=()=>Array.from({length:41},()=>0);
