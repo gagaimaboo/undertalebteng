@@ -27448,15 +27448,18 @@ const DR=(()=>{
  }
  function boltcheck(ap){
   // scr_boltcheck_onebutton: hit the bolt closest to the press spot (within -5..15 steps).
+  // A second bolt lined up at the same spot (dualbolt) gets hit by the same press.
   ap.pressbuffer=[5,5,5,5];
-  let q=-1,top=999;
-  ap.bolts.forEach((b,i)=>{if(!b.alive)return;const c=b.frame-ap.boltx;if(c<15&&c>-5&&c<top){top=c;q=i}});
+  let q=-1,top=999,dual=-1;
+  ap.bolts.forEach((b,i)=>{if(!b.alive)return;const c=b.frame-ap.boltx;if(c<15&&c>-5){if(c===top)dual=i;if(c<top){top=c;q=i}}});
   if(q<0)return;
-  const b=ap.bolts[q],p=Math.abs(top);
-  let pts=p===0?150:p===1?120:p===2?110:100-p*2;
-  ap.points[b.char]+=pts;
-  ap.burst.push({x:ap.x+80+b.frame*ap.boltspeed-ap.boltx*ap.boltspeed,y:ap.y+38*b.char,a:1,s:1,mag:p===0?.2:.1,color:p===0?C.yellow:(p>=15?HPCOLOR[S.party[b.char].char-1]:HPSOFT[S.party[b.char].char-1])});
-  b.alive=0;
+  const p=Math.abs(top);
+  const hit=b=>{
+   ap.points[b.char]+=p===0?150:p===1?120:p===2?110:100-p*2;
+   ap.burst.push({x:ap.x+80+b.frame*ap.boltspeed-ap.boltx*ap.boltspeed,y:ap.y+38*b.char,a:1,s:1,mag:p===0?.2:.1,color:p===0?C.yellow:(p>=15?HPCOLOR[S.party[b.char].char-1]:HPSOFT[S.party[b.char].char-1])});
+   b.alive=0;
+  };
+  hit(ap.bolts[q]);if(dual>=0)hit(ap.bolts[dual]);
  }
  function heroAttack(i,points){
   const h=S.party[i];h.points=points;h.state=1;h.attacktimer=0;h.attacked=0;
