@@ -30,8 +30,10 @@ canvas{display:block;width:100%;height:100%;outline:0;image-rendering:pixelated;
 #mobileControls .cancel.pressed{transform:translateY(-18px) scale(.94)}
 /* Shown only for touch play (see setTouchUI): a phone, or after a touch; a real keyboard hides them. */
 html.touchUI #mobileControls{display:flex}
-#mobileControls .joystickWrap{padding:22px;margin:-22px}
-#mobileJoystick,#mobileJoystick2{opacity:.72;transition:opacity .12s}
+/* Roblox-style dynamic stick: a big grab area; the stick jumps to wherever the thumb lands */
+#mobileControls .joystickWrap{padding:56px 72px 40px 40px;margin:-56px -72px -40px -40px}
+#mobileJoystick,#mobileJoystick2{opacity:.72;transition:opacity .12s,transform .12s ease-out}
+#mobileJoystick.active,#mobileJoystick2.active{transition:opacity .12s}
 #mobileJoystick.active,#mobileJoystick2.active{opacity:1}
 /* Mad Mew Mew's split SOUL: while her attacks fly, X/Z give way to a second stick.
    Left stick = blue half, right stick = red half. */
@@ -7427,23 +7429,37 @@ function setupTestControls(){
     joyHeld=wanted;
   };
   const centerJoystick=()=>{
-    setJoyKeys([]);joyDir=-1;
+    setJoyKeys([]);joyDir=-1;rest=null;
     joy.classList.remove('active');
+    joy.style.transform='';
     joyKnob.style.transform='translate(-50%,-50%)';
   };
-  const updateJoystick=e=>{
+  // Roblox-style dynamic thumbstick: the base centers on the spot the thumb lands, and
+  // when the thumb goes past the rim the base gets dragged along, so pulling the other
+  // way reverses at once instead of first crossing the whole stick.
+  let rest=null,bx=0,by=0,max=1;
+  const placeBase=()=>{joy.style.transform=`translate(${bx-rest.cx}px,${by-rest.cy}px)`};
+  const grabJoystick=e=>{
+    joy.style.transform='';
     const r=joy.getBoundingClientRect();
-    const cx=r.left+r.width/2,cy=r.top+r.height/2;
-    let dx=e.clientX-cx,dy=e.clientY-cy;
+    rest={cx:r.left+r.width/2,cy:r.top+r.height/2};
     const knobSize=joyKnob.getBoundingClientRect().width||r.width*.44;
-    const max=Math.max(1,(r.width-knobSize)/2-4);
+    max=Math.max(1,(r.width-knobSize)/2-4);
+    // keep the whole stick on screen
+    const h=r.width/2;
+    bx=Math.min(Math.max(e.clientX,h),innerWidth-h);by=Math.min(Math.max(e.clientY,h),innerHeight-h);
+    placeBase();
+  };
+  const updateJoystick=e=>{
+    if(!rest)grabJoystick(e);
+    let dx=e.clientX-bx,dy=e.clientY-by;
     const dist=Math.hypot(dx,dy);
-    if(dist>max){dx=dx/dist*max;dy=dy/dist*max}
+    if(dist>max){bx+=dx-dx/dist*max;by+=dy-dy/dist*max;placeBase();dx=dx/dist*max;dy=dy/dist*max}
     joyKnob.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
 
     const nx=dx/max,ny=dy/max,mag=Math.hypot(nx,ny);
-    // Deadzone with a little hysteresis: it takes .28 to start moving, .18 to stop.
-    if(mag<(joyDir<0?0.28:0.18)){joyDir=-1;setJoyKeys([]);return}
+    // Deadzone with a little hysteresis: it takes .22 to start moving, .15 to stop.
+    if(mag<(joyDir<0?0.22:0.15)){joyDir=-1;setJoyKeys([]);return}
     // 8 directions. Straight ones get the wider slice (50deg vs 40deg) so menus don't
     // catch stray diagonals, and the current direction holds 8deg past its edge so the
     // SOUL doesn't flicker between straight and diagonal on a borderline thumb.
@@ -7462,7 +7478,7 @@ function setupTestControls(){
     e.preventDefault();e.stopPropagation();unlockAudio();
     joyPointer=e.pointerId;joy.classList.add('active');joyDir=-1;
     try{joyZone.setPointerCapture?.(e.pointerId)}catch(_){}
-    updateJoystick(e);
+    grabJoystick(e);updateJoystick(e);
   });
   joyZone.addEventListener('pointermove',e=>{
     if(e.pointerId!==joyPointer)return;
