@@ -27146,9 +27146,11 @@ const DR=(()=>{
    S.susieSwung=1;const al=S.mons.map((m,i)=>m.alive?i:-1).filter(i=>i>=0);
    S.chartarget[1]=al[Math.floor(Math.random()*al.length)];S.faceaction[1]=1;heroAttack(1,100+Math.round(rnd(40)));
   }
-  // obj_attackpress fastmode (what the game runs): spells and items go off during the
-  // FIGHT bars instead of in a separate, slower spell phase.
-  S.myfight=1;makeAttackPress();
+  let fightphase=1;
+  for(let i=0;i<3;i++)if(S.charaction[i]===4||S.charaction[i]===2)fightphase=0;
+  if(S.myfight===4)fightphase=1;
+  if(fightphase){S.myfight=1;makeAttackPress()}
+  else{S.myfight=4;S.spellphase={t:0,alarm:5,active:0,char:0,castyet:0,total:0,using:[0,0,0],gotspell:[0,0,0],gotitem:[0,0,0],delay:10}}
  }
  function mnendturn(){
   if(monsterpop()===0){wincombat();return}
@@ -27246,6 +27248,8 @@ const DR=(()=>{
   const h=S.party[x];
   h.state=S.charaction[x]===4?4:2;h.attacktimer=0;h.itemed=0;
   battletext(spelltext(S.charspecial[x],x));
+  // spell text moves on by itself, no Z press
+  if(S.writer)S.writer.auto=1;
  }
  function spelltext(spell,caster){
   const h=S.party[caster],star=S.chartarget[caster],m=S.mons[star]||S.mons[0];
@@ -27394,16 +27398,7 @@ const DR=(()=>{
  function makeAttackPress(){
   const ap={x:2,y:365,active:1,boltx:0,boltspeed:8,imagetimer:0,posttimer:0,fade:0,fadeamt:0,fakefade:0,pressbuffer:[0,0,0,0],points:[0,0,0],attacked:[0,0,0],havechar:[0,0,0],bolts:[],after:[],burst:[]};
   for(let i=0;i<3;i++)if(S.charaction[i]===1)ap.havechar[i]=1;
-  // spell/item users: the first casts 10 steps in, the next at 25, then 45; maxdelay 25+15 each
-  ap.spelldelay=[10,10,10];ap.casters=[0,0,0];ap.maxdelay=0;ap.mdt=0;let used=0;
-  for(let i=0;i<3;i++)if(S.charaction[i]===2||S.charaction[i]===4){
-   if(!ap.maxdelay)ap.maxdelay=25;ap.maxdelay+=15;
-   if(i===1&&used)ap.spelldelay[1]=25;
-   if(i===2&&used)ap.spelldelay[2]=ap.spelldelay[1]===25?45:25;
-   used=1;ap.casters[i]=1;
-  }
-  ap.timermax=ap.havechar.some(v=>v)?50:3+ap.maxdelay;
-  if(S.susieSwung)ap.timermax=Math.max(ap.timermax,30);
+  ap.timermax=ap.havechar.some(v=>v)?50:(S.susieSwung?30:3);
   // my_method 1: one bolt per attacker, shuffled, spaced diff or diff*1.5 apart.
   const diff=12;const order=[];
   for(let i=0;i<3;i++)if(ap.havechar[i])order.push(i);
@@ -27418,8 +27413,6 @@ const DR=(()=>{
  function attackPressStep(){
   const ap=S.ap;if(!ap)return;
   if(ap.fade){ap.fadeamt+=.08;if(ap.fadeamt>1)S.ap=null;return}
-  ap.mdt++;
-  if(monsterpop()>0)for(let x=0;x<3;x++)if(ap.casters[x]&&ap.mdt===ap.spelldelay[x]){heroCast(x);if(S.writer)S.writer.auto=1}
   const count=[0,0,0];
   for(const b of ap.bolts){
    if(b.frame-ap.boltx<-5)b.alive=0;
@@ -27434,8 +27427,6 @@ const DR=(()=>{
   for(const b of ap.burst){b.a-=.1;b.s+=b.mag}ap.burst=ap.burst.filter(b=>b.a>0);
   let go=[0,1,2].every(i=>ap.attacked[i]||!ap.havechar[i]);
   if(monsterpop()===0)go=true;
-  const casting=ap.casters.some((c,x)=>c&&ap.mdt<=ap.spelldelay[x]+16)||S.party.some(h=>h.alarm4>0)||S.fx.some(e=>['snowgrave','frostbite','rudebuster','icespell','pacify','mist','spareanim'].includes(e.kind));
-  if(casting&&monsterpop()>0)go=false;
   if(go){
    ap.posttimer++;
    if(ap.posttimer>ap.timermax&&!ap.fade){
