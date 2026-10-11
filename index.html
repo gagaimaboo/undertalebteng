@@ -2327,6 +2327,24 @@ function sfxPoolSize(name){
  if(name==='hurt'||name==='damage'||name==='hit'||name==='break1'||name==='break2')return 8;
  return 4;
 }
+// snd_loop: a looping copy whose pitch can change while it plays (snd_pitch); stop() ends it.
+function playLoop(name,rate=1){
+ const base=sounds[name];if(!base||!audioUnlocked)return null;
+ const buf=sfxBuf.get(name);
+ if(buf&&sfxCtx&&sfxCtx.state==='running'){
+  try{
+   const c=sfxCtx,src=c.createBufferSource();src.buffer=buf;src.loop=true;src.playbackRate.value=rate;
+   const g=c.createGain();g.gain.value=base.volume;src.connect(g);g.connect(c.destination);src.start();
+   return {stop(){try{src.stop()}catch(_){}},rate(r){try{src.playbackRate.value=r}catch(_){}}};
+  }catch(_){}
+ }
+ if(buf===undefined)sfxDecode(name,true);
+ try{
+  const a=createSfxVoice(base);a.loop=true;a.volume=base.volume;a.playbackRate=rate;a.preservesPitch=a.mozPreservesPitch=a.webkitPreservesPitch=false;
+  const pr=a.play();if(pr&&pr.catch)pr.catch(()=>{});
+  return {stop(){try{a.pause()}catch(_){}},rate(r){try{a.playbackRate=r}catch(_){}}};
+ }catch(_){return null}
+}
 function createSfxVoice(base){
  const a=base.cloneNode(true);
  a.preload=localMobileAssetContext()?'metadata':'auto';a.loop=false;a.volume=base.volume;
@@ -2419,7 +2437,7 @@ function play(name,rate=1){
    }
    if(!a)return;
    a._lastSfxUse=++sfxPlaySerial;
-   a.volume=base.volume;a.playbackRate=rate;
+   a.volume=base.volume;a.playbackRate=rate;a.preservesPitch=a.mozPreservesPitch=a.webkitPreservesPitch=false;
    try{a.currentTime=0}catch(_){}
    const promise=a.play();
    if(promise&&promise.catch)promise.catch(()=>{
@@ -2427,7 +2445,7 @@ function play(name,rate=1){
      // can fail while another works in the exact same WebView.
      try{
        const moved=advanceAudioFallback(a);
-       a.currentTime=0;a.volume=base.volume;a.playbackRate=rate;
+       a.currentTime=0;a.volume=base.volume;a.playbackRate=rate;a.preservesPitch=a.mozPreservesPitch=a.webkitPreservesPitch=false;
        const retry=a.play();
        if(retry&&retry.catch)retry.catch(()=>{
          // If this was only a suspended decoder after tab sleep, reload once.
@@ -26554,7 +26572,7 @@ const DR_ASSETS={"spr":{"spr_krisb_idle":[36,38,3,0,["89f53b11-4ba9-459c-970e-02
    its obj_dbulletcontroller type 14 attack (obj_viro_needle).
    640x480 room space, one logic step per 1/30 s like the game.            */
 // Chapter 1 sprites/fonts (same layout as DR_ASSETS), loaded from DR_RAW1.
-const DR1_ASSETS={"spr":{"spr_diamondm_idle":[35,40,0,0,["852c64c8-0b96-430f-a5c2-a8e8ceb7e46c","610b6f3b-3def-42cd-bb05-6a6cb8b06b0c","a42610ef-29d6-4150-b0ea-57e688f75b02","5210c1c5-7c63-469f-9e8b-91bea98a1657"]],"spr_diamondm_hurt":[47,47,0,7,["034f2308-ffdb-412a-ad63-4d561ad1cd0e"]],"spr_diamondm_spared":[35,40,0,0,["020511ae-d352-4c3a-8ff8-fa681d227a28","34046a28-7ae7-4239-beaa-39cefb71b659","ff6673db-e331-4340-bdf8-e6e5ed397089"]],"spr_diamondbullet":[33,32,16,15,["8b39604a-9c7b-41c3-91bf-e77fc16195a1"]],"spr_diamondbullet_form":[33,32,16,15,["2f2c1899-a8a6-40f1-a2c9-df4933bbbee0"]],"spr_diamondbullet_vert":[33,33,16,16,["03944b35-fcd9-43fe-a81d-6f0c777eca03"]],"spr_battleblcon_long":[150,86,0,0,["0bd9e5ae-5220-41ab-b0b7-61a89548e6fb"]],"spr_heartenemy_idle":[53,48,0,0,["93d0f57f-9dad-4ffb-9d70-832a1cc00efd","c72fdb87-605a-46f9-8d32-3eec9ee0fc34","997c1773-9d77-4563-ab12-406cca2a3c62","610e2ad5-f6b3-46e5-a0d8-652f51accb51"]],"spr_heartenemy_hurt":[67,76,1,24,["10da12f6-1ab5-410c-8b26-040e2b21f57e","31f52c91-5c3f-4e54-b8d0-4794d300e7c6"]],"spr_heartenemy_spared":[47,48,0,0,["41df1dda-7937-4c66-b2d2-7ff4415f3254"]],"spr_jigsawry_idle":[38,36,0,0,["4b696a20-1d7f-4a38-956b-0472f65dffa7","775d11bf-6ef2-470e-839f-deda4dc33275","b742886d-9e09-4a6c-a17d-e8b3222dc945","44ab5851-8892-4dba-bfb2-e4b561833a13","73ceecdb-5659-41d9-a6bc-09e2f7b939db","c8ed6073-fc4a-4195-9ad7-eb1664f5258e"]],"spr_jigsawry_hurt":[37,38,0,0,["7bb3b4d5-1ff5-4496-a6de-977c4a544c8b"]],"spr_jigsawry_spared":[38,36,0,0,["c364404c-7a1b-4830-9ad6-65b0466012ae","941a5678-145c-4382-9b5f-ab2db9a73101","16fdcf4b-2ce8-46a4-97dc-75ddda8e08c5","f7febcc5-f436-4a82-9ed8-d11c1bd2d663","186653a1-03e6-434a-a2d7-ad4052cb9df9","9c879220-eb2d-4b00-94f6-e40c91d8ca77"]],"spr_jigsawbullet":[40,40,20,20,["baf777b2-d660-447b-a55a-8e1294bc82f1"]],"spr_spinheart":[41,41,20,20,["4d26f6a6-4355-4fd6-862f-8e6bb70fc6af"]],"spr_spinheartmask":[41,41,20,20,["cfbfa52c-2f80-49f5-8eee-6244aab54700"]],"spr_heartblcon_0":[50,50,0,0,["242ee46d-db89-4aeb-836d-37a03a8b434c","f3b65ce8-514f-477d-a45d-a02179342967","05fa3179-0e1e-458b-b183-cd2d3698c215","f2918309-dea8-48c9-8dde-1993527925cb","455663f7-e56d-437c-98c8-eb7af7d52bbb","89b87537-7774-4874-b4d0-c3ef69ba811a"]],"spr_heartblcon_1":[50,50,0,0,["4304a9d1-6bce-40c4-9b27-8f2bf8f5b4a0","84927f30-9da2-4c0e-8f3b-0d9e26bf81ac","d83684f2-7bc8-49bc-a87c-038b40f46f23","391545ef-89a2-4239-a464-92b1eef84b02","de6ac876-01a6-4c57-bc90-da0a1b73a06d","a9646ca4-668d-4b48-b779-54c38ee3131a"]],"spr_heartblcon_2":[50,50,0,0,["d4ac65a5-4816-44f9-93eb-8451112dd011","da5348da-e64d-41b1-aa0c-ef37e8464e81","29329402-47c0-407a-9eef-86dab5ecf4fc"]],"spr_heartblcon_3":[50,50,0,0,["8ef1642c-1060-4574-a6de-39e06835ff7d","780573dd-67c2-406f-858b-58a5943c9354","5588a5f6-f84c-4067-83c1-075692d66270"]],"spr_battleblcon":[140,80,0,0,["f8f9ebeb-448e-4890-8ba5-6add2f29ff88"]],"spr_face_r_dark":[57,59,0,0,["d9d259f0-87e9-4c3a-9b06-cd295ac9e8ee","b7a57aa8-49d5-468e-bdf4-d757e331daaa","22aa97ee-c91a-4fc1-a495-36859fdbad45","9f351c47-4fc5-4a58-be6c-39843068ba41","8eeb62ee-936c-4ff1-9e5c-fc44874ce7c9","8c834d17-cca5-4291-a417-c753254e018d","efd9e198-bb89-49b5-8da6-bbea8b1fe221","624e4e7d-696f-419d-b2dc-5ffb03773b36","15a567c4-ba81-446c-b160-ad447e35985e","8d44fbc9-0d09-4cae-9a55-cf15220df4d6","b72f9088-44f8-4bc5-afa5-5b7ae0be441e","75167ab4-276b-417b-b9f0-07282c6c4d05","9e151565-85ea-4ec4-a7c3-06b66f70df9e"]],"spr_hathyx_idle":[53,48,0,0,["f857fa20-562e-4187-a3ec-4121f267ead7","b239fd64-c8e3-485c-b8b1-71ef1a697cdd","07a9b07b-b27f-4411-a6c4-0d6ed119e4ae","9ad39355-9c92-46d9-b85e-7ea25a3e742a"]],"spr_hathyx_hurt":[67,76,1,24,["ce7aff41-8447-4ad4-9e0f-03422b220949"]],"spr_hathyx_spared":[47,48,0,0,["04083775-73e5-4401-9f70-2ba01234e130"]],"spr_heartblcon_4":[50,50,0,0,["5cba490d-1e19-4eda-ae47-4a3adc865da5","66025b01-29de-49a4-a0cc-772a5e3157bf","dd563013-7e13-4b71-8b7b-4274b4b57089","e6139c73-0d44-4b3a-89ac-d1e9566a16f5","660cce1a-342f-4f2e-9701-cb27e57ec91c","2bd5b3ab-5dc4-4177-9f0e-d45fc490475c"]],"spr_heartblcon_5":[50,50,0,0,["6323f32f-16a8-4718-83b0-ca74d6c30251","e614c0ac-6860-4a8b-a71a-fc329851f01b","293b7a7f-511f-4287-a1e9-381b0db54ba9","7540094a-f362-4d92-837b-c58c562b7391","89425f8b-d8ec-4690-80bf-58685055f198"]],"spr_daimond_knight_idle":[35,40,0,0,["13d7722a-ebd3-4fb4-acdc-16a53f9d1eb3","bc7ba02e-a0b1-4a48-aafc-51c5f00f6ec5","8f481a01-f64f-4af9-87e6-a29b24aa353b","17ad2deb-0fee-4d0a-a145-55e344050fc5"]],"spr_diamond_knight_hurt":[45,50,5,10,["3886f73b-5a42-450b-aaa8-e176814a57b6"]],"spr_diamond_knight_spared":[35,40,0,0,["432b225d-a2f7-4d6e-a23d-70b516c65292","e3996384-4939-4f06-92be-9cbcb0b47bf6","153259a3-8511-4149-80a3-429c5128e8e4","7a839aac-3c46-47bf-adb1-591d46d516f0"]],"spr_diamond_knight_slash":[75,50,20,10,["be8e1641-f9a9-4b9d-8125-5bb8e2ade515","1610c3a7-c7ec-4515-a414-23357d010731","71b99b7b-4552-4e94-8194-3490d4240e1c","492fdb9d-f56b-4dd4-a58f-a5939c56de27","1aa5b2a5-e0ee-4272-9e9c-a7f5f161ef45","5d69d47f-f85e-43a5-9170-9071962bebfa"]],"spr_diamondswordbullet":[29,29,12,14,["b82e4105-af39-4590-b946-58bc238fcadd"]],"spr_heartbullet":[18,18,9,9,["331d8126-c95f-4041-b764-b30ce5186aa0"]],"spr_face_s0":[45,50,0,0,["0f779806-ff68-4aa9-a91c-3fd9b3b61dde"]],"spr_face_s1":[45,50,0,0,["2d127e25-cee9-4ab2-9f7d-d787a40bd747"]],"spr_face_s2":[45,50,0,0,["e46c3382-3c8c-47f8-859c-a77e2474ac7f"]],"spr_face_s7":[45,50,0,0,["858d6848-2378-4af9-8907-b07f4515db8b"]],"spr_textbox_left":[16,1,0,0,["36e08b8f-c266-4cb3-9832-093d8ab5d474"]],"spr_textbox_top":[1,16,0,0,["1db995e8-21ff-4719-8fc5-b10cc9c834b6"]],"spr_textbox_topleft":[16,16,0,0,["10425707-3390-4473-8b0f-ad00914690ac","db8d13ce-3d4f-4bcc-ab98-c00ea77167ce","df2d6c9a-1600-4a94-8cb6-b7245cbe71c1","7d12ae40-fdb6-4985-8c04-064de4ecb8b8","3271248c-99be-4d6e-9cc7-d5528522bf02","11f5c04e-cbf5-45b0-8064-7458024d899c","c7a5351b-112f-47e8-bb40-25248b84d228","c54b5b37-5564-46e5-ad89-bdc097167f64"]],"spr_chainking_idle":[75,75,7,0,["6a79d1f5-e068-480e-9254-1cce65b9f9d2","4efaf2b7-44ba-4b16-88ad-64442b11ca4b","edd9fa63-98cc-4e34-b3e2-d1b835116464","ebddc129-2479-4916-9a00-557b3a1bbe82","be89560e-0efb-4aa2-bb9b-0e3be2e7fa67"]],"spr_chainking_hurt":[80,75,7,0,["096142c2-5022-41c5-a4e7-5b3571eb868b"]],"spr_chainking_toss":[120,89,32,8,["8eff6516-4e64-4e6c-9951-a95ea72ca5a6","cb7e43e5-6ce9-4b9b-8809-f234be44f18d","07f9c4e6-2d7b-44d6-8d0e-578f7a3a034a","254b2a00-f4cc-40f2-aa58-0a3d620a28a3","99fd0a36-53fe-4eb4-adc6-68dbffd59769"]],"spr_chainking_toss_idle":[106,85,32,5,["ae2c6ae8-dfc3-4dd9-b2e6-8ed467b8102d","70b4e602-7db5-4468-8a94-5e4ac8afeffb","952e04bd-350c-424b-b392-cbf9ae6bbff1"]],"spr_chainking_pullback":[125,100,32,9,["cb42a340-ac68-4cea-8fbf-107c95fe0705"]],"spr_chainking_receive":[125,100,32,9,["cfeb7d9e-2a8d-49da-9275-d4ffb9e8659a"]],"spr_battlebg_1":[49,49,24,24,["fa6e7252-a7ab-4845-ae9d-7816edac3101","fba46218-c823-494f-873f-f6f85a676b0c"]],"spr_battlebg_2":[59,59,29,29,["57b73fb8-c135-4104-a26c-699894461548","b7da48da-d7d8-40aa-abcd-aeae5b9a9a50"]],"spr_battlebg_wavechain":[59,39,29,19,["11efce02-a2d3-4b2c-b210-033dbd4d2e68","acca356c-1159-4dd9-95f6-54862ad7166a"]],"spr_battlebg_spikes":[49,49,24,24,["08d65f65-26f0-472c-87bf-f50f2e336205"]],"spr_bouncebox_spike":[7,13,0,0,["c925f229-301c-4a6a-b146-677b6d42505b"]],"spr_spadebullet":[36,34,18,17,["916a7f48-c26b-40f8-af5d-eb4403249092"]],"spr_chainfront":[39,39,19,19,["e3fd7d90-f7ad-4991-b545-dabded5303e8"]],"spr_chainpiece":[28,10,14,5,["54f3bd40-c51d-4e8e-bd30-280b041fafc8"]],"spr_heartoutline":[20,20,10,10,["88b89abf-9c06-4b7f-841b-f8c052c4db86"]],"spr_soulshining":[32,32,16,16,["b8b3b962-1d0e-4f4d-84b2-4e0b9be38a4d","27d12e5c-4081-434d-84a3-90e6b87ab178","6ae1d4b2-b695-4899-92b8-892677d18c67","4747bfa6-2bc7-45f1-9210-5efe20944168","a925897f-15db-439d-acdb-abe58d74385c","f805d8a3-84ac-4136-8f8d-86705d93c701","b2c4e5a4-2feb-4761-b092-14bb6fdfdb50","2d76cf47-171f-4765-8308-1ab284304ae0","8bea62fb-5aa6-4d04-9556-4a1b04194008","e892b055-32e4-45f2-9d42-3833b17dfd52","a160a26b-b43e-4fcd-b8ea-4ceacb0991ef","184835ca-6d91-43ba-b026-29318b8517ac"]],"spr_susieb_idle_serious":[54,45,19,0,["c66126cc-34a7-4031-95cb-fd9890765607","b84c47fb-166a-4463-bec9-50ddff323896","610fee02-0218-422f-8f10-6f92f76e19cc","5f606bed-6043-44d4-b22d-d2bc5bab4944"]],"spr_susieb_attack_serious":[103,71,21,24,["bc3e125e-1a18-4632-b31e-b485f73883f5","922e4d22-34cb-4de2-9536-fa2e61b49af5","f5cb24c8-97d4-4661-8bed-24fb974625e6","038ce7c3-69a0-4f6e-89f9-cd4e0e6e1709","cd7de351-9816-4ba9-a474-6b6172e5423c","40884871-bdce-47c5-ab07-fc78664f7159"]],"spr_battleblcon_long_tall":[150,140,0,0,["b03323ed-91ac-4ab4-ae94-efa22d94b5fa"]],"spr_face_s3":[45,50,0,0,["f244d4e8-3dde-4291-a178-28e6ebb3d747"]],"spr_face_sC":[45,50,0,0,["8400d201-6bc0-4c9a-bc3b-426ecb18a99e"]],"spr_face_s4":[45,50,0,0,["1137009a-ee81-45ba-ac58-fba5d94f5399"]]},"font":{"fnt_dotumche":{"32":[2,2,9,16,9,0],"33":[96,102,2,14,9,4],"34":[77,102,5,6,9,3],"35":[13,2,9,14,9,0],"36":[75,2,8,15,9,1],"37":[32,20,8,14,9,1],"38":[92,52,8,14,9,1],"39":[122,102,2,6,9,4],"40":[9,102,5,15,9,3],"41":[16,102,5,15,9,1],"42":[43,102,6,10,9,1],"43":[63,85,8,11,9,1],"44":[63,102,3,15,9,3],"45":[23,102,8,8,9,1],"46":[84,102,2,14,9,4],"47":[38,85,7,13,9,1],"48":[82,36,8,14,9,1],"49":[57,102,4,14,9,2],"50":[92,69,7,14,9,1],"51":[74,69,7,14,9,1],"52":[82,20,8,14,9,1],"53":[11,69,7,14,9,1],"54":[83,69,7,14,9,1],"55":[29,69,7,14,9,1],"56":[38,69,7,14,9,1],"57":[20,85,7,14,9,1],"58":[112,102,2,12,9,3],"59":[68,102,3,14,9,3],"60":[73,85,8,11,9,1],"61":[109,85,8,10,9,1],"62":[83,85,8,11,9,1],"63":[52,20,8,14,9,1],"64":[12,20,8,14,9,1],"65":[102,20,8,14,9,1],"66":[72,20,8,14,9,1],"67":[52,36,8,14,9,1],"68":[72,52,8,14,9,1],"69":[42,20,8,14,9,1],"70":[62,20,8,14,9,1],"71":[2,36,8,14,9,1],"72":[62,52,8,14,9,1],"73":[92,102,2,14,9,4],"74":[101,85,6,14,9,1],"75":[32,52,8,14,9,1],"76":[11,85,7,14,9,1],"77":[42,52,8,14,9,1],"78":[42,36,8,14,9,1],"79":[112,36,8,14,9,1],"80":[2,52,8,14,9,1],"81":[55,2,8,15,9,1],"82":[92,36,8,14,9,1],"83":[2,20,8,14,9,1],"84":[92,20,8,14,9,1],"85":[12,52,8,14,9,1],"86":[22,20,8,14,9,1],"87":[22,52,8,14,9,1],"88":[22,36,8,14,9,1],"89":[95,2,8,14,9,1],"90":[56,69,7,14,9,1],"91":[2,102,5,15,9,3],"92":[24,2,9,14,9,0],"93":[119,85,5,15,9,1],"94":[104,102,6,4,9,2],"95":[85,2,8,15,9,1],"96":[116,102,4,4,9,2],"97":[102,36,8,14,9,1],"98":[52,52,8,14,9,1],"99":[32,36,8,14,9,1],"100":[82,52,8,14,9,1],"101":[12,36,8,14,9,1],"102":[110,69,7,14,9,1],"103":[102,52,7,15,9,1],"104":[2,85,7,14,9,1],"105":[88,102,2,14,9,4],"106":[51,102,4,15,9,2],"107":[101,69,7,14,9,1],"108":[100,102,2,14,9,4],"109":[72,36,8,14,9,1],"110":[2,69,7,14,9,1],"111":[115,2,8,14,9,1],"112":[35,2,8,15,9,1],"113":[65,2,8,15,9,1],"114":[93,85,6,14,9,2],"115":[20,69,7,14,9,1],"116":[65,69,7,14,9,1],"117":[47,69,7,14,9,1],"118":[62,36,8,14,9,1],"119":[112,20,8,14,9,1],"120":[105,2,8,14,9,1],"121":[45,2,8,15,9,1],"122":[29,85,7,14,9,1],"123":[47,85,6,15,9,2],"124":[73,102,2,15,9,4],"125":[55,85,6,15,9,1],"126":[33,102,8,8,9,1],"127":[111,52,7,14,9,1]}}};
+const DR1_ASSETS={"spr":{"spr_diamondm_idle":[35,40,0,0,["852c64c8-0b96-430f-a5c2-a8e8ceb7e46c","610b6f3b-3def-42cd-bb05-6a6cb8b06b0c","a42610ef-29d6-4150-b0ea-57e688f75b02","5210c1c5-7c63-469f-9e8b-91bea98a1657"]],"spr_diamondm_hurt":[47,47,0,7,["034f2308-ffdb-412a-ad63-4d561ad1cd0e"]],"spr_diamondm_spared":[35,40,0,0,["020511ae-d352-4c3a-8ff8-fa681d227a28","34046a28-7ae7-4239-beaa-39cefb71b659","ff6673db-e331-4340-bdf8-e6e5ed397089"]],"spr_diamondbullet":[33,32,16,15,["8b39604a-9c7b-41c3-91bf-e77fc16195a1"]],"spr_diamondbullet_form":[33,32,16,15,["2f2c1899-a8a6-40f1-a2c9-df4933bbbee0"]],"spr_diamondbullet_vert":[33,33,16,16,["03944b35-fcd9-43fe-a81d-6f0c777eca03"]],"spr_battleblcon_long":[150,86,0,0,["0bd9e5ae-5220-41ab-b0b7-61a89548e6fb"]],"spr_heartenemy_idle":[53,48,0,0,["93d0f57f-9dad-4ffb-9d70-832a1cc00efd","c72fdb87-605a-46f9-8d32-3eec9ee0fc34","997c1773-9d77-4563-ab12-406cca2a3c62","610e2ad5-f6b3-46e5-a0d8-652f51accb51"]],"spr_heartenemy_hurt":[67,76,1,24,["10da12f6-1ab5-410c-8b26-040e2b21f57e","31f52c91-5c3f-4e54-b8d0-4794d300e7c6"]],"spr_heartenemy_spared":[47,48,0,0,["41df1dda-7937-4c66-b2d2-7ff4415f3254"]],"spr_jigsawry_idle":[38,36,0,0,["4b696a20-1d7f-4a38-956b-0472f65dffa7","775d11bf-6ef2-470e-839f-deda4dc33275","b742886d-9e09-4a6c-a17d-e8b3222dc945","44ab5851-8892-4dba-bfb2-e4b561833a13","73ceecdb-5659-41d9-a6bc-09e2f7b939db","c8ed6073-fc4a-4195-9ad7-eb1664f5258e"]],"spr_jigsawry_hurt":[37,38,0,0,["7bb3b4d5-1ff5-4496-a6de-977c4a544c8b"]],"spr_jigsawry_spared":[38,36,0,0,["c364404c-7a1b-4830-9ad6-65b0466012ae","941a5678-145c-4382-9b5f-ab2db9a73101","16fdcf4b-2ce8-46a4-97dc-75ddda8e08c5","f7febcc5-f436-4a82-9ed8-d11c1bd2d663","186653a1-03e6-434a-a2d7-ad4052cb9df9","9c879220-eb2d-4b00-94f6-e40c91d8ca77"]],"spr_jigsawbullet":[40,40,20,20,["baf777b2-d660-447b-a55a-8e1294bc82f1"]],"spr_spinheart":[41,41,20,20,["4d26f6a6-4355-4fd6-862f-8e6bb70fc6af"]],"spr_spinheartmask":[41,41,20,20,["cfbfa52c-2f80-49f5-8eee-6244aab54700"]],"spr_heartblcon_0":[50,50,0,0,["242ee46d-db89-4aeb-836d-37a03a8b434c","f3b65ce8-514f-477d-a45d-a02179342967","05fa3179-0e1e-458b-b183-cd2d3698c215","f2918309-dea8-48c9-8dde-1993527925cb","455663f7-e56d-437c-98c8-eb7af7d52bbb","89b87537-7774-4874-b4d0-c3ef69ba811a"]],"spr_heartblcon_1":[50,50,0,0,["4304a9d1-6bce-40c4-9b27-8f2bf8f5b4a0","84927f30-9da2-4c0e-8f3b-0d9e26bf81ac","d83684f2-7bc8-49bc-a87c-038b40f46f23","391545ef-89a2-4239-a464-92b1eef84b02","de6ac876-01a6-4c57-bc90-da0a1b73a06d","a9646ca4-668d-4b48-b779-54c38ee3131a"]],"spr_heartblcon_2":[50,50,0,0,["d4ac65a5-4816-44f9-93eb-8451112dd011","da5348da-e64d-41b1-aa0c-ef37e8464e81","29329402-47c0-407a-9eef-86dab5ecf4fc"]],"spr_heartblcon_3":[50,50,0,0,["8ef1642c-1060-4574-a6de-39e06835ff7d","780573dd-67c2-406f-858b-58a5943c9354","5588a5f6-f84c-4067-83c1-075692d66270"]],"spr_battleblcon":[140,80,0,0,["f8f9ebeb-448e-4890-8ba5-6add2f29ff88"]],"spr_face_r_dark":[57,59,0,0,["d9d259f0-87e9-4c3a-9b06-cd295ac9e8ee","b7a57aa8-49d5-468e-bdf4-d757e331daaa","22aa97ee-c91a-4fc1-a495-36859fdbad45","9f351c47-4fc5-4a58-be6c-39843068ba41","8eeb62ee-936c-4ff1-9e5c-fc44874ce7c9","8c834d17-cca5-4291-a417-c753254e018d","efd9e198-bb89-49b5-8da6-bbea8b1fe221","624e4e7d-696f-419d-b2dc-5ffb03773b36","15a567c4-ba81-446c-b160-ad447e35985e","8d44fbc9-0d09-4cae-9a55-cf15220df4d6","b72f9088-44f8-4bc5-afa5-5b7ae0be441e","75167ab4-276b-417b-b9f0-07282c6c4d05","9e151565-85ea-4ec4-a7c3-06b66f70df9e"]],"spr_hathyx_idle":[53,48,0,0,["f857fa20-562e-4187-a3ec-4121f267ead7","b239fd64-c8e3-485c-b8b1-71ef1a697cdd","07a9b07b-b27f-4411-a6c4-0d6ed119e4ae","9ad39355-9c92-46d9-b85e-7ea25a3e742a"]],"spr_hathyx_hurt":[67,76,1,24,["ce7aff41-8447-4ad4-9e0f-03422b220949"]],"spr_hathyx_spared":[47,48,0,0,["04083775-73e5-4401-9f70-2ba01234e130"]],"spr_heartblcon_4":[50,50,0,0,["5cba490d-1e19-4eda-ae47-4a3adc865da5","66025b01-29de-49a4-a0cc-772a5e3157bf","dd563013-7e13-4b71-8b7b-4274b4b57089","e6139c73-0d44-4b3a-89ac-d1e9566a16f5","660cce1a-342f-4f2e-9701-cb27e57ec91c","2bd5b3ab-5dc4-4177-9f0e-d45fc490475c"]],"spr_heartblcon_5":[50,50,0,0,["6323f32f-16a8-4718-83b0-ca74d6c30251","e614c0ac-6860-4a8b-a71a-fc329851f01b","293b7a7f-511f-4287-a1e9-381b0db54ba9","7540094a-f362-4d92-837b-c58c562b7391","89425f8b-d8ec-4690-80bf-58685055f198"]],"spr_daimond_knight_idle":[35,40,0,0,["13d7722a-ebd3-4fb4-acdc-16a53f9d1eb3","bc7ba02e-a0b1-4a48-aafc-51c5f00f6ec5","8f481a01-f64f-4af9-87e6-a29b24aa353b","17ad2deb-0fee-4d0a-a145-55e344050fc5"]],"spr_diamond_knight_hurt":[45,50,5,10,["3886f73b-5a42-450b-aaa8-e176814a57b6"]],"spr_diamond_knight_spared":[35,40,0,0,["432b225d-a2f7-4d6e-a23d-70b516c65292","e3996384-4939-4f06-92be-9cbcb0b47bf6","153259a3-8511-4149-80a3-429c5128e8e4","7a839aac-3c46-47bf-adb1-591d46d516f0"]],"spr_diamond_knight_slash":[75,50,20,10,["be8e1641-f9a9-4b9d-8125-5bb8e2ade515","1610c3a7-c7ec-4515-a414-23357d010731","71b99b7b-4552-4e94-8194-3490d4240e1c","492fdb9d-f56b-4dd4-a58f-a5939c56de27","1aa5b2a5-e0ee-4272-9e9c-a7f5f161ef45","5d69d47f-f85e-43a5-9170-9071962bebfa"]],"spr_diamondswordbullet":[29,29,12,14,["b82e4105-af39-4590-b946-58bc238fcadd"]],"spr_heartbullet":[18,18,9,9,["331d8126-c95f-4041-b764-b30ce5186aa0"]],"spr_face_s0":[45,50,0,0,["0f779806-ff68-4aa9-a91c-3fd9b3b61dde"]],"spr_face_s1":[45,50,0,0,["2d127e25-cee9-4ab2-9f7d-d787a40bd747"]],"spr_face_s2":[45,50,0,0,["e46c3382-3c8c-47f8-859c-a77e2474ac7f"]],"spr_face_s7":[45,50,0,0,["858d6848-2378-4af9-8907-b07f4515db8b"]],"spr_textbox_left":[16,1,0,0,["36e08b8f-c266-4cb3-9832-093d8ab5d474"]],"spr_textbox_top":[1,16,0,0,["1db995e8-21ff-4719-8fc5-b10cc9c834b6"]],"spr_textbox_topleft":[16,16,0,0,["10425707-3390-4473-8b0f-ad00914690ac","db8d13ce-3d4f-4bcc-ab98-c00ea77167ce","df2d6c9a-1600-4a94-8cb6-b7245cbe71c1","7d12ae40-fdb6-4985-8c04-064de4ecb8b8","3271248c-99be-4d6e-9cc7-d5528522bf02","11f5c04e-cbf5-45b0-8064-7458024d899c","c7a5351b-112f-47e8-bb40-25248b84d228","c54b5b37-5564-46e5-ad89-bdc097167f64"]],"spr_chainking_idle":[75,75,7,0,["6a79d1f5-e068-480e-9254-1cce65b9f9d2","4efaf2b7-44ba-4b16-88ad-64442b11ca4b","edd9fa63-98cc-4e34-b3e2-d1b835116464","ebddc129-2479-4916-9a00-557b3a1bbe82","be89560e-0efb-4aa2-bb9b-0e3be2e7fa67"]],"spr_chainking_hurt":[80,75,7,0,["096142c2-5022-41c5-a4e7-5b3571eb868b"]],"spr_chainking_toss":[120,89,32,8,["8eff6516-4e64-4e6c-9951-a95ea72ca5a6","cb7e43e5-6ce9-4b9b-8809-f234be44f18d","07f9c4e6-2d7b-44d6-8d0e-578f7a3a034a","254b2a00-f4cc-40f2-aa58-0a3d620a28a3","99fd0a36-53fe-4eb4-adc6-68dbffd59769"]],"spr_chainking_toss_idle":[106,85,32,5,["ae2c6ae8-dfc3-4dd9-b2e6-8ed467b8102d","70b4e602-7db5-4468-8a94-5e4ac8afeffb","952e04bd-350c-424b-b392-cbf9ae6bbff1"]],"spr_chainking_pullback":[125,100,32,9,["cb42a340-ac68-4cea-8fbf-107c95fe0705"]],"spr_chainking_receive":[125,100,32,9,["cfeb7d9e-2a8d-49da-9275-d4ffb9e8659a"]],"spr_battlebg_1":[49,49,24,24,["fa6e7252-a7ab-4845-ae9d-7816edac3101","fba46218-c823-494f-873f-f6f85a676b0c"]],"spr_battlebg_2":[59,59,29,29,["57b73fb8-c135-4104-a26c-699894461548","b7da48da-d7d8-40aa-abcd-aeae5b9a9a50"]],"spr_battlebg_wavechain":[59,39,29,19,["11efce02-a2d3-4b2c-b210-033dbd4d2e68","acca356c-1159-4dd9-95f6-54862ad7166a"]],"spr_battlebg_spikes":[49,49,24,24,["08d65f65-26f0-472c-87bf-f50f2e336205"]],"spr_bouncebox_spike":[7,13,0,0,["c925f229-301c-4a6a-b146-677b6d42505b"]],"spr_spadebullet":[36,34,18,17,["916a7f48-c26b-40f8-af5d-eb4403249092"]],"spr_chainfront":[39,39,19,19,["e3fd7d90-f7ad-4991-b545-dabded5303e8"]],"spr_chainpiece":[28,10,14,5,["54f3bd40-c51d-4e8e-bd30-280b041fafc8"]],"spr_heartoutline":[20,20,10,10,["88b89abf-9c06-4b7f-841b-f8c052c4db86"]],"spr_soulshining":[32,32,16,16,["b8b3b962-1d0e-4f4d-84b2-4e0b9be38a4d","27d12e5c-4081-434d-84a3-90e6b87ab178","6ae1d4b2-b695-4899-92b8-892677d18c67","4747bfa6-2bc7-45f1-9210-5efe20944168","a925897f-15db-439d-acdb-abe58d74385c","f805d8a3-84ac-4136-8f8d-86705d93c701","b2c4e5a4-2feb-4761-b092-14bb6fdfdb50","2d76cf47-171f-4765-8308-1ab284304ae0","8bea62fb-5aa6-4d04-9556-4a1b04194008","e892b055-32e4-45f2-9d42-3833b17dfd52","a160a26b-b43e-4fcd-b8ea-4ceacb0991ef","184835ca-6d91-43ba-b026-29318b8517ac"]],"spr_susieb_idle_serious":[54,45,19,0,["c66126cc-34a7-4031-95cb-fd9890765607","b84c47fb-166a-4463-bec9-50ddff323896","610fee02-0218-422f-8f10-6f92f76e19cc","5f606bed-6043-44d4-b22d-d2bc5bab4944"]],"spr_susieb_attack_serious":[103,71,21,24,["bc3e125e-1a18-4632-b31e-b485f73883f5","922e4d22-34cb-4de2-9536-fa2e61b49af5","f5cb24c8-97d4-4661-8bed-24fb974625e6","038ce7c3-69a0-4f6e-89f9-cd4e0e6e1709","cd7de351-9816-4ba9-a474-6b6172e5423c","40884871-bdce-47c5-ab07-fc78664f7159"]],"spr_battleblcon_long_tall":[150,140,0,0,["b03323ed-91ac-4ab4-ae94-efa22d94b5fa"]],"spr_face_s3":[45,50,0,0,["f244d4e8-3dde-4291-a178-28e6ebb3d747"]],"spr_face_sC":[45,50,0,0,["8400d201-6bc0-4c9a-bc3b-426ecb18a99e"]],"spr_face_s4":[45,50,0,0,["1137009a-ee81-45ba-ac58-fba5d94f5399"]],"bg_cc_arena":[320,240,0,0,["f1bc3c9f-6c7a-4d06-8485-b0076609161f"]]},"font":{"fnt_dotumche":{"32":[2,2,9,16,9,0],"33":[96,102,2,14,9,4],"34":[77,102,5,6,9,3],"35":[13,2,9,14,9,0],"36":[75,2,8,15,9,1],"37":[32,20,8,14,9,1],"38":[92,52,8,14,9,1],"39":[122,102,2,6,9,4],"40":[9,102,5,15,9,3],"41":[16,102,5,15,9,1],"42":[43,102,6,10,9,1],"43":[63,85,8,11,9,1],"44":[63,102,3,15,9,3],"45":[23,102,8,8,9,1],"46":[84,102,2,14,9,4],"47":[38,85,7,13,9,1],"48":[82,36,8,14,9,1],"49":[57,102,4,14,9,2],"50":[92,69,7,14,9,1],"51":[74,69,7,14,9,1],"52":[82,20,8,14,9,1],"53":[11,69,7,14,9,1],"54":[83,69,7,14,9,1],"55":[29,69,7,14,9,1],"56":[38,69,7,14,9,1],"57":[20,85,7,14,9,1],"58":[112,102,2,12,9,3],"59":[68,102,3,14,9,3],"60":[73,85,8,11,9,1],"61":[109,85,8,10,9,1],"62":[83,85,8,11,9,1],"63":[52,20,8,14,9,1],"64":[12,20,8,14,9,1],"65":[102,20,8,14,9,1],"66":[72,20,8,14,9,1],"67":[52,36,8,14,9,1],"68":[72,52,8,14,9,1],"69":[42,20,8,14,9,1],"70":[62,20,8,14,9,1],"71":[2,36,8,14,9,1],"72":[62,52,8,14,9,1],"73":[92,102,2,14,9,4],"74":[101,85,6,14,9,1],"75":[32,52,8,14,9,1],"76":[11,85,7,14,9,1],"77":[42,52,8,14,9,1],"78":[42,36,8,14,9,1],"79":[112,36,8,14,9,1],"80":[2,52,8,14,9,1],"81":[55,2,8,15,9,1],"82":[92,36,8,14,9,1],"83":[2,20,8,14,9,1],"84":[92,20,8,14,9,1],"85":[12,52,8,14,9,1],"86":[22,20,8,14,9,1],"87":[22,52,8,14,9,1],"88":[22,36,8,14,9,1],"89":[95,2,8,14,9,1],"90":[56,69,7,14,9,1],"91":[2,102,5,15,9,3],"92":[24,2,9,14,9,0],"93":[119,85,5,15,9,1],"94":[104,102,6,4,9,2],"95":[85,2,8,15,9,1],"96":[116,102,4,4,9,2],"97":[102,36,8,14,9,1],"98":[52,52,8,14,9,1],"99":[32,36,8,14,9,1],"100":[82,52,8,14,9,1],"101":[12,36,8,14,9,1],"102":[110,69,7,14,9,1],"103":[102,52,7,15,9,1],"104":[2,85,7,14,9,1],"105":[88,102,2,14,9,4],"106":[51,102,4,15,9,2],"107":[101,69,7,14,9,1],"108":[100,102,2,14,9,4],"109":[72,36,8,14,9,1],"110":[2,69,7,14,9,1],"111":[115,2,8,14,9,1],"112":[35,2,8,15,9,1],"113":[65,2,8,15,9,1],"114":[93,85,6,14,9,2],"115":[20,69,7,14,9,1],"116":[65,69,7,14,9,1],"117":[47,69,7,14,9,1],"118":[62,36,8,14,9,1],"119":[112,20,8,14,9,1],"120":[105,2,8,14,9,1],"121":[45,2,8,15,9,1],"122":[29,85,7,14,9,1],"123":[47,85,6,15,9,2],"124":[73,102,2,15,9,4],"125":[55,85,6,15,9,1],"126":[33,102,8,8,9,1],"127":[111,52,7,14,9,1]}}};
 const DR=(()=>{
  const A=DR_ASSETS,A1=DR1_ASSETS,STEP_MS=1000/30;
  const imgs={},masks={};let ready=false,loading=null,S=null;
@@ -26562,7 +26580,9 @@ const DR=(()=>{
  const sndFiles={snd_mercyadd:'snd_mercyadd.ogg',snd_pacify:'snd_pacify.ogg',snd_text:'snd_text.wav',snd_icespell:'snd_icespell.ogg',snd_snowgrave:'snd_snowgrave.ogg',snd_ghostappear:'snd_ghostappear.ogg',snd_spell_pacify:'snd_spell_pacify.ogg'};
  const SND_CH1=new Set(['snd_dadlaugh','snd_dadblast']);
  const sndUrl=n=>(SND_CH1.has(n)?DR_RAW1:DR_RAW)+`sounds/${n}/${sndFiles[n]||n}`;
- let music=null;
+ let music=null,battleMusic=null,kingMusic=null;
+ // Chaos King (Toby Fox), pinned to the commit that added it.
+ const DR_KING_MUSIC='https://cdn.jsdelivr.net/gh/gagaimaboo/undertalebteng@fee4004f3b5f09357da0761a9de78d5636ffae7c/assets/dr/chaos_king.mp3';
 
  // ------------------------------------------------------------ assets ------
  function load(){
@@ -26580,11 +26600,15 @@ const DR=(()=>{
   }
   for(const f of Object.keys(A1.font))jobs.push(loadImage(DR_RAW1+`fonts/${f}/${f}.png`).then(im=>{imgs['font_'+f]=im}).catch(()=>{}));
   for(const [k,n] of Object.entries(sndKeys))jobs.push(loadAudioAsset(sndUrl(n),k==='text'?.4:.66,false).then(a=>{sounds['dr_'+k]=a}).catch(()=>{}));
-  jobs.push(loadAudioAsset('https://cdn.jsdelivr.net/gh/BenSFGamer/Deltarune-web@main/battle.ogg',.5,true).then(a=>{music=a}).catch(()=>{}));
+  jobs.push(loadAudioAsset('https://cdn.jsdelivr.net/gh/BenSFGamer/Deltarune-web@main/battle.ogg',.5,true).then(a=>{music=battleMusic=a}).catch(()=>{}));
+  jobs.push(loadAudioAsset(DR_KING_MUSIC,.5,true).then(a=>{kingMusic=a}).catch(()=>{}));
   loading=Promise.all(jobs).then(()=>{buildMasks();ready=true});
   return loading;
  }
  const snd=(k,r=1)=>{try{play('dr_'+k,r)}catch(_){}};
+ const sndLoop=(k,r=1)=>{let h=null;try{h=playLoop('dr_'+k,r)}catch(_){}if(h&&S)(S.loops||(S.loops=[])).push(h);return h};
+ const stopLoop=h=>{if(h)try{h.stop()}catch(_){}};
+ const stopLoops=()=>{if(S&&S.loops){for(const h of S.loops)stopLoop(h);S.loops=[]}};
  function buildMasks(){
   // spr_dodgeheartmask: precise heart mask (bbox 2..17).
   const im=imgs.spr_dodgeheartmask?.[0];masks.heart=[];
@@ -26910,7 +26934,7 @@ const DR=(()=>{
    }
   },
   // obj_king_boss (monstertype 25): an 11-attack script, Talk ACTs that unlock X-ACTs.
-  king:{name:'King',hp:2800,at:8,df:0,gold:0,x:460,y:70,mx:75,my:75,mercymax:999,boss:1,customBox:1,susieSerious:1,turn:180,
+  king:{name:'King',hp:2800,at:8,df:0,gold:0,x:460,y:70,mx:75,my:75,mercymax:999,boss:1,customBox:1,susieSerious:1,turn:180,music:'king',arena:'bg_cc_arena',
    idle:'spr_chainking_idle',idleSpeed:6,hurt:'spr_chainking_hurt',spared:null,still:'spr_chainking_idle',
    intro:'* King blocked the way!',attack:'king',tiredAt:()=>false,
    acts:[{name:'Check',actor:1},{name:'Talk',actor:1,key:'kris'},{name:'Talk',actor:2,key:'susie'},{name:'Talk',actor:3,key:'ralsei'},{name:'Talk',actor:4,key:'noelle'}],
@@ -27071,6 +27095,8 @@ const DR=(()=>{
   for(const m of S.mons)m.acts=m.acts.filter(a=>(a.actor===1||has(a.actor))&&(a.name!=='Warning'||S.susieAuto));
   for(const m of S.mons)m.freezable=1; // scr_enemy_object_init
   try{stopMusic()}catch(_){}
+  for(const a of [battleMusic,kingMusic])if(a)try{a.pause()}catch(_){}
+  music=(S.mons.some(m=>m.def.music==='king')&&kingMusic)||battleMusic;
   if(music){try{music.currentTime=0;playMusicElement(music)}catch(_){}}
   return S;
  }
@@ -27624,7 +27650,7 @@ const DR=(()=>{
   if(S.mnfight===2){
    S.turntimer--;
    if(S.turntimer<=0&&!S.reset){
-    S.bullets=[];S.gens=null;S.invc=1;S.arena=null;
+    S.bullets=[];S.gens=null;S.invc=1;S.arena=null;stopLoops();
     for(const m of S.mons)m.hidden=0; // obj_dknight_slasher Destroy: the Ranger shows again
     if(S.darkener)S.darkener.on=0;
     if(S.heart){S.returnHeart={x:S.heart.x,y:S.heart.y,t:0};S.heart=null}
@@ -27856,9 +27882,9 @@ const DR=(()=>{
    // obj_wavechain: shoots out, locks onto the box, then the King waves it up and down.
    const ck=b.ck;
    if(b.chaincon===0){
-    if(!b.noise){b.noise=1;snd('chainext')}
+    if(!b.noise){b.noise=1;b.chainsnd=sndLoop('chainext')}
     b.pieces.push({x:b.x,y:b.y,xs:b.x,ys:b.y,siner:0,alpha:1});
-    if(box&&b.x<=box.x){snd('locker');snd('screenshake');b.sp=0;b.shakeamt=12;b.remx=h?h.x:0;b.remy=h?h.y:0;b.rbx=box.x;b.rby=box.y;b.chaincon=2.1}
+    if(box&&b.x<=box.x){stopLoop(b.chainsnd);snd('locker');snd('screenshake');b.sp=0;b.shakeamt=12;b.remx=h?h.x:0;b.remy=h?h.y:0;b.rbx=box.x;b.rby=box.y;b.chaincon=2.1}
    }
    if(b.chaincon===2.1&&box){
     const d=rnd(360)*Math.PI/180,xs=Math.cos(d)*b.shakeamt,ys=-Math.sin(d)*b.shakeamt;
@@ -27866,9 +27892,10 @@ const DR=(()=>{
     b.shakeamt-=2;if(b.shakeamt<0)b.chaincon=3;
    }
    if(b.chaincon===3){
-    if(b.noise===1){b.noise=2;snd('chainwave')}
+    if(b.noise===1){b.noise=2;b.wavesnd=sndLoop('chainwave')}
     const D=[12,10,9,7][b.type]||12,B=[20,18,16,14][b.type]||20;
-    b.siner++;ck.y=b.initky+Math.sin(b.siner/D)*80*(b.type===3?b.wavefactor:1);
+    b.siner++;
+    if(b.wavesnd)b.wavesnd.rate(Math.max(.05,[.8,.9,1,1][b.type]-Math.sin(b.siner/D)/2));ck.y=b.initky+Math.sin(b.siner/D)*80*(b.type===3?b.wavefactor:1);
     if(++b.btimer>=B){S.bullets.push({kind:'spade',x:-20,y:b.initby,hs:4,ang:0,alpha:1,xs:1,dmg:b.dmg,target:b.target,grazed:0,grazepoints:b.grazepoints,timepoints:0});b.btimer=0}
    }
    b.kx[0]=ck.x-b.initkx;b.ky[0]=ck.y-b.initky;
@@ -27879,7 +27906,7 @@ const DR=(()=>{
    if(b.chaincon===0){b.x+=Math.cos(b.dir*Math.PI/180)*b.sp}
    b.t++;
    if(b.t>=b.tmax-10){b.wavefactor*=.8;for(const q of b.pieces)q.alpha-=.1;for(const o of S.bullets)if(o.kind==='spade'){o.inactive=1;o.alpha-=.1}}
-   if(b.t>=b.tmax){S.turntimer=3;for(const o of S.bullets)if(o.kind==='spade'||o===ck)o.dead=true;b.dead=true}
+   if(b.t>=b.tmax){stopLoop(b.wavesnd);stopLoop(b.chainsnd);S.turntimer=3;for(const o of S.bullets)if(o.kind==='spade'||o===ck)o.dead=true;b.dead=true}
    return;
   }
   if(b.kind==='finalchain'){finalChainStep(b);return}
@@ -27889,9 +27916,9 @@ const DR=(()=>{
  function finalChainStep(b){
   const h=S.heart,box=S.box;if(!box)return;
   if(b.chaincon===0){
-   if(!b.noise){b.noise=1;snd('chainext')}
+   if(!b.noise){b.noise=1;b.chainsnd=sndLoop('chainext')}
    if(b.pieces.length<41)b.pieces.push({x:b.x,y:b.y,siner:0,alpha:1,ang:180});
-   if(b.x<=box.x){snd('locker');snd('screenshake');b.x=box.x;b.y=box.y;b.sp=0;b.shakeamt=16;b.rbx=box.x;b.rby=box.y;b.chaincon=2.1}
+   if(b.x<=box.x){stopLoop(b.chainsnd);snd('locker');snd('screenshake');b.x=box.x;b.y=box.y;b.sp=0;b.shakeamt=16;b.rbx=box.x;b.rby=box.y;b.chaincon=2.1}
    else b.x+=Math.cos(b.dir*Math.PI/180)*b.sp;
   }
   if(b.chaincon===2.1){
@@ -27918,10 +27945,10 @@ const DR=(()=>{
     b.movetime=b.type===0||b.type===5?30:25;
     let px=320,py=160,d=0,tries=0;
     do{px=320+rnd(140)-rnd(140);py=160+rnd(120)-rnd(120);d=Math.hypot(px-b.x,py-b.y)}while((d<mind||d>maxd)&&++tries<500);
-    b.mark={x:px,y:py,siner:0};b.px=px;b.py=py;b.dir=pdir(b.x,b.y,px,py);b.sp=d/b.movetime;b.mt=0;b.movecon=1;snd('chainext');
+    b.mark={x:px,y:py,siner:0};b.px=px;b.py=py;b.dir=pdir(b.x,b.y,px,py);b.sp=d/b.movetime;b.mt=0;b.movecon=1;b.movesnd=sndLoop('chainext');
    }
    if(b.movecon===1&&!b.ended){b.mt++;b.x+=Math.cos(b.dir*Math.PI/180)*b.sp;b.y-=Math.sin(b.dir*Math.PI/180)*b.sp;if(b.mt>b.movetime){b.x=b.px;b.y=b.py;b.movecon=2;b.sp=0;b.mt=0}}
-   if(b.movecon===2&&!b.ended){const mm={1:22,2:16,3:7,4:3,5:22}[b.type]||20;if(++b.mt>=mm){b.mark=null;b.movecon=0}}
+   if(b.movecon===2&&!b.ended){const mm={1:22,2:16,3:7,4:3,5:22}[b.type]||20;if(++b.mt>=mm){b.mark=null;b.movecon=0;stopLoop(b.movesnd)}}
   }
   b.kx[0]=b.x;b.ky[0]=b.y;for(let i=40;i>0;i--){b.kx[i]=b.kx[i-1];b.ky[i]=b.ky[i-1]}
   b.pieces.forEach((q,i)=>{q.x=b.kx[i];q.y=b.ky[i];q.ang=b.dir});
@@ -27945,7 +27972,7 @@ const DR=(()=>{
    if(sp.active&&!b.ended){if(ringHit(box.x,box.y,box.spr,sp.sc)){if(S.inv<=0)damageHero(sp)}else ringGraze(sp,box.x,box.y,box.spr,sp.sc)}
    if(sp.grazed){if(!sp.tb){b.mytimer+=2;sp.tb=1}if(++sp.gt>=15){sp.tb=0;sp.gt=0;sp.grazed=0}}
   }
-  if(b.ended){if(++b.endtimer>=10){for(const o of S.bullets)if(o.kind==='chainking')o.dead=true;S.turntimer=3;b.dead=true}}
+  if(b.ended){stopLoop(b.movesnd);stopLoop(b.chainsnd);if(++b.endtimer>=10){for(const o of S.bullets)if(o.kind==='chainking')o.dead=true;S.turntimer=3;b.dead=true}}
   b.mytimer++;
  }
  // obj_growtangle_bouncer (types 3 and 5): the spiked box ricochets around an arena.
@@ -28591,6 +28618,8 @@ const DR=(()=>{
  // -------------------------------------------------------------- draw ------
  function drawBack(g){
   g.fillStyle='#000';g.fillRect(0,0,640,480);
+  const ar=S.mons.find(m=>m.def.arena);
+  if(ar){const im=frame(ar.def.arena,0);if(im){g.save();g.globalAlpha=Math.min(1,S.bgalpha);g.drawImage(im,0,0,640,480);g.restore()}return}
   const t=imgs.bg_battleback1?.[0];if(!t)return;
   const tile=(ox,oy,a)=>{g.save();g.globalAlpha=a;ox=((ox%50)+50)%50-50;oy=((oy%50)+50)%50-50;for(let y=oy;y<480;y+=50)for(let x=ox;x<640;x+=50)g.drawImage(t,x,y);g.restore()};
   tile(Math.round(-100+S.bgsiner),Math.round(-100+S.bgsiner),S.bgalpha/2);
@@ -29046,7 +29075,7 @@ const DR=(()=>{
   while(S.acc>=STEP_MS){S.acc-=STEP_MS;step();if(S.exited)break}
  }
  function exit(reason){
-  if(S.exited)return;S.exited=true;
+  if(S.exited)return;S.exited=true;stopLoops();
   try{music&&music.pause()}catch(_){}
   if(S.onExit)S.onExit(reason);
  }
