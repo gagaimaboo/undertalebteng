@@ -29553,22 +29553,36 @@ const DR=(()=>{
  }
  // SnowGrave crystal statue: the crystal is fitted around the monster's sprite and the
  // monster shows through as a dark silhouette (as in the UNDERTALE-engine SnowGrave).
+ // the opaque bounds of a sprite frame (cached), so the crystal fits what you actually see
+ function opaqueBox(im){
+  if(im._ob)return im._ob;
+  const w=im.naturalWidth,h=im.naturalHeight;let r={x:0,y:0,w,h};
+  try{
+   const c=document.createElement('canvas');c.width=w;c.height=h;const cg=c.getContext('2d');cg.drawImage(im,0,0);
+   const d=cg.getImageData(0,0,w,h).data;let x0=w,y0=h,x1=-1,y1=-1;
+   for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(d[(y*w+x)*4+3]>16){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
+   if(x1>=0)r={x:x0,y:y0,w:x1-x0+1,h:y1-y0+1};
+  }catch(_){}
+  return im._ob=r;
+ }
+ // SnowGrave crystal statue: the gem is sized around the monster's visible pixels, and the
+ // monster shows through its inner face as a dark silhouette.
  function drawCrystal(g,e){
   const m=e.m,im=frame(m.def.still,0),cr=images.snowgraveCrystal;if(!im)return;
-  const r={x:m.x,y:m.y,w:im.naturalWidth*2,h:im.naturalHeight*2};
+  const [mw,mh,ox,oy]=meta(m.def.still),ob=opaqueBox(im);
+  // sprite drawn at 2x from its origin; the visible part of it on screen
+  const vx=m.x-ox*2+ob.x*2,vy=m.y-oy*2+ob.y*2,vw=ob.w*2,vh=ob.h*2;
   const a=Math.min(1,e.t2/10);
-  if(e.t2<10)g.drawImage(im,r.x,r.y,r.w,r.h);
+  if(e.t2<10)g.drawImage(im,m.x-ox*2,m.y-oy*2,mw*2,mh*2);
   if(!cr)return;
+  // the silhouette fills most of the gem: 74% of its width, 80% of its height
   const aspect=(cr.naturalWidth||1080)/(cr.naturalHeight||1640);
-  let ch=Math.max(r.h*1.52,96),cw=ch*aspect;
-  if(cw<r.w*1.38){cw=r.w*1.38;ch=cw/aspect}
-  const cap=Math.max(96,Math.min(240,Math.max(r.h*1.2,(r.w*1.2)/aspect)));
-  if(ch>cap){ch=cap;cw=ch*aspect}
-  const cx=r.x+r.w/2,cy=r.y+r.h/2,x0=cx-cw/2,y0=cy-ch/2;
+  let cw=Math.max(vw/.74,(vh/.80)*aspect,56);const ch=cw/aspect;
+  const cx=vx+vw/2,cy=vy+vh/2,x0=cx-cw/2,y0=cy-ch/2;
   g.save();g.globalAlpha=a;g.imageSmoothingEnabled=false;
   g.drawImage(cr,Math.round(x0),Math.round(y0),Math.round(cw),Math.round(ch));
-  const fit=Math.min((cw*.66)/r.w,(ch*.64)/r.h),dw=r.w*fit,dh=r.h*fit;
-  g.globalAlpha=.42*a;g.drawImage(NB.tinted(im,'#000000'),Math.round(cx-dw/2),Math.round(y0+ch*.515-dh/2),Math.round(dw),Math.round(dh));
+  g.globalAlpha=.42*a;
+  g.drawImage(NB.tinted(im,'#000000'),ob.x,ob.y,ob.w,ob.h,Math.round(vx),Math.round(vy),Math.round(vw),Math.round(vh));
   g.restore();
  }
  function drawTensionBar(g){
@@ -29863,17 +29877,29 @@ function drOption(g,label,x,y,on,click,hover){
  drHit(x-28,y-2,DR.gfx.textWidth('fnt_mainbig',label)+34,34,click,hover);
 }
 function drHint(g,str){DR.gfx.text(g,'fnt_main',str,320,456,DRG,{align:'center'})}
+// both lists show 9 rows and scroll to keep the selection on screen
+const DR_ROWS=9;let drTop=0,drSupTop=0;
+function drScrollTop(top,sel,n){if(sel<top)top=sel;if(sel>=top+DR_ROWS)top=sel-DR_ROWS+1;return Math.max(0,Math.min(top,Math.max(0,n-DR_ROWS)))}
+function drScrollMarks(g,top,n,onUp,onDown){
+ // little bobbing arrows (the bitmap fonts have no arrow glyphs)
+ const b=Math.sin(performance.now()/200)*2,tri=(x,y,up)=>{g.fillStyle=DRY;g.beginPath();g.moveTo(x-8,y+(up?6:-6));g.lineTo(x+8,y+(up?6:-6));g.lineTo(x,y+(up?-6:6));g.closePath();g.fill()};
+ if(top>0){tri(290,60+b,1);drHit(250,48,60,26,onUp)}
+ if(top+DR_ROWS<n){tri(290,404+b,0);drHit(250,388,60,34,onDown)}
+}
 function drawDrRoster(now=performance.now()){
  const ids=DR.enemyIds,g=drMenuBegin(now);
  if(!DR.ready){DR.gfx.text(g,'fnt_mainbig','',0,0);g.fillStyle='#fff';g.font='20px monospace';g.fillText('Loading DELTARUNE assets...',190,240);g.restore();return}
  drTitle(g,'ENEMIES',`${drSel+1} / ${ids.length}`);
  DR.gfx.darkbox(g,16,48,300,424,DRM.t);
+ drTop=drScrollTop(drTop,drSel,ids.length);
  ids.forEach((id,i)=>{
-  const y=72+i*36,chosen=i===drSel,on=chosen&&drFocus===0;
+  if(i<drTop||i>=drTop+DR_ROWS)return;
+  const y=72+(i-drTop)*36,chosen=i===drSel,on=chosen&&drFocus===0;
   DR.gfx.text(g,'fnt_mainbig',DR.enemies[id].rname||DR.enemies[id].name,56,y,chosen?DRY:'#ffffff');
   if(on)DR.gfx.draw(g,'spr_heart',0,32,y+8);
   drHit(24,y-2,268,34,()=>{if(drSel===i&&drFocus===0){drFocus=4;play('select')}else{drSel=i;drFocus=0;play('move')}});
  });
+ drScrollMarks(g,drTop,ids.length,()=>{drTop=Math.max(0,drTop-1);drSel=Math.min(drSel,drTop+DR_ROWS-1);play('move')},()=>{drTop++;drSel=Math.max(drSel,drTop);play('move')});
  const id=ids[drSel],e=DR.enemies[id];
  drPreview(g,id,now,467,184);
  DR.gfx.text(g,'fnt_mainbig',(e.rname||e.name).toUpperCase(),467,186,DRY,{align:'center'});
@@ -29895,13 +29921,16 @@ function drawDrSupport(now=performance.now()){
  if(!DR.ready){g.restore();return}
  drTitle(g,'SUPPORTS',`${drSup.length} / ${DR.maxSupports}`);
  DR.gfx.darkbox(g,16,48,300,424,DRM.t);
+ drSupTop=drScrollTop(drSupTop,drSupSel,entries.length);
  entries.forEach((id,i)=>{
-  const y=72+i*36,on=drSupFocus===0&&i===drSupSel,count=drSup.filter(v=>v===id).length;
+  if(i<drSupTop||i>=drSupTop+DR_ROWS)return;
+  const y=72+(i-drSupTop)*36,on=drSupFocus===0&&i===drSupSel,count=drSup.filter(v=>v===id).length;
   DR.gfx.text(g,'fnt_mainbig',id==='clear'?'CLEAR':DR.enemies[id].name,56,y,on?DRY:(id==='clear'?DRG:'#ffffff'));
   if(count)DR.gfx.text(g,'fnt_main','x'+count,284,y+10,DRY,{align:'right'});
   if(on)DR.gfx.draw(g,'spr_heart',0,32,y+8);
   drHit(24,y-2,268,34,()=>{if(drSupSel===i&&drSupFocus===0)drSupAdd(i);else{drSupSel=i;drSupFocus=0;play('move')}});
  });
+ drScrollMarks(g,drSupTop,entries.length,()=>{drSupTop=Math.max(0,drSupTop-1);drSupSel=Math.min(drSupSel,drSupTop+DR_ROWS-1);play('move')},()=>{drSupTop++;drSupSel=Math.max(drSupSel,drSupTop);play('move')});
  const sel=entries[drSupSel];
  if(sel!=='clear'){drPreview(g,sel,now,467,184);DR.gfx.text(g,'fnt_mainbig',DR.enemies[sel].name.toUpperCase(),467,186,DRY,{align:'center'})}
  else if(drSup.length){
