@@ -26728,8 +26728,12 @@ const DR=(()=>{
   // SnowGrave is maxtension*2 (200%), halved by the ThornRing. Like the rest of this
   // game, the selectable version uses the ThornRing cost so a full bar can cast it.
   10:{name:'SnowGrave',desc:'Fatal',target:0,cost:250},
-  11:{name:'FrostBite',desc:'Double#ICE#strike',target:2,cost:125}
+  11:{name:'FrostBite',desc:'Double#ICE#strike',target:2,cost:125},
+  // K. Round's weird route: Rude Buster through an axe Noelle froze. 5% TP to start, then
+  // dearer the more of K. Round's HP is gone.
+  12:{name:'FrostBuster',desc:'Frozen#Rude#Damage',target:2,get cost(){return frostCost()}}
  };
+ function frostCost(){const k=S&&S.mons&&S.mons.find(m=>m.id==='kround');return Math.min(250,13+(k?Math.round((k.maxhp-Math.max(0,k.hp))*.15):0))}
  // weapons (one owner) and armors (anyone) the SHOP sells and the CUSTOM hub equips
  const DRGEAR={
   spookysword:{name:'Spookysword',type:'weapon',who:'kris',at:2,price:160,desc:'A black sword with a spooky aura.'},
@@ -27137,7 +27141,9 @@ const DR=(()=>{
   kround:{name:'K.Round',music:'kround',hp:1300,at:7,df:3,gold:100,x:480,y:120,mx:43,my:77,turn:999,customBox:1,boss:1,mercymax:999,
    idle:'spr_checkers_idle',idleSpeed:3,hurt:'spr_checkers_idle',spared:'spr_checkers_idle',still:'spr_checkers_idle',
    intro:'* K. Round blocks the way!',attack:'kround',
-   init(m){Object.assign(m,{crown:0,attacktype:0,milkCount:0,checked:0,lecture:0,warned:0})},
+   init(m){Object.assign(m,{crown:0,attacktype:0,milkCount:0,checked:0,lecture:0,warned:0,chill:0})},
+   // weird route: nothing but FROST BUSTER can finish it
+   onHurt(m){if(S.kw&&!S.kw.fb&&m.hp<1)m.hp=1},
    acts:[{name:'Check',actor:1},{name:'Bow',actor:1},{name:'Deep Bow',actor:3},{name:'Warning',actor:3}],
    act(name,m,i,a){
     const q=S.actPhase.queue,R=S.party.some(h=>h.id==='ralsei'),Su=S.party.some(h=>h.id==='susie');
@@ -27183,8 +27189,10 @@ const DR=(()=>{
    draw(g,m,flash){
     if(m.pose){m.poseT=(m.poseT||0)+(m.pose.sp||0);draw(g,m.pose.spr,m.poseT,m.x,m.y,2,2,0,m.alpha);return}
     m.poseT=0;
-    if(m.state===3){draw(g,'spr_checkers_idle',0,m.x+m.shakex,m.y,2,2,0,m.alpha);return}
-    draw(g,'spr_checkers_idle',m.siner/3,m.x,m.y,2,2,0,m.alpha,{flash});
+    // frostier with every FROST BUSTER: an icy layer over it
+    const ice=(f,x)=>{if(m.chill)draw(g,'spr_checkers_idle',f,x,m.y,2,2,0,m.alpha*Math.min(.7,.2+m.chill*.12),{fog:'#9fe8ff'})};
+    if(m.state===3){draw(g,'spr_checkers_idle',0,m.x+m.shakex,m.y,2,2,0,m.alpha);ice(0,m.x+m.shakex);return}
+    draw(g,'spr_checkers_idle',m.siner/3,m.x,m.y,2,2,0,m.alpha,{flash});ice(m.siner/3,m.x);
    }
   },
   // obj_susieenemy (monstertype 19) + obj_lancerboss3 (18): the Field fight. Susie is on the
@@ -27703,6 +27711,8 @@ const DR=(()=>{
   if(d.noSusie){const su=party[1];su.absent=1;su.hp=0;party[0].y=100;party[2].y=180}
   // the weird route (Noelle only): IceShock / FrostBite / SnowGrave endings
   S.weird=!!(opt.weird&&d.noSusie&&party[2].id==='noelle');
+  // the K. Round weird route needs Susie and Noelle
+  S.kw=opt.weird&&eid==='kround'&&party.some(h=>h.id==='susie'&&!h.absent)&&party.some(h=>h.id==='noelle'&&!h.absent)?{rb:0,ice:0,said:0,learned:0,uses:0,dirty:0,fb:0}:null;
   S.mode=cu&&cu.modes?{...cu.modes}:{};S.custom=!!cu;
   if(cu&&cu.items){S.items=cu.items.filter(id=>ITEM[id]).slice(0,6);S.tempitem=[[...S.items],[...S.items],[...S.items]]}S.iceTries=0;S.weirdEnding=null;S.weirdDone=0;
   for(const h of party)h.spells=[...h.spells];
@@ -27924,6 +27934,7 @@ const DR=(()=>{
    return ['* '+h.name+' cast PACIFY!/%'];
   }
   if(spell===4)return ['* '+h.name+' used RUDE BUSTER!/%'];
+  if(spell===12){const n=S.kw?S.kw.uses:0;return ['* '+h.name+' used FROST BUSTER'+(n>=4?'!!!':n>=2?'!!':'!')+'/%']}
   if(spell===8)return ['* '+h.name+' cast SLEEPMIST!/%'];
   if(spell===9)return ['* '+h.name+' cast ICESHOCK!/%'];
   if(spell===10)return ['* '+h.name+' cast SNOWGRAVE!/%'];
@@ -27969,6 +27980,16 @@ const DR=(()=>{
    const n=h.mag*4;
    for(const t of S.party){if(t.absent)continue;healHero(t,n);S.fx.push({kind:'heal',target:t,t:0,stars:[]});S.dmgw.push(dmgwriter(t.x,t.y+t.myheight-24,n,3,{delay:8,special:t.hp>=t.maxhp?3:0}))}
    S.spelldelay=15;return;
+  }
+  if(S.kw&&!S.kw.learned&&(spell===4||spell===9)&&S.mons[star]&&S.mons[star].id==='kround'){if(spell===4)S.kw.rb++;else S.kw.ice++;S.kw.dirty=1}
+  if(spell===12){
+   if(!S.mons[star]||!S.mons[star].alive){star=S.mons.findIndex(m=>m.alive);if(star<0){S.spelldelay=30;return}}
+   const m=S.mons[star],kw=S.kw||{uses:0},lv=kw.uses;
+   // 200 the first time, +220 a cast after that, up to K. Round's whole 1300
+   const dmg=m.id==='kround'?Math.min(m.maxhp,200+lv*220):Math.ceil(h.mag*5+h.at*11-m.df*3)+lv*40;
+   kw.uses++;snd('icespell',1.2);
+   S.fx.push({kind:'rudebuster',h,m,star,caster,t:0,damage:dmg,frost:1,lv,flakes:[],ring:0});
+   h.hideFor=28;S.spelldelay=75+Math.min(30,lv*6);return;
   }
   if(S.weird&&weirdSpell(spell,caster,star))return;
   if(spell===11){
@@ -28165,6 +28186,7 @@ const DR=(()=>{
   S.darkener={amt:0,on:1};
   S.talkT=0;S.bubbles=[];S.talkmax=90;
   if(S.weirdEnding&&!S.weirdDone){S.weirdDone=1;weirdScene(S.weirdEnding);return}
+  if(S.kw&&S.kw.dirty&&kroundBanter())return;
   for(const m of S.mons){
    if(!m.alive)continue;
    m.target=randomTarget();S.targeted[m.target]=1;
@@ -28575,6 +28597,7 @@ const DR=(()=>{
  }
  // the three endings, then the battle is over
  function weirdScene(kind){
+  if(kind==='kround'){kroundScene();return}
   const su=susieOf(),L=lancerOf();
   S.bubbles=[];S.bullets=[];S.mnfight=0;S.myfight=3;
   try{music&&music.pause()}catch(_){}
@@ -29655,6 +29678,10 @@ const DR=(()=>{
     }
     flakeStep(e.hex);
    }
+   else if(e.kind==='shatter'){
+    e.t++;for(const f of e.sh){f.x+=f.vx;f.y+=f.vy;f.vx*=.96;f.vy+=.35;f.ang+=f.va;if(e.t>30)f.a-=.03}
+    if(e.t>70)e.dead=1;
+   }
    else if(e.kind==='frozen'){
     // obj_frozennpc in battle: fresh 0 -> petrify, then the ice climbs (timer += .05).
     if(e.fresh===0){snd('petrify');e.fresh=2}
@@ -29701,14 +29728,27 @@ const DR=(()=>{
       if(b.chosen>0){const k=fb-b.chosen;dmg+=[30,28,22,20,13,11,10][k]||0}
       const star=e.star;S.hittarget[star]=0;
       S.dmgw.push(dmgwriter(monsterx(e.m),monstery(e.m)+20-S.hittarget[star]*20,dmg,1));S.hittarget[star]++;
+      if(e.frost&&S.kw)S.kw.fb=1;
       e.m.hp-=dmg;if(dmg>0){hurtMon(e.m);e.m.flash=6}
-      if(e.m.hp<=0&&e.m.alive){e.m.alive=false;e.m.killed=true;defeatRun(e.m)}
+      if(S.kw)S.kw.fb=0;
+      if(e.frost){
+       e.m.chill=e.lv+1;S.shake={amt:4+e.lv*2,t:0};
+       const n=10+e.lv*8;for(let k=0;k<n;k++){const a=R()*Math.PI*2,v=3+R()*(5+e.lv*1.5);e.flakes.push({x:b.cx,y:b.cy,vx:Math.cos(a)*v,vy:Math.sin(a)*v,ang:R()*360,va:R()*20-10,s:.15+R()*(.2+e.lv*.04),a:1})}
+       if(e.lv>=2)snd('petrify');
+      }
+      if(e.m.hp<=0&&e.m.alive){
+       e.m.alive=false;e.m.killed=true;
+       // a FROST BUSTER finish freezes it solid (scr_defeatrun's frozen path)
+       if(e.frost){S.gold+=24;S.fx.push({kind:'frozen',m:e.m,timer:0,fresh:0});S.fx.push({kind:'recruit',x0:monsterx(e.m),y:monstery(e.m)-40,vy:0,timer:0,lt:0,xs:4,ys:0,a:1});if(S.kw&&e.m.id==='kround')S.weirdEnding='kround'}
+       else defeatRun(e.m);
+      }
       snd('rbhit');
       b.bursts=[0,1,2,3,4,5,6,7].map(i=>({x:b.cx,y:b.cy,ang:45+i*90,sp:25,xs:2,a:1,k:i<4?.75:.8}));
      }
     }
     if(b){for(const a of b.after){a.ys-=.1;if(b.explode){a.a-=.07;a.ys*=.9}}b.after=b.after.filter(a=>a.ys>.1&&a.a>0)}
-    if(b&&b.explode){b.et++;for(const q of b.bursts){q.x+=Math.cos(q.ang*Math.PI/180)*q.sp;q.y-=Math.sin(q.ang*Math.PI/180)*q.sp;q.sp*=q.k;q.xs*=.8}if(b.et>=18)e.dead=1}
+    if(b&&b.explode){b.et++;for(const q of b.bursts){q.x+=Math.cos(q.ang*Math.PI/180)*q.sp;q.y-=Math.sin(q.ang*Math.PI/180)*q.sp;q.sp*=q.k;q.xs*=.8}if(b.et>=(e.frost?40:18))e.dead=1}
+    if(e.frost){e.ring++;for(const f of e.flakes){f.x+=f.vx;f.y+=f.vy;f.vx*=.93;f.vy=f.vy*.93+.15;f.ang+=f.va;f.a-=.025}e.flakes=e.flakes.filter(f=>f.a>0)}
     if(e.t>60&&!b)e.dead=1;
    }
   }
@@ -30045,7 +30085,7 @@ const DR=(()=>{
     // obj_frozennpc Draw: the hurt sprite, then four navy-white offsets and an additive
     // layer, cut from row t down: the ice climbs from the feet to the head.
     const m=e.m,im=frame(m.def.still,0);if(!im)continue;
-    const SC=mix(C.navy,C.white,.8),sw=im.naturalWidth,sh=im.naturalHeight,[,,fox,foy]=meta(m.def.still),x=m.x-fox*2,y=m.y-foy*2;
+    const SC=mix(C.navy,C.white,.8),sw=im.naturalWidth,sh=im.naturalHeight,[,,fox,foy]=meta(m.def.still),j=e.crack?e.crack*2:0,x=m.x-fox*2+(j?Math.round(Math.random()*j*2-j):0),y=m.y-foy*2;
     g.drawImage(im,x,y,sw*2,sh*2);
     const t=Math.max(0,sh-e.timer*sh);
     if(t<sh){
@@ -30056,6 +30096,10 @@ const DR=(()=>{
     }
    }
    else if(e.kind==='recruit')draw(g,'spr_battlemsg',12,e.x0+83*e.xs/2,e.y,e.xs,e.ys,0,e.a);
+   else if(e.kind==='shatter'){
+    if(e.t<12){g.save();g.globalAlpha=1-e.t/12;g.fillStyle='#ffffff';g.fillRect(-40,-40,720,560);g.restore()}
+    for(const f of e.sh){if(f.a<=0)continue;if(f.big){g.save();g.globalAlpha=f.a;g.translate(f.x,f.y);g.rotate(f.ang*Math.PI/180);g.fillStyle=ICE;g.fillRect(-6*f.s,-4*f.s,12*f.s,8*f.s);g.fillStyle='#ffffff';g.fillRect(-6*f.s,-4*f.s,12*f.s,2);g.restore()}else draw(g,'spr_icespell_snowflake',0,f.x,f.y,f.s,f.s,f.ang,f.a)}
+   }
    else if(e.kind==='death'){
     const m=e.m,im=frame(m.def.still,0);if(!im)continue;
     if(e.t2<=1){g.drawImage(im,m.x,m.y,im.naturalWidth*2,im.naturalHeight*2);continue}
@@ -30071,6 +30115,7 @@ const DR=(()=>{
    else if(e.kind==='soulshine')draw(g,'spr_soulshining',e.f,e.x,e.y,2,2);
    else if(e.kind==='hflash'){const [n,i]=heroSprite(e.h);draw(g,n,i,e.h.x,e.h.y,2,2,0,e.a*.8,{fog:e.color})}
    else if(e.kind==='frostbite')drawFrostbite(g,e);
+   else if(e.kind==='rudebuster'&&e.frost){drawFrostBuster(g,e);continue}
    else if(e.kind==='rudebuster'){
     if(e.t<=28)draw(g,'spr_susie_rudebuster',e.t/2,e.h.x,e.h.y,2,2);
     const b=e.bolt;if(!b)continue;const rt=e.red?{tint:'#ff4040'}:{};
@@ -30079,6 +30124,75 @@ const DR=(()=>{
     else for(const q of b.bursts)draw(g,'spr_rudebuster_beam',b.et/2,q.x,q.y,q.xs,2,q.ang,1,rt);
    }
   }
+ }
+ // FROST BUSTER: Rude Buster in the iced navy-white of a frozen enemy, bigger and colder
+ // every cast (lv = casts before this one).
+ const ICE=mix(C.navy,C.white,.8);
+ function drawFrostBuster(g,e){
+  const lv=e.lv,b=e.bolt,s=1+Math.min(6,lv)*.12;
+  if(e.t<=28){
+   draw(g,'spr_susie_rudebuster',e.t/2,e.h.x,e.h.y,2,2);
+   draw(g,'spr_susie_rudebuster',e.t/2,e.h.x,e.h.y,2,2,0,.35+.05*Math.min(6,lv),{fog:ICE});
+   // the cold gathers on the axe
+   const n=4+lv*2;for(let k=0;k<n;k++){const a=k/n*Math.PI*2+e.t/6,r=(60+lv*8)*(1-e.t/28);draw(g,'spr_icespell_snowflake',0,e.h.x+50+Math.cos(a)*r,e.h.y+30+Math.sin(a)*r*.6,.3*s,.3*s,e.t*8,.8)}
+  }
+  if(b){
+   for(const a of b.after)draw(g,'spr_rudebuster_beam',4,a.x,a.y,2*s,a.ys*s,a.dir,Math.max(0,a.a),{fog:ICE});
+   if(!b.explode){draw(g,'spr_rudebuster_beam',b.t,b.x,b.y,2*s,2*s,b.dir,b.a,{fog:ICE});draw(g,'spr_rudebuster_beam',b.t,b.x,b.y,1.2*s,1.2*s,b.dir,b.a*.7,{fog:'#f2fcff'})}
+   else{
+    for(const q of b.bursts)draw(g,'spr_rudebuster_beam',b.et/2,q.x,q.y,q.xs*s,2*s,q.ang,Math.max(0,1-b.et/40),{fog:ICE});
+    // the freeze ring
+    const r=e.ring*(4+lv),a=Math.max(0,1-e.ring/28);
+    if(a>0){g.save();g.globalAlpha=a;g.strokeStyle='#cff4ff';g.lineWidth=3+lv;g.beginPath();g.ellipse(b.cx,b.cy,r,r*.7,0,0,Math.PI*2);g.stroke();g.restore()}
+    if(e.ring<6){g.save();g.globalAlpha=(1-e.ring/6)*(.25+.08*Math.min(6,lv));g.fillStyle='#e8fbff';g.fillRect(-40,-40,720,560);g.restore()}
+   }
+  }
+  for(const f of e.flakes)draw(g,'spr_icespell_snowflake',0,f.x,f.y,f.s,f.s,f.ang,f.a);
+ }
+ // after learning it, Susie keeps an icy aura, stronger with every cast
+ function drawFrostAura(g,h){
+  const lv=Math.min(6,1+S.kw.uses),t=S.t,[n,i]=heroSprite(h),o=1+lv*.6,a=.12+.05*lv+.06*Math.sin(t/8);
+  for(const [dx,dy] of [[-1,0],[1,0],[0,-1],[0,1]])draw(g,n,i,h.x+dx*o,h.y+dy*o,2,2,0,a,{fog:'#9fe8ff'});
+  const k=lv*2;for(let j=0;j<k;j++){const q=t/24+j*Math.PI*2/k;draw(g,'spr_icespell_snowflake',0,h.x+30+Math.cos(q)*(34+lv*4),h.y+44+Math.sin(q)*(16+lv*2),.4+lv*.05,.4+lv*.05,t*3,.55)}
+ }
+ // the end of the K. Round weird route: frozen solid, then it goes off like a frozen buster does
+ function kroundScene(){
+  const m=S.mons.find(o=>o.id==='kround'),fz=S.fx.find(e=>e.kind==='frozen'&&e.m===m),su=S.party.find(h=>h.id==='susie'&&!h.absent);
+  S.bubbles=[];S.bullets=[];S.mnfight=0;S.myfight=3;
+  try{music&&music.pause()}catch(_){}
+  S.actPhase={m,queue:[
+   {fn:()=>{if(fz)fz.crack=1;snd('petrify')},wait:30},
+   {fn:()=>{if(fz)fz.crack=2;snd('screenshake')},wait:25},
+   {fn:()=>{S.fx=S.fx.filter(e=>e!==fz);snd('rbhit');snd('snowgrave');S.shake={amt:14,t:0};
+    const x=monsterx(m),y=monstery(m),sh=[];for(let k=0;k<70;k++){const a=R()*Math.PI*2,v=4+R()*14;sh.push({x:x+R()*40-20,y:y+R()*80-40,vx:Math.cos(a)*v,vy:Math.sin(a)*v-4,ang:R()*360,va:R()*30-15,s:k<30?.8+R()*1.6:.12+R()*.3,a:1,big:k<30})}
+    S.fx.push({kind:'shatter',x,y,t:0,sh});if(su)su.pose=null},wait:60},
+   {pages:[{face:'N',e:16,text:'* ...!/'},'* K. Round shattered into a thousand frozen pieces!/',{face:'S',e:0,text:'* ...Huh./'},{face:'S',e:2,text:'* So THAT\'s what a frozen buster does./'},{face:'N',e:15,text:'* S-Susie^1, your axe is still steaming.../'},{face:'S',e:2,text:'* Heh. Cool^1, right?/%'}]},
+   {fn:()=>{S.actPhase=null;wincombat()}}]};
+  battletext(['* (K. Round is frozen solid^1, crown and all.)/',{face:'N',e:15,text:'* Is it... is it over?/'},{face:'S',e:2,text:'* Heh. Told ya it\'d come off./'},'* ...The ice began to crack./',{face:'S',e:9,text:'* Wait^1, why is it gl-/%'}]);
+ }
+ // Susie's comments while the rude busters and ice shocks bounce off, then the axe
+ function kroundBanter(){
+  const kw=S.kw;kw.dirty=0;
+  const m=S.mons.find(o=>o.id==='kround');if(!m||!m.alive)return false;
+  let pages,learn=false;
+  if(kw.rb>=2&&kw.ice>=2){
+   learn=true;kw.learned=1;
+   pages=[{face:'S',e:9,text:'* Ugh^1! This stupid checker won\'t go DOWN!/'},{face:'S',e:0,text:'* Hey^1, Noelle^1! C\'mere./'},{face:'N',e:15,text:'* Y-yes?/'},{face:'S',e:2,text:'* That ice thing you do. Do it on my axe./'},{face:'N',e:1,text:'* On your... axe? Susie^1, I don\'t know if.../'},{face:'S',e:9,text:'* Just DO it!/%'}];
+  }else{
+   const n=kw.said++;
+   pages=[[{face:'S',e:2,text:'* Huh^1? It barely even felt that!/%'}],[{face:'N',e:15,text:'* It just... shook the ice right off...!/%'}],[{face:'S',e:9,text:'* C\'mon^1, break already!/%'}],[{face:'S',e:9,text:'* Why won\'t you just BREAK!?/%'}]][Math.min(n,3)];
+  }
+  S.bubbles=[];S.mnfight=0;S.myfight=3;S.darkener=null;
+  const q=[];
+  if(learn){
+   const su=S.party.find(h=>h.id==='susie'&&!h.absent);
+   q.push({fn:()=>{snd('icespell');if(su){S.fx.push({kind:'hflash',h:su,a:1,color:'#9fe8ff'});if(!su.spells.includes(12))su.spells.push(12)}},wait:25,
+    pages:['* Noelle froze Susie\'s axe solid./',{face:'S',e:2,text:'* Heh... now THAT\'S cold./'},'* Susie learned \\cBFROST BUSTER\\cW!/%']});
+  }
+  q.push({fn:()=>{S.charaction=[0,0,0];S.charspecial=[0,0,0]}});
+  S.actPhase={m,queue:q};
+  battletext(pages);
+  return true;
  }
  // SnowGrave crystal statue: the crystal is fitted around the monster's sprite and the
  // monster shows through as a dark silhouette (as in the UNDERTALE-engine SnowGrave).
@@ -30306,7 +30420,7 @@ const DR=(()=>{
   g.translate(sh,0);
   drawBack(g);
   if(S.darkener){g.fillStyle='rgba(0,0,0,'+(S.darkener.amt/20)+')';g.fillRect(-40,-40,720,560)}
-  for(let i=S.party.length-1;i>=0;i--)drawHero(g,S.party[i]);
+  for(let i=S.party.length-1;i>=0;i--){const h=S.party[i];if(S.kw&&S.kw.learned&&h.id==='susie'&&!h.absent&&h.hp>0)drawFrostAura(g,h);drawHero(g,h)}
   for(const m of S.mons)drawMonster(g,m);
   drawFx(g);
   drawBox(g);
