@@ -26592,7 +26592,7 @@ const DR1_ASSETS={"spr":{"spr_susie_enemy":[54,45,0,0,["67c6dcb7-267b-44bd-86b3-
 const DR=(()=>{
  const A=DR_ASSETS,A1=DR1_ASSETS,STEP_MS=1000/30;
  const imgs={},masks={};let ready=false,loading=null,S=null;
- const sndKeys={menumove:'snd_menumove',select:'snd_select',laz:'snd_laz_c',crit:'snd_criticalswing',damage:'snd_damage',impact:'snd_impact',hurt:'snd_hurt1',graze:'snd_graze',mercyadd:'snd_mercyadd',spare:'snd_spare',power:'snd_power',rbswing:'snd_rudebuster_swing',rbhit:'snd_rudebuster_hit',pacify:'snd_pacify',text:'snd_text',boost:'snd_boost',icespell:'snd_icespell',snowgrave:'snd_snowgrave',petrify:'snd_petrify',deathnoise:'snd_deathnoise',ghostappear:'snd_ghostappear',spellpacify:'snd_spell_pacify',defeatrun:'snd_defeatrun',bell:'snd_bell',dadlaugh:'snd_dadlaugh',ralsing1:'snd_ralseising1',ralsing2:'snd_ralseising2',dadblast:'snd_dadblast',chainext:'snd_chain_extend',locker:'snd_locker',screenshake:'snd_screenshake',chainwave:'snd_chain_wave',spearrise:'snd_spearrise',bump:'snd_bump',magicsprinkle:'snd_magicsprinkle',jump:'snd_jump',ultraswing:'snd_ultraswing',swing:'snd_swing',item:'snd_item',cardrive:'snd_cardrive',drive:'snd_drive',honk:'snd_lancerhonk',whistle:'snd_lancerwhistle',splat:'snd_splat',sussurprise:'snd_sussurprise'};
+ const sndKeys={menumove:'snd_menumove',select:'snd_select',laz:'snd_laz_c',crit:'snd_criticalswing',damage:'snd_damage',impact:'snd_impact',hurt:'snd_hurt1',graze:'snd_graze',mercyadd:'snd_mercyadd',spare:'snd_spare',power:'snd_power',rbswing:'snd_rudebuster_swing',rbhit:'snd_rudebuster_hit',pacify:'snd_pacify',text:'snd_text',boost:'snd_boost',icespell:'snd_icespell',snowgrave:'snd_snowgrave',petrify:'snd_petrify',deathnoise:'snd_deathnoise',ghostappear:'snd_ghostappear',spellpacify:'snd_spell_pacify',defeatrun:'snd_defeatrun',bell:'snd_bell',dadlaugh:'snd_dadlaugh',ralsing1:'snd_ralseising1',ralsing2:'snd_ralseising2',dadblast:'snd_dadblast',chainext:'snd_chain_extend',locker:'snd_locker',screenshake:'snd_screenshake',chainwave:'snd_chain_wave',spearrise:'snd_spearrise',bump:'snd_bump',magicsprinkle:'snd_magicsprinkle',jump:'snd_jump',ultraswing:'snd_ultraswing',swing:'snd_swing',item:'snd_item',cardrive:'snd_cardrive',txtral:'snd_txtral',txtsus:'snd_txtsus',txtnoe:'snd_txtnoe',txtlan:'snd_txtlan',drive:'snd_drive',honk:'snd_lancerhonk',whistle:'snd_lancerwhistle',splat:'snd_splat',sussurprise:'snd_sussurprise'};
  const sndFiles={snd_mercyadd:'snd_mercyadd.ogg',snd_pacify:'snd_pacify.ogg',snd_text:'snd_text.wav',snd_icespell:'snd_icespell.ogg',snd_snowgrave:'snd_snowgrave.ogg',snd_ghostappear:'snd_ghostappear.ogg',snd_spell_pacify:'snd_spell_pacify.ogg'};
  const SND_CH1=new Set(['snd_dadlaugh','snd_dadblast','snd_ralseising1','snd_ralseising2']);
  const sndUrl=n=>(SND_CH1.has(n)?DR_RAW1:DR_RAW)+`sounds/${n}/${sndFiles[n]||n}`;
@@ -26770,7 +26770,8 @@ const DR=(()=>{
     if(c==='/'){this.halt=this.str[this.pos+1]==='%'?2:1;return}
     if(c==='%'){this.done=true;return}
     this.pos++;typed++;
-    if(c!==' '&&this.pos%2===1)snd('text');
+    // talking portraits use their own voice (snd_txtral / txtsus / txtnoe / txtlan)
+    if(c!==' '&&this.pos%2===1)snd(this.face?({R:'txtral',S:'txtsus',N:'txtnoe',L:'txtlan'}[this.face.face]||'text'):'text');
    }
    if(this.pos>=this.str.length){const e=this.str.trimEnd();if(e.endsWith('/%'))this.halt=2;else if(e.endsWith('/'))this.halt=1}
   }
