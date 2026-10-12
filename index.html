@@ -26951,7 +26951,7 @@ const DR=(()=>{
    }
   },
   // obj_clubsenemy (monstertype 16): three heads, three bubbles; Ralsei does the talking.
-  clover:{name:'Clover',hp:270,at:6,df:1,gold:80,x:415,y:150,mx:95,my:74,turn:150,talkmax:210,
+  clover:{name:'Clover',hp:270,at:6,df:1,gold:80,x:400,y:120,mx:95,my:74,turn:150,talkmax:210,
    idle:'spr_clubs_idle',idleSpeed:6,hurt:'spr_clubs_hurt',spared:'spr_clubs_spared',still:'spr_clubs_idle',
    intro:'* Clover grew close!',attack:'clubs',
    tiredAt:m=>m.hp<=m.maxhp/2,
@@ -27128,12 +27128,20 @@ const DR=(()=>{
   load();
   if(!opt.party){S={picking:true,k:savedParty(),e:savedEnemy(),sup:savedSupports(),se:savedEnemy(),row:0,t:0,acc:0,exited:false,onExit:opt.onExit||null};return S}
   const eid=ENEMY[opt.enemy]?opt.enemy:'dummy',d=ENEMY[eid];
-  const ids=[eid,...(opt.supports||[]).filter(id=>ENEMY[id]).slice(0,MAX_SUPPORTS)],spots=enemySpots(ids.length,d);
+  const ids=[eid,...(opt.supports||[]).filter(id=>ENEMY[id]).slice(0,MAX_SUPPORTS)];let spots=enemySpots(ids.length,d);
+  // the game's 2-3 enemy spots are made for small enemies; with a big one (Clover, King)
+  // stack them down the right side by their real heights instead
+  const defs=ids.map(id=>ENEMY[id]);
+  if(ids.length>1&&ids.length<=3&&defs.some(e=>e.mx>60)){
+   const hs=defs.map(e=>e.my*2),sum=hs.reduce((a,b)=>a+b,0),n=ids.length;
+   const gap=sum<=300?(300-sum)/n:-(sum-300)/(n-1);let y=10+(sum<=300?gap/2:0);
+   spots=defs.map((e,i)=>{const sp=[Math.min(i%2?545:430,630-e.mx*2),Math.round(y)];y+=hs[i]+gap;return sp});
+  }
   const names=ids.map(id=>ENEMY[id].name),intro=ids.length===1?d.intro:'* '+(names.length===2?names.join(' and '):names.slice(0,-1).join(', ')+' and '+names[names.length-1])+' blocked the way!';
   const party=opt.party.map((id,i)=>{const h=HERO[id];return {id,...h,i,x:80,y:50+80*i,maxhp:h.hp,hp:h.hp,state:0,hurt:0,hurttimer:0,siner:0,attacktimer:0,acttimer:0,defendtimer:0,victoryanim:0,attacked:0,itemed:0,points:0,flash:0,fsiner:0,darken:0,alarm1:-1,alarm4:-1}});
   S={
    t:0,acc:0,exited:false,onExit:opt.onExit||null,
-   party,mons:ids.map((id,i)=>{const e=ENEMY[id];return {id,def:e,name:e.name,hp:e.hp,maxhp:e.hp,at:e.at,df:e.df,mercy:0,mercymax:e.mercymax||100,status:0,comment:' ',x:spots[i][0],y:spots[i][1],state:0,siner:0,fsiner:0,flash:0,shakex:0,hurttimer:0,hurtshake:0,alive:true,acting:0,alpha:1,blendFx:0,
+   party,mons:ids.map((id,i)=>{const e=ENEMY[id];return {id,def:e,name:e.name,hp:e.hp,maxhp:e.hp,at:e.at,df:e.df,mercy:0,mercymax:e.mercymax||100,status:0,comment:' ',x:ids.length>1?Math.min(spots[i][0],630-e.mx*2):spots[i][0],y:ids.length>1?Math.min(spots[i][1],310-e.my*2):spots[i][1],state:0,siner:0,fsiner:0,flash:0,shakex:0,hurttimer:0,hurtshake:0,alive:true,acting:0,alpha:1,blendFx:0,
     acts:e.acts.map(a=>({...a}))}}),
    tension:0,maxtension:250,tensionselect:0,temptension:[0,0,0],
    items:[1,1,1],tempitem:[[1,1,1],[1,1,1],[1,1,1]],
