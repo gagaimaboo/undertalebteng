@@ -26688,12 +26688,29 @@ const DR=(()=>{
   for(const p of parts){const im=frame(n,p.i);if(im){g.save();if(o.alpha!=null)g.globalAlpha*=o.alpha;const src=o.color&&o.color!=='#ffffff'?NB.multiplied(im,o.color):im;g.drawImage(src,p.m[0],0,p.m[1],im.naturalHeight,cx,y,p.m[1]*xs,im.naturalHeight*ys);g.restore()}cx+=(p.m[1]+sep)*xs}
  }
  const mix=(a,b,k)=>{const p=s=>[1,3,5].map(i=>parseInt(s.slice(i,i+2),16));const x=p(a),y=p(b);return '#'+x.map((v,i)=>Math.round(v+(y[i]-v)*k).toString(16).padStart(2,'0')).join('')};
- const rnd=n=>Math.random()*n,choose=(...a)=>a[Math.floor(Math.random()*a.length)];
+ // Online: every copy of the fight runs off one seeded stream, but only while the battle
+ // itself steps (drawing keeps its own randomness, it runs a different number of times per copy).
+ let MP=null;
+ const R=()=>MP&&MP.inStep?MP.rand():Math.random();
+ const rnd=n=>R()*n,choose=(...a)=>a[Math.floor(R()*a.length)];
 
  // ------------------------------------------------------------- input ------
  const KEY={confirm:['z','enter'],cancel:['x','shift'],up:['arrowup','w'],down:['arrowdown','s'],left:['arrowleft','a'],right:['arrowright','d']};
  const held={},prev={},P={},latch={};
- function poll(){for(const k in KEY){const h=KEY[k].some(n=>!!key[n]);P[k]=(h&&!prev[k])||!!latch[k];latch[k]=false;prev[k]=h;held[k]=h}}
+ // Online: the host's frame carries every player's keys (held bits + taps) for this step, in
+ // NB.KEYN bit order. Whoever owns the hero picking in the menu drives the menus; the host
+ // (slot 1, the SOUL) drives everything else. FIGHT bars listen to each bar's own player.
+ const KEYN=['confirm','cancel','menu','up','down','left','right'];
+ const owner=c=>{if(!MP)return 0;const p=MP.roles[c]|0;return MP.players[p]&&!MP.players[p].gone?p:0};
+ const ctrlOf=()=>S&&S.myfight===0&&S.mnfight===0&&!S.victory&&S.charturn>=0&&S.charturn<=2?owner(S.charturn):0;
+ function mpPoll(){
+  const fr=MP.frame||{};
+  for(const ev of fr.ev||[])if(ev&&ev.t==='leave'&&MP.players[ev.p]){MP.players[ev.p].gone=true}
+  MP.players.forEach((p,i)=>{const e=(fr.k&&fr.k[i])||[0,0];KEYN.forEach((k,b)=>{const h=!!((e[0]>>b)&1);p.P[k]=(h&&!p.H[k])||!!((e[1]>>b)&1);p.H[k]=h});p.at=(fr.at&&fr.at[i])||0});
+  const c=MP.players[ctrlOf()]||MP.players[0];
+  for(const k in KEY){P[k]=!!c.P[k];held[k]=!!c.H[k];latch[k]=false}
+ }
+ function poll(){if(MP){mpPoll();return}for(const k in KEY){const h=KEY[k].some(n=>!!key[n]);P[k]=(h&&!prev[k])||!!latch[k];latch[k]=false;prev[k]=h;held[k]=h}}
  function onKey(low){for(const k in KEY)if(KEY[k].includes(low))latch[k]=true}
 
  // ----------------------------------------------------------- data ---------
@@ -27623,7 +27640,8 @@ const DR=(()=>{
   return Array.from({length:n},(_,i)=>[i%2?400:510,10+Math.floor(i/2)*gap+(i%2?gap/2:0)]);
  }
  function start(opt={}){
-  load();
+  load();MP=null;
+  if(opt.mp)MP=mpMake(opt.mp);
   if(!opt.party){S={picking:true,k:savedParty(),e:savedEnemy(),sup:savedSupports(),se:savedEnemy(),row:0,t:0,acc:0,exited:false,onExit:opt.onExit||null};return S}
   const eid=ENEMY[opt.enemy]?opt.enemy:'dummy',d=ENEMY[eid];
   if(d.noSusie)opt={...opt,party:['kris','susie',(opt.party||[])[2]==='noelle'?'noelle':'ralsei']};
@@ -27698,7 +27716,42 @@ const DR=(()=>{
   const tracks={king:kingMusic,susie:susieMusic,kround:kroundMusic,lancer:lancerMusic},want=(S.mons.find(m=>m.def.music&&tracks[m.def.music])||{}).def;
   music=(want&&tracks[want.music])||battleMusic;
   if(music){try{music.currentTime=0;playMusicElement(music)}catch(_){}}
+  if(MP){
+   // player 1 takes the first hero (and the SOUL), the next players the next heroes that pick
+   // their own moves; heroes nobody has stay with player 1, extra players watch
+   S.mp=MP;let k=0;
+   MP.roles=S.party.map(h=>h.absent||(h.i===1&&S.susieAuto&&h.id==='susie')?0:(k<MP.players.length?k++:0));
+   MP.inStep=false;
+  }
   return S;
+ }
+ function mpMake(o){
+  const mp={players:o.players.map((q,i)=>({i,id:q.id,name:String(q.name||'PLAYER').toUpperCase().slice(0,12),gone:false,P:{},H:{},at:0})),
+   me:o.me|0,roles:[0,0,0],rs:(o.seed>>>0)||1,inStep:true,frame:null};
+  mp.rand=()=>{let t=(mp.rs=(mp.rs+0x6D2B79F5)|0);t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296};
+  return mp;
+ }
+ // one step from the host's frame
+ function mpStep(fr){if(!S||!MP||S.exited)return;MP.frame=fr||null;MP.inStep=true;try{step()}finally{if(MP){MP.inStep=false;MP.frame=null}}}
+ // every second the host says where HP, mercy and TP stand; a copy that drifted is put back
+ function mpAuth(){return [S.t,S.party.map(h=>h.hp),S.mons.map(m=>m.hp),S.mons.map(m=>Math.round(m.mercy)),Math.round(S.tension)]}
+ function mpFix(au){
+  if(!S||!Array.isArray(au))return false;const [,hp,mh,mm,tp]=au;let bad=false;
+  S.party.forEach((h,i)=>{const v=hp&&hp[i];if(Number.isFinite(v)&&h.hp!==v){bad=true;h.hp=v}});
+  S.mons.forEach((m,i)=>{const v=mh&&mh[i],w=mm&&mm[i];if(Number.isFinite(v)&&m.hp!==v){bad=true;m.hp=v}if(Number.isFinite(w)&&Math.round(m.mercy)!==w){bad=true;m.mercy=w}});
+  if(Number.isFinite(tp)&&Math.round(S.tension)!==tp){bad=true;S.tension=tp}
+  return bad;
+ }
+ // who plays which hero, shown over each one; whose turn it is, up top
+ function drawMp(g){
+  S.party.forEach((h,c)=>{
+   if(h.absent)return;const p=MP.players[owner(c)];if(!p)return;const me=owner(c)===MP.me;
+   text(g,'fnt_main',me?'YOU':p.name,h.x+20,h.y-14,me?C.yellow:C.white,{align:'center'});
+  });
+  if(S.myfight===0&&S.mnfight===0&&!S.victory&&S.charturn>=0&&S.charturn<=2){
+   const o=owner(S.charturn),me=o===MP.me,p=MP.players[o];
+   text(g,'fnt_mainbig',me?'YOUR TURN!':(p?p.name:'?')+' IS PICKING...',320,6,me?C.yellow:C.gray,{align:'center'});
+  }
  }
  const coord=(menu,c=S.charturn)=>{S.coord[menu]=S.coord[menu]||[0,0,0];return S.coord[menu][c]};
  const setCoord=(menu,v,c=S.charturn)=>{S.coord[menu]=S.coord[menu]||[0,0,0];S.coord[menu][c]=v};
@@ -27746,7 +27799,7 @@ const DR=(()=>{
   const su=S.party[1]&&S.party[1].id==='susie'?S.party[1]:null;
   if(S.susieAuto&&!S.susieSwung&&su&&!su.absent&&su.hp>0&&!S.acting[1]){
    S.susieSwung=1;const al=S.mons.map((m,i)=>m.alive?i:-1).filter(i=>i>=0);
-   S.chartarget[1]=al[Math.floor(Math.random()*al.length)];S.faceaction[1]=1;heroAttack(1,100+Math.round(rnd(40)));
+   S.chartarget[1]=al[Math.floor(R()*al.length)];S.faceaction[1]=1;heroAttack(1,100+Math.round(rnd(40)));
   }
   let fightphase=1;
   for(let i=0;i<3;i++)if(S.charaction[i]===4||S.charaction[i]===2)fightphase=0;
@@ -28026,7 +28079,7 @@ const DR=(()=>{
   // my_method 1: one bolt per attacker, shuffled, spaced diff or diff*1.5 apart.
   const diff=12;const order=[];
   for(let i=0;i<3;i++)if(ap.havechar[i])order.push(i);
-  for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]]}
+  for(let i=order.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[order[i],order[j]]=[order[j],order[i]]}
   let off=0,last=-1;
   order.forEach((c,i)=>{
    off+=last;const b={char:c,frame:30+off,alive:1,red:0};ap.bolts.push(b);
@@ -28039,11 +28092,15 @@ const DR=(()=>{
   if(ap.fade){ap.fadeamt+=.08;if(ap.fadeamt>1)S.ap=null;return}
   const count=[0,0,0];
   for(const b of ap.bolts){
-   if(b.frame-ap.boltx<-5)b.alive=0;
+   if(b.frame-ap.boltx<-5-(MP&&owner(b.char)?12:0))b.alive=0; // a far player's press needs a moment to arrive
    if(b.alive){count[b.char]++;if(ap.imagetimer===0&&b.frame-ap.boltx>=0)ap.after.push({x:ap.x+80+b.frame*ap.boltspeed-ap.boltx*ap.boltspeed,y:ap.y+38*b.char,a:.4})}
   }
   for(let i=0;i<3;i++)if(count[i]===0&&ap.havechar[i]&&!ap.attacked[i]){ap.attacked[i]=1;heroAttack(i,ap.points[i])}
-  if(monsterpop()>0){if(P.confirm)boltcheck(ap)}
+  if(monsterpop()>0){
+   // online: each player's Z hits their own bars, judged at the step they pressed on their screen
+   if(MP)MP.players.forEach((p,i)=>{if(p.P.confirm&&!p.gone)boltcheck(ap,i,p.at?Math.max(0,Math.min(14,S.t-p.at)):0)});
+   else if(P.confirm)boltcheck(ap);
+  }
   else{ap.fakefade=1;if(ap.posttimer<ap.timermax-35)ap.posttimer=ap.timermax-34}
   ap.imagetimer=(ap.imagetimer+1)%2;ap.boltx++;
   for(let i=0;i<4;i++)ap.pressbuffer[i]--;
@@ -28061,12 +28118,12 @@ const DR=(()=>{
   }
   if(ap.fade||ap.fakefade){ap.fadeamt+=.08;if(ap.fade&&ap.fadeamt>1)S.ap=null}
  }
- function boltcheck(ap){
+ function boltcheck(ap,who=-1,lag=0){
   // scr_boltcheck_onebutton: hit the bolt closest to the press spot (within -5..15 steps).
   // A second bolt lined up at the same spot (dualbolt) gets hit by the same press.
   ap.pressbuffer=[5,5,5,5];
   let q=-1,top=999,dual=-1;
-  ap.bolts.forEach((b,i)=>{if(!b.alive)return;const c=b.frame-ap.boltx;if(c<15&&c>-5){if(c===top)dual=i;if(c<top){top=c;q=i}}});
+  ap.bolts.forEach((b,i)=>{if(!b.alive||(who>=0&&owner(b.char)!==who))return;const c=b.frame-(ap.boltx-lag);if(c<15&&c>-5){if(c===top)dual=i;if(c<top){top=c;q=i}}});
   if(q<0)return;
   const p=Math.abs(top);
   const hit=b=>{
@@ -28102,7 +28159,7 @@ const DR=(()=>{
  // ------------------------------------------- enemy turn ------------------
  // Every enemy still standing talks, picks its own target (scr_randomtarget) and,
  // 12 steps into the turn, makes its own attack.
- function randomTarget(){const alive=S.party.map((h,i)=>h.hp>0?i:-1).filter(i=>i>=0);return alive.length?alive[Math.floor(Math.random()*alive.length)]:0}
+ function randomTarget(){const alive=S.party.map((h,i)=>h.hp>0?i:-1).filter(i=>i>=0);return alive.length?alive[Math.floor(R()*alive.length)]:0}
  function enemyTalkStart(){
   S.targeted=[0,0,0];
   S.darkener={amt:0,on:1};
@@ -29227,7 +29284,7 @@ const DR=(()=>{
    S.inv=Math.round(40*(S.invc||1));return;
   }
   let target=b.target;let h=S.party[target];
-  if(!h||h.hp<=0){const alive=S.party.filter(p=>p.hp>0);h=alive[Math.floor(Math.random()*alive.length)]||S.party[0];target=h.i}
+  if(!h||h.hp<=0){const alive=S.party.filter(p=>p.hp>0);h=alive[Math.floor(R()*alive.length)]||S.party[0];target=h.i}
   let td=b.dmg;
   if(S.mode&&S.mode.hard)td=Math.ceil(td*1.5);
   const thA=h.maxhp/5,thB=h.maxhp/8;
@@ -30260,6 +30317,7 @@ const DR=(()=>{
    else{draw(g,b.spr||'spr_battleblcon_long',b.img||0,b.x,b.y);b.w.draw(g)}
   }
   drawPanel(g);
+  if(MP)drawMp(g);
   drawMenus(g);
   if(S.writer&&(S.myfight!==0||S.bmenuno===0||S.victory))S.writer.draw(g);
   drawAttackPress(g);
@@ -30270,15 +30328,17 @@ const DR=(()=>{
  function update(dt){
   if(!S||S.exited)return;
   if(!ready)return;
+  if(MP){if(api.mpTick)api.mpTick(dt);return}
   S.acc+=Math.min(dt*1000,250);
   while(S.acc>=STEP_MS){S.acc-=STEP_MS;step();if(S.exited)break}
  }
  function exit(reason){
-  if(S.exited)return;S.exited=true;stopLoops();
+  if(S.exited)return;S.exited=true;stopLoops();MP=null;
   try{music&&music.pause()}catch(_){}
   if(S.onExit)S.onExit(reason);
  }
- return {start,update,render,onKey,load,exit,get S(){return S},get ready(){return ready},items:ITEM,gear:DRGEAR,modes:DRMODES,modeMult:drModeMult,spells:SPELL,heroes:HERO,gfx:{draw,frame,meta,text,textWidth,darkbox,gridBack,C},enemies:ENEMY,enemyIds:ENEMY_IDS,maxSupports:MAX_SUPPORTS,parties:PARTIES,heroes:HERO,_dbg:{P,held,mercyadd,heroHit,dmgwriter}};
+ const api={start,update,render,onKey,load,exit,mpStep,mpAuth,mpFix,mpTick:null,get S(){return S},get ready(){return ready},items:ITEM,gear:DRGEAR,modes:DRMODES,modeMult:drModeMult,spells:SPELL,heroes:HERO,gfx:{draw,frame,meta,text,textWidth,darkbox,gridBack,C},enemies:ENEMY,enemyIds:ENEMY_IDS,maxSupports:MAX_SUPPORTS,parties:PARTIES,heroes:HERO,_dbg:{P,held,mercyadd,heroHit,dmgwriter}};
+return api;
 })();
 
 // DELTARUNE tab: an ENEMIES page and a SUPPORTS page laid out like the UNDERTALE ones,
@@ -30689,7 +30749,7 @@ boot().catch(err=>{
 const NBO=(()=>{
  // PROTO changes whenever online play changes, so two different builds never share a room
  // (they'd fall out of step); ONLINE_BUILD is shown in the panel to compare builds.
- const MAX=5,PROTO='nbo3',STEP=1000/30,ONLINE_BUILD='64';
+ const MAX=5,PROTO='nbo4',STEP=1000/30,ONLINE_BUILD='65';
  const KEYMAP={confirm:['z','enter'],cancel:['x','shift'],menu:['c','control'],up:['arrowup','w'],down:['arrowdown','s'],left:['arrowleft','a'],right:['arrowright','d']};
  const B64='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_',B64I={};[...B64].forEach((c,i)=>B64I[c]=i);
  const enc3=v=>B64[v&63]+B64[(v>>6)&63]+B64[(v>>12)&63];
@@ -30788,7 +30848,12 @@ const NBO=(()=>{
  // local input: held keys + taps (NB.latch sees every keydown, touch buttons included)
  let latchBits=0,latchAt=0;
  const baseLatch=NB.latch;
- NB.latch=low=>{baseLatch(low);NB.KEYN.forEach((k,i)=>{if(KEYMAP[k].includes(low)){latchBits|=1<<i;if(i===0&&NB.S)latchAt=NB.S.t}})};
+ // the engine the fight runs on: NB (UNDERTALE) or DR (DELTARUNE)
+ const ES=()=>game&&game.dr?DR.S:NB.S;
+ const latchLow=low=>NB.KEYN.forEach((k,i)=>{if(KEYMAP[k].includes(low)){latchBits|=1<<i;const S=ES();if(i===0&&S)latchAt=S.t}});
+ NB.latch=low=>{baseLatch(low);latchLow(low)};
+ const baseDrKey=DR.onKey;
+ DR.onKey=low=>{baseDrKey(low);if(game&&game.dr&&game.running)latchLow(low)};
  const heldBits=()=>{let b=0;NB.KEYN.forEach((k,i)=>{if(KEYMAP[k].some(n=>key[n]))b|=1<<i});return b};
  function takeSample(){const s={h:heldBits(),l:latchBits,a:(latchBits&1)?latchAt:0};latchBits=0;return s}
 
@@ -30868,7 +30933,7 @@ const NBO=(()=>{
    if(game){st.g={id:game.id,ok:game.ok?1:0,k:game.ackT||game.lastT||0};const mineSb=game.sbs&&game.sbs[T.self];if(mineSb)st.sb={g:game.id,s:packSb(mineSb)}}
    const q=inQ.slice(-36);
    if(q.length){let d='';const a=[];for(const s of q){d+=enc3(s.h|(s.l<<7));if(s.a)a.push([s.q,s.a])}st.i={q:q[q.length-1].q,d};if(a.length)st.i.a=a}
-   const r=game&&game.running?NB.mpReport():null;
+   const r=game&&game.running&&!game.dr?NB.mpReport():null;
    if(r){st.i=st.i||{};st.i.dm=r.total;if(r.own)st.i.p=[r.x,r.y,r.b,r.turn];const ac=NB.mpActs();if(ac.length)st.i.ac=ac.slice(-12)}
   }
   return st;
@@ -30936,9 +31001,12 @@ const NBO=(()=>{
   }
  }
  function bossLabel(){const b=BOSS_OPTIONS[bossSelected];return b?(b.label||b.name||b.id):'?'}
+ const drScreen=()=>typeof screen==='string'&&screen.startsWith('dr');
+ const drLabel=()=>{const e=DR.enemies[DR.enemyIds[drSel]];return 'DR '+(e?e.name:'?')};
  function hostStart(){
   if(!isHost||(game&&game.st!=='end'))return;
   if(lobby.some(p=>!p.ready)){setStatus('everyone has to be READY first');return}
+  if(drScreen()){hostStartDr();return}
   practiceMode='classic';
   currentBoss=BOSS_OPTIONS[bossSelected]?.id||'dummy';
   const ids=nbBattleIds();
@@ -30958,6 +31026,19 @@ const NBO=(()=>{
   for(const p of lobby)game.clients[p.id]={ok:false,ack:0,lastQ:0,buf:new Map(),gone:false,held:0,pos:null,dmTot:0,dmSeen:0,acSeen:0,acNew:[]};
   // everyone has the battle and its sprites before the first step
   nbLoadAssets().then(()=>{if(game&&game.st==='setup')game.ok=true;refreshUI()});
+  log('starting '+game.bossName+' ('+players.length+' players)');
+  pubDirty=true;refreshUI();
+ }
+ // DELTARUNE: the fight picked in the DELTARUNE tab; player 1 is the first hero, player 2 the next...
+ function hostStartDr(){
+  const players=[{id:T.self,name:myName},...lobby.map(p=>({id:p.id,name:p.name}))];
+  const cfg={dr:1,opts:{party:DR.parties[drParty],enemy:DR.enemyIds[drSel],supports:drSup.slice(),susieAuto:drSusieAuto,weird:drWeird,custom:drCustom&&drCustom.on?drCustomCfg():null},
+   players,seed:(Math.random()*4294967296)>>>0};
+  const text=b64e(JSON.stringify(cfg)),size=T.kind==='room'?2700:20000,parts=[];
+  for(let i=0;i<text.length;i+=size){const c=text.slice(i,i+size),arr=[];for(let j=0;j<c.length;j+=1000)arr.push(c.slice(j,j+1000));parts.push(arr)}
+  game={id:rid(6),st:'setup',dr:1,cfg,parts,p:players.map(q=>q.id),bossName:clean(drLabel(),24),clients:{},F:[],leaves:[],au:null,t0:performance.now(),ok:false,running:false};
+  for(const p of lobby)game.clients[p.id]={ok:false,ack:0,lastQ:0,buf:new Map(),gone:false,held:0,pos:null,dmTot:0,dmSeen:0,acSeen:0,acNew:[]};
+  DR.load().then(()=>{if(game&&game.st==='setup')game.ok=true;refreshUI()});
   log('starting '+game.bossName+' ('+players.length+' players)');
   pubDirty=true;refreshUI();
  }
@@ -30984,6 +31065,7 @@ const NBO=(()=>{
   });
   const fr={k};if(anyAt)fr.at=at;
   if(game.leaves.length){fr.ev=game.leaves.map(p=>({t:'leave',p}));game.leaves=[]}
+  if(game.dr){game.F.push(fr);return fr} // DELTARUNE: keys only, everything else follows from them
   // during the enemy's turn: where everyone's SOUL is, by their own word, and the HP
   // their own copies took since the last step
   const S=NB.S,mine=NB.mpReport(),atk=!!(S&&S.mnfight===2),sp=[],dm=[];let anyS=false;
@@ -31029,7 +31111,7 @@ const NBO=(()=>{
     game.N=g.c.N;game.parts[g.c.i]=Array.isArray(g.c.d)?g.c.d.join(''):'';
     if(game.parts.filter(v=>v!=null).length===game.N)prepare(game);
    }
-   const t0=NB.S&&NB.S.mp&&game.running?NB.S.t:0;
+   const es=ES(),t0=es&&es.mp&&game.running?es.t:0;
    if(g.sb&&typeof g.sb==='object'){game.sbs=game.sbs||{};for(const id of Object.keys(g.sb))if(id!==T.self&&(g.p||[]).includes(id)){const v=cleanSb(g.sb[id]);if(v)game.sbs[id]=v}}
    if(game.running){decFrames(g.u,game.n,game.frames,t0);decFrames(g.f,game.n,game.frames,t0)}
    if(g.au&&g.au[0]>t0)game.aus.set(g.au[0],g.au);
@@ -31045,6 +31127,7 @@ const NBO=(()=>{
   gm.loading=true;
   try{
    gm.cfg=JSON.parse(b64d(gm.parts.join('')));
+   if(gm.cfg.dr){gm.dr=1;await DR.load();if(game===gm){gm.ok=true;pubDirty=true;publish(true)}return}
    await nbLoadAssets();
    swapIn(gm.cfg);
    // the CUSTOM monster's own sprites must be decoded before its size is measured
@@ -31070,6 +31153,12 @@ const NBO=(()=>{
  // ---------------------------------------------------------------- battle
  let acc=0,sAcc=0,starve=0;
  function beginBattle(cfg,me){
+  if(cfg.dr){
+   game.dr=1;screen='dr';closePanel();
+   DR.start({...cfg.opts,mp:{players:cfg.players,me,seed:cfg.seed},onExit(reason){endBattle(reason)}});
+   game.running=true;acc=0;sAcc=0;starve=0;inQ.length=0;
+   log('fight on');pubDirty=true;return;
+  }
   const o=cfg.opts;
   const items=o.items.map(v=>({...v,onUse:isHost?()=>{try{consumeVanillaInventoryItem(v.id)}catch(_){}}:null}));
   screen='nb';closePanel();
@@ -31084,6 +31173,14 @@ const NBO=(()=>{
   if(!game)return;
   const was=game.running;game.running=false;game.over=true;
   if(isHost)game.st='end';
+  if(game.dr){
+   if(!isHost&&DR.S&&DR.S.mp)game.lastT=DR.S.t;
+   if(DR.S&&!DR.S.exited)DR.exit(reason);
+   if(!was)return;
+   screen='drroster';try{drFocus=0;startMenuMusic()}catch(_){}
+   const why={win:'the party won!',gameover:'the party fell...',quit:'left the fight','host left':'the host left'}[reason]||String(reason||'fight over');
+   log(why);if(reason==='quit'&&!isHost)game=null;pubDirty=true;publish(true);openPanel();return;
+  }
   if(!isHost&&NB.S&&NB.S.mp)game.lastT=NB.S.t;
   if(NB.S&&!NB.S.exited)NB.S.exited=true;
   if(!was)return;
@@ -31114,15 +31211,15 @@ const NBO=(()=>{
    minHp:n('minHp'),maxhp:Math.max(1,n('maxhp')),hp:n('hp'),alive:!!v.alive,turns:n('turns'),time:n('time'),name:clean(v.name),
    mods:Array.isArray(v.mods)?v.mods.filter(x=>typeof x==='string').map(x=>x.slice(0,24)).slice(0,12):[]};
  }
- NB.mpTick=(dt,now)=>{
-  const S=NB.S;if(!S||!game||!game.running)return;
+ function tick(E,dt){
+  const S=E.S();if(!S||!game||!game.running)return;
   const ms=Math.min(dt*1000,250);
   if(isHost){
    acc+=ms;
-   while(acc>=STEP&&game.running){acc-=STEP;const fr=hostFrame();NB.mpStep(fr);hostAuth();if(NB.S.exited)break}
+   while(acc>=STEP&&game.running){acc-=STEP;const fr=hostFrame();E.step(fr);E.auth();if(E.S().exited)break}
    S.acc=acc;
   }else{
-   NB.mpTakeActs();
+   E.pre();
    // my keys, 30 times a second, stamped with the step I was looking at
    sAcc+=ms;while(sAcc>=STEP){sAcc-=STEP;const s=takeSample();s.q=++inSeq;inQ.push(s);if(inQ.length>90)inQ.shift();if(s.l)pubDirty=true}
    // replay the host's frames at 30 Hz, faster whenever more than a couple are waiting:
@@ -31133,10 +31230,10 @@ const NBO=(()=>{
    if(ahead>2)due+=Math.min(8,Math.ceil((ahead-2)/2));
    let ran=0;
    while(due-->0&&game.frames.has(S.t+1)&&game.running){
-    const s=S.t+1,fr=game.frames.get(s);game.frames.delete(s);NB.mpStep(fr);ran++;
-    const au=game.aus.get(NB.S.t);if(au&&game.running){game.aus.delete(NB.S.t);checkAuth(au)}
-    game.lastT=NB.S.t;
-    if(NB.S.exited)break;
+    const s=S.t+1,fr=game.frames.get(s);game.frames.delete(s);E.step(fr);ran++;
+    const au=game.aus.get(E.S().t);if(au&&game.running){game.aus.delete(E.S().t);E.fix(au)}
+    game.lastT=E.S().t;
+    if(E.S().exited)break;
    }
    if(!ran){starve+=ms;acc=Math.min(acc,STEP)}else starve=0;
    for(const t of game.frames.keys())if(t<=S.t)game.frames.delete(t);
@@ -31146,6 +31243,11 @@ const NBO=(()=>{
   }
   publish();
  };
+ const ENG={
+  nb:{S:()=>NB.S,step:fr=>NB.mpStep(fr),auth:()=>hostAuth(),fix:au=>checkAuth(au),pre:()=>NB.mpTakeActs()},
+  dr:{S:()=>DR.S,step:fr=>DR.mpStep(fr),auth:()=>{const S=DR.S;if(S&&S.mp&&!(S.t%30))game.au=DR.mpAuth()},fix:au=>{if(DR.mpFix(au))game.desync++},pre:()=>{}}};
+ NB.mpTick=(dt,now)=>{if(game&&!game.dr)tick(ENG.nb,dt)};
+ DR.mpTick=dt=>{if(game&&game.dr)tick(ENG.dr,dt)};
  // Every second the host says what HP everyone and every monster has; a copy that drifted
  // (floating-point differences between browsers) is put back.
  function checkAuth(au){
@@ -31160,6 +31262,13 @@ const NBO=(()=>{
  NB.draw=function(now){
   baseDraw(now);
   if(!game||!game.running||isHost||starve<700)return;
+  const U=UT_SCALE;ctx.save();ctx.setTransform(U,0,0,U,0,0);ctx.font='16px UT8Bit, monospace';ctx.textAlign='center';
+  ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(200,200,240,28);ctx.fillStyle='#ffff00';ctx.fillText('WAITING FOR HOST...',320,219);ctx.restore();
+ };
+ const baseDrRender=DR.render;
+ DR.render=function(){
+  baseDrRender();
+  if(!game||!game.running||!game.dr||isHost||starve<700)return;
   const U=UT_SCALE;ctx.save();ctx.setTransform(U,0,0,U,0,0);ctx.font='16px UT8Bit, monospace';ctx.textAlign='center';
   ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(200,200,240,28);ctx.fillStyle='#ffff00';ctx.fillText('WAITING FOR HOST...',320,219);ctx.restore();
  };
@@ -31270,14 +31379,14 @@ const NBO=(()=>{
    $('nboStart').style.display=isHost?'':'none';
    const g=game&&!game.over&&game.st!=='end';
    $('nboStart').disabled=!!g||lobby.some(p=>!p.ready);
-   $('nboStart').textContent='START: '+bossLabel();
+   $('nboStart').textContent='START: '+(drScreen()?drLabel():bossLabel());
    if(isHost&&game&&game.st==='setup'){const c=Object.values(game.clients);setStatus(`sending the fight... ${c.filter(x=>x.ok).length}/${c.length} ready`)}
    else if(!isHost&&game&&!game.ok&&!game.over)setStatus(`getting the fight... ${game.parts.filter(v=>v!=null).length}/${game.N||'?'}`);
    else if(!isHost&&!joined)setStatus('waiting for the host...');
-   else if(isHost&&lobby.length===0)setStatus('share the code. pick the fight on the title screen, then START.');
+   else if(isHost&&lobby.length===0)setStatus('share the code. pick the fight on the title screen (or in the DELTARUNE tab), then START.');
    else if(isHost)setStatus(lobby.some(p=>!p.ready)?'waiting for everyone to be READY':'ready to start');
    else setStatus(ready?'waiting for the host to start':'press READY');
-   $('nboNote').textContent=`online build ${ONLINE_BUILD}, via ${T.label.toLowerCase()}. the host's fight, settings and items are used. FIGHT/ACT/ITEM/MERCY take turns; everyone dodges at once, each with their own SOUL. ESC leaves a fight.`;
+   $('nboNote').textContent=`online build ${ONLINE_BUILD}, via ${T.label.toLowerCase()}. the host's fight, settings and items are used. FIGHT/ACT/ITEM/MERCY take turns; everyone dodges at once, each with their own SOUL. DELTARUNE (host it from the DELTARUNE tab): player 1 is the first hero and the SOUL, player 2 the next hero, player 3 the one after. ESC leaves a fight.`;
   }else{
    $('nboNote').textContent=inArtifact()?'in this app, everyone in the room needs access to this page (share it with them).':'works between copies of this page on the same site (e.g. GitHub Pages).';
   }
