@@ -27937,6 +27937,7 @@ const DR=(()=>{
   else{S.myfight=4;S.spellphase={t:0,alarm:5,active:0,char:0,castyet:0,total:0,using:[0,0,0],gotspell:[0,0,0],gotitem:[0,0,0],delay:10}}
  }
  function mnendturn(){
+  S.jfree=0;S.hsp=0;if(S.jhud||(S.bp<S.bpy&&S.intro!==1)){S.jhud=0;S.intro=1}
   if(monsterpop()===0){wincombat();return}
   if(S.mons.some(m=>m.alive&&m.endAfterTurn)){for(const m of S.mons)if(m.endAfterTurn){m.alive=false;m.drawGone=1}wincombat();return}
   S.mnfight=0;S.myfight=0;S.bmenuno=0;S.charturn=0;S.turn++;
@@ -29630,6 +29631,7 @@ const DR=(()=>{
   if(m.def.step&&m.alive)m.def.step(m);
  }
  function boxStep(){
+  boxSideStep();
   const b=S.box;if(!b)return;
   if(b.grow===1&&b.timer<b.max)b.timer++;
   if(b.grow===3&&b.timer>0)b.timer--;
@@ -29638,9 +29640,13 @@ const DR=(()=>{
   }
   if(b.grow===1&&b.timer>=b.max)b.grow=2;
   for(const a of b.after)a.a-=.04;b.after=b.after.filter(a=>a.a>0);
-  const d=S.darkener;
-  if(d){if(d.on){if(d.amt<15)d.amt++}else{b.grow=3;if(d.amt>0)d.amt--;if(d.amt<=0)S.darkener=null}}
   if(b.grow===3&&b.timer<=0&&!b.after.length)S.box=null;
+ }
+ // the darkener and the SOUL flying home run even when an attack took the box away
+ // (JEVIL's final chaos), or they'd hang on into the next turn
+ function boxSideStep(){
+  const d=S.darkener;
+  if(d){if(d.on){if(d.amt<15)d.amt++}else{if(S.box)S.box.grow=3;if(d.amt>0)d.amt--;if(d.amt<=0)S.darkener=null}}
   const r=S.returnHeart;if(r){r.t++;const k=S.party[0];r.x+=(k.x+k.mywidth/2-r.x)/4;r.y+=(k.y+k.myheight/2-r.y)/4;if(r.t>10)S.returnHeart=null}
  }
  // FROSTBITE: a quick IceShock, then shards spiral in for a much heavier second hit
@@ -30504,6 +30510,7 @@ const DR=(()=>{
  function jevilFinal(g,c){
   const h=S.heart,L=x=>S.bullets.push({jv:1,k:'jlas',spr:'spr_joker_scythebody',mask:'spr_joker_scythebody_mask',x,y:-60,ang:rnd(360),rot:14,vs:5,grav:1,ex:0,w:2,xs:2,ys:2,alpha:1,active:1,perm:1,cut:1,dmg:c.dmg,target:3,grazed:0,grazepoints:15,timepoints:0,ctl:c});
   S.hsp=10;
+  if(c.rt>1100&&c.special<4){c.special=4;stopLoop(c.rum);c.fader=0;c.white=-1;S.turntimer=Math.min(S.turntimer,11)}
   // the whole screen is the arena now: the party panel slides away until the turn is over
   if(!c.special){snd('jbyebye');c.special=1;c.rank=16;c.rt=0;c.chase=0;c.amount=0;c.jt=0;c.prev=0;c.fader=0;c.white=-1;S.intro=2;S.jhud=1}
   if(c.rt<10){c.fader+=.1;if(S.box)S.box.fade=(S.box.fade||1)-.1;if(h)h.y+=16}
@@ -30512,7 +30519,8 @@ const DR=(()=>{
   if(c.rt>=60&&c.amount<30&&c.btimer>=c.rank){
    if(c.rank>7)c.rank--;
    let w=Math.floor(rnd(5));if(w===c.prev)w=Math.floor(rnd(5));
-   if(c.chase===3&&h){w=Math.max(0,Math.min(6,Math.floor((h.x+10)/90)));c.chase=0}
+   // (online every copy has its own SOUL, so the aimed scythe is a random one there)
+   if(c.chase===3){if(h&&!MP)w=Math.max(0,Math.min(6,Math.floor((h.x+10)/90)));c.chase=0}
    L(40+90*w);if(w===1)L(490);if(w===0)L(580);
    c.prev=w;c.btimer=0;c.chase++;c.amount++;
   }
@@ -30632,7 +30640,7 @@ const DR=(()=>{
    }
    if(b.ex===1){b.active=0;b.w+=8;if(b.w>=16)b.active=1;if(b.w>=32)b.ex=2}
    else if(b.ex===2){b.w-=4;if(b.w<=16){b.alpha-=.25;b.active=0}if(b.w<=0){b.dead=true;return}}
-   if(b.grazed===1){b.ctl.made+=.2;b.grazed=2}
+   if(b.grazed===1){if(!MP)b.ctl.made+=.2;b.grazed=2}
    if(b.active){const hw=2.5*b.w;const r=[-hw,-b.y,hw,640-b.y];if(heartTouches(b,[b.x-hw,0,b.x+hw,640])){if(S.inv<=0)damageHero(b)}else grazeCheck(b,[b.x-hw,0,b.x+hw,640])}
    return;
   }
