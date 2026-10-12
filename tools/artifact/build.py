@@ -193,10 +193,13 @@ def main():
     total = sum(os.path.getsize(os.path.join(OUT, p)) for p in files) + page
     print(f'build: {len(img)} sprites, {len(aud)} sounds, {len(fonts)} fonts -> page {page / 1e6:.2f} MB, '
           f'pack {os.path.getsize(os.path.join(OUT, "pack/assets.json")) / 1e6:.2f} MB, {len(files)} files, {total / 1e6:.2f} MB total')
-    # artifact limits: page and each file 16MB, one publish 255 files / 64MB
+    # artifact limits: page and each file 16MB; a version holds 511 files / 256MB, one publish
+    # sends 255 files / 64MB (updates only send what changed, so a fresh artifact goes up in batches)
     big = [p for p in files + ['ub.html'] if os.path.getsize(os.path.join(OUT, p)) > 16e6]
-    if big or len(files) > 254 or total > 64e6:
+    if big or len(files) > 510 or total > 256e6:
         sys.exit(f'build: over the artifact limits (files over 16MB: {big}, {len(files)} files, {total / 1e6:.1f} MB)')
+    if len(files) > 254 or total > 64e6:
+        print('build: too big for one publish; publishing to a new artifact has to go up in batches')
 
 
 if __name__ == '__main__':
