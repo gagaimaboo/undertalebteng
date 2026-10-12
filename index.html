@@ -26706,6 +26706,11 @@ const DR=(()=>{
  function mpPoll(){
   const fr=MP.frame||{};
   for(const ev of fr.ev||[])if(ev&&ev.t==='leave'&&MP.players[ev.p]){MP.players[ev.p].gone=true}
+  // my own SOUL flies on my keys right here; everyone else's comes with the host's frame
+  for(const k in KEY)MP.lk[k]=KEY[k].some(n=>!!key[n]);
+  if(fr.s)fr.s.forEach((r,i)=>{const p=MP.players[i];if(p&&r&&i!==MP.me)p.soul={x:r[0],y:r[1],b:r[2],t:S.t}});
+  // hits and grazes each player's own copy saw land on their SOUL, the same step everywhere
+  for(const v of fr.ac||[]){const [pi,mi,name,arg]=v;if(name==='hit')applyHeroDamage({target:mi,dmg:arg,noInv:1,from:pi});else if(name==='graze')tensionheal(arg/100)}
   MP.players.forEach((p,i)=>{const e=(fr.k&&fr.k[i])||[0,0];KEYN.forEach((k,b)=>{const h=!!((e[0]>>b)&1);p.P[k]=(h&&!p.H[k])||!!((e[1]>>b)&1);p.H[k]=h});p.at=(fr.at&&fr.at[i])||0});
   const c=MP.players[ctrlOf()]||MP.players[0];
   for(const k in KEY){P[k]=!!c.P[k];held[k]=!!c.H[k];latch[k]=false}
@@ -26733,7 +26738,9 @@ const DR=(()=>{
   // dearer the more of K. Round's HP is gone.
   12:{name:'FrostBuster',desc:'Frozen#Rude#Damage',target:2,get cost(){return frostCost()}}
  };
- function frostCost(){const k=S&&S.mons&&S.mons.find(m=>m.id==='kround');return Math.min(250,13+(k?Math.round((k.maxhp-Math.max(0,k.hp))*.15):0))}
+ // (outside the K. Round route it's 5% plus 10% a cast)
+ function frostCost(){const k=S&&S.mons&&S.mons.find(m=>m.id==='kround');if(S&&S.kw&&k)return Math.min(250,13+Math.round((k.maxhp-Math.max(0,k.hp))*.15));return Math.min(250,13+25*((S&&S.fbx&&S.fbx.uses)||0))}
+ const fbState=()=>S.kw||(S.fbx=S.fbx||{uses:0});
  // weapons (one owner) and armors (anyone) the SHOP sells and the CUSTOM hub equips
  const DRGEAR={
   spookysword:{name:'Spookysword',type:'weapon',who:'kris',at:2,price:160,desc:'A black sword with a spooky aura.'},
@@ -27737,16 +27744,22 @@ const DR=(()=>{
  }
  function mpMake(o){
   const mp={players:o.players.map((q,i)=>({i,id:q.id,name:String(q.name||'PLAYER').toUpperCase().slice(0,12),gone:false,P:{},H:{},at:0})),
-   me:o.me|0,roles:[0,0,0],rs:(o.seed>>>0)||1,inStep:true,frame:null};
+   me:o.me|0,roles:[0,0,0],rs:(o.seed>>>0)||1,inStep:true,frame:null,lk:{},acts:[],actSeq:0,actOut:0};
   mp.rand=()=>{let t=(mp.rs=(mp.rs+0x6D2B79F5)|0);t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296};
   return mp;
  }
  // one step from the host's frame
  function mpStep(fr){if(!S||!MP||S.exited)return;MP.frame=fr||null;MP.inStep=true;try{step()}finally{if(MP){MP.inStep=false;MP.frame=null}}}
  // every second the host says where HP, mercy and TP stand; a copy that drifted is put back
- function mpAuth(){return [S.t,S.party.map(h=>h.hp),S.mons.map(m=>m.hp),S.mons.map(m=>Math.round(m.mercy)),Math.round(S.tension)]}
+ function mpAuth(){return [S.t,S.party.map(h=>h.hp),S.mons.map(m=>m.hp),S.mons.map(m=>Math.round(m.mercy)),Math.round(S.tension),MP.rs]}
+ // my SOUL for the host to pass on, and my hits/grazes (the host takes its own each frame)
+ function mpSoul(){const h=S&&S.heart;if(!MP||!h||S.mnfight!==2||h.fly>0)return null;return [h.x,h.y,S.inv>0||soulOff()?1:0,S.turn]}
+ function mpActs(){return MP?MP.acts:[]}
+ function mpTakeActs(){if(!MP)return [];const out=MP.acts.filter(v=>v[0]>MP.actOut).map(v=>v.slice(1));if(MP.acts.length)MP.actOut=MP.acts[MP.acts.length-1][0];return out}
  function mpFix(au){
-  if(!S||!Array.isArray(au))return false;const [,hp,mh,mm,tp]=au;let bad=false;
+  if(!S||!Array.isArray(au))return false;const [,hp,mh,mm,tp,rs]=au;let bad=false;
+  // the bullets each copy aims at its own SOUL can pull a different number of random rolls
+  if(Number.isFinite(rs)&&MP)MP.rs=rs|0;
   S.party.forEach((h,i)=>{const v=hp&&hp[i];if(Number.isFinite(v)&&h.hp!==v){bad=true;h.hp=v}});
   S.mons.forEach((m,i)=>{const v=mh&&mh[i],w=mm&&mm[i];if(Number.isFinite(v)&&m.hp!==v){bad=true;m.hp=v}if(Number.isFinite(w)&&Math.round(m.mercy)!==w){bad=true;m.mercy=w}});
   if(Number.isFinite(tp)&&Math.round(S.tension)!==tp){bad=true;S.tension=tp}
@@ -27934,7 +27947,7 @@ const DR=(()=>{
    return ['* '+h.name+' cast PACIFY!/%'];
   }
   if(spell===4)return ['* '+h.name+' used RUDE BUSTER!/%'];
-  if(spell===12){const n=S.kw?S.kw.uses:0;return ['* '+h.name+' used FROST BUSTER'+(n>=4?'!!!':n>=2?'!!':'!')+'/%']}
+  if(spell===12){const n=fbState().uses;return ['* '+h.name+' used FROST BUSTER'+(n>=4?'!!!':n>=2?'!!':'!')+'/%']}
   if(spell===8)return ['* '+h.name+' cast SLEEPMIST!/%'];
   if(spell===9)return ['* '+h.name+' cast ICESHOCK!/%'];
   if(spell===10)return ['* '+h.name+' cast SNOWGRAVE!/%'];
@@ -27984,9 +27997,9 @@ const DR=(()=>{
   if(S.kw&&!S.kw.learned&&(spell===4||spell===9)&&S.mons[star]&&S.mons[star].id==='kround'){if(spell===4)S.kw.rb++;else S.kw.ice++;S.kw.dirty=1}
   if(spell===12){
    if(!S.mons[star]||!S.mons[star].alive){star=S.mons.findIndex(m=>m.alive);if(star<0){S.spelldelay=30;return}}
-   const m=S.mons[star],kw=S.kw||{uses:0},lv=kw.uses;
+   const m=S.mons[star],kw=fbState(),lv=kw.uses;
    // 200 the first time, +220 a cast after that, up to K. Round's whole 1300
-   const dmg=m.id==='kround'?Math.min(m.maxhp,200+lv*220):Math.ceil(h.mag*5+h.at*11-m.df*3)+lv*40;
+   const dmg=m.id==='kround'&&S.kw?Math.min(m.maxhp,200+lv*220):Math.ceil(h.mag*5+h.at*11-m.df*3)+lv*40;
    kw.uses++;snd('icespell',1.2);
    S.fx.push({kind:'rudebuster',h,m,star,caster,t:0,damage:dmg,frost:1,lv,flakes:[],ring:0});
    h.hideFor=28;S.spelldelay=75+Math.min(30,lv*6);return;
@@ -28872,15 +28885,18 @@ const DR=(()=>{
   const h=S.heart;if(!h)return;
   if(h.fly>0){h.fly--;h.x+=(h.tx-h.x)/(h.fly+1);h.y+=(h.ty-h.y)/(h.fly+1);return}
   if(S.mnfight!==2)return;
-  const sp=4;let px=0,py=0;
-  if(held.right)px=sp;if(held.left)px=-sp;if(held.down)py=sp;if(held.up)py=-sp;
-  if(held.cancel){px=Math.ceil(px*.5);py=Math.ceil(py*.5)}
+  const sp=4,K=MP?MP.lk:held;let px=0,py=0;
+  if(K.right)px=sp;if(K.left)px=-sp;if(K.down)py=sp;if(K.up)py=-sp;
+  if(K.cancel){px=Math.ceil(px*.5);py=Math.ceil(py*.5)}
   // The box walls (obj_growtangle as battlesolid): keep the 20x20 SOUL inside.
   h.x+=px;h.y+=py;if(S.box)clampHeart();
   if(S.inv>0){S.inv--;h.img+=.25}else h.img=0;
  }
+ // online: my hero is down, so my SOUL just watches
+ const soulOff=()=>{if(!MP)return false;const c=myHero();return c>=0&&S.party[c].hp<=0};
+ function myHero(){if(!MP)return 0;for(let c=0;c<3;c++){const h=S.party[c];if(h&&!h.absent&&owner(c)===MP.me)return c}return -1}
  function heartTouches(b,box){
-  const h=S.heart;if(!h)return false;
+  const h=S.heart;if(!h||soulOff())return false;
   for(const [mx,my] of masks.heart||[]){const px=h.x+mx+.5,py=h.y+my+.5;if(px>=box[0]&&px<box[2]&&py>=box[1]&&py<box[3])return true}
   return false;
  }
@@ -28891,7 +28907,7 @@ const DR=(()=>{
  }
  // Heart mask vs a bullet's bbox rect [l,t,r,b] around its origin, rotated by ang (image_angle).
  function heartTouchesRot(b,r,ang){
-  const h=S.heart;if(!h)return false;
+  const h=S.heart;if(!h||soulOff())return false;
   const c=Math.cos(ang*Math.PI/180),s=Math.sin(ang*Math.PI/180);
   for(const [mx,my] of masks.heart||[]){const dx=h.x+mx+.5-b.x,dy=h.y+my+.5-b.y;const lx=dx*c-dy*s,ly=dx*s+dy*c;if(lx>=r[0]&&lx<r[2]&&ly>=r[1]&&ly<r[3])return true}
   return false;
@@ -28904,12 +28920,15 @@ const DR=(()=>{
  // bbox of spr_diamondbullet (10..23, 14..17) and spr_diamondbullet_vert (14..18, 11..22) around their origins.
  const DBOX=[10-16,14-15,23-16+1,17-15+1],VBOX=[14-16,11-16,18-16+1,22-16+1];
  function grazeCheck(b,box){
-  const h=S.heart;if(!h||S.inv>0)return;
+  const h=S.heart;if(!h||S.inv>0||soulOff())return;
   const gx=h.x+10-25,gy=h.y+10-25;
   if(box[2]>gx&&box[0]<gx+50&&box[3]>gy&&box[1]<gy+50)grazeHit(b);
  }
  // obj_grazebox: full points on the first touch, a trickle while it stays close.
  function grazeHit(b){
+  // online: the TP goes out with the next frame, and a graze doesn't shorten the turn
+  // (that would split the copies apart)
+  if(MP){const n=b.grazed?b.grazepoints/30:b.grazepoints;if(!b.grazed){b.grazed=1;snd('graze');S.grazebox.timer=10}else{if(S.grazebox.timer>=0&&S.grazebox.timer<4)S.grazebox.timer=3;if(S.grazebox.timer<2)S.grazebox.timer=2}mpAct(0,'graze',Math.round(n*100));return}
   if(b.grazed){tensionheal(b.grazepoints/30);if(S.turntimer>=10)S.turntimer-=b.timepoints/30;if(S.grazebox.timer>=0&&S.grazebox.timer<4)S.grazebox.timer=3;if(S.grazebox.timer<2)S.grazebox.timer=2}
   else{b.grazed=1;tensionheal(b.grazepoints);if(S.turntimer>=10)S.turntimer-=b.timepoints;snd('graze');S.grazebox.timer=10}
  }
@@ -29068,12 +29087,12 @@ const DR=(()=>{
  function ringHit(cx,cy,spr,sc){
   // nothing hurts while the SOUL is still flying in or the box is still growing:
   // the full-size spike ring used to catch the SOUL on its way to the middle
-  const h=S.heart;if(!h||h.fly>0||(S.box&&S.box.grow!==2))return false;const [w,hh]=meta(spr),ox=w/2*sc,oy=hh/2*sc,ix=(w/2-2)*sc,iy=(hh/2-2)*sc;
+  const h=S.heart;if(!h||soulOff()||h.fly>0||(S.box&&S.box.grow!==2))return false;const [w,hh]=meta(spr),ox=w/2*sc,oy=hh/2*sc,ix=(w/2-2)*sc,iy=(hh/2-2)*sc;
   for(const [mx,my] of masks.heart||[]){const dx=Math.abs(h.x+mx+.5-cx),dy=Math.abs(h.y+my+.5-cy);if(dx<=ox&&dy<=oy&&(dx>=ix||dy>=iy))return true}
   return false;
  }
  function ringGraze(b,cx,cy,spr,sc){
-  const h=S.heart;if(!h||S.inv>0||h.fly>0||(S.box&&S.box.grow!==2))return;const [w,hh]=meta(spr),ox=w/2*sc,oy=hh/2*sc,gx=h.x+10,gy=h.y+10;
+  const h=S.heart;if(!h||S.inv>0||soulOff()||h.fly>0||(S.box&&S.box.grow!==2))return;const [w,hh]=meta(spr),ox=w/2*sc,oy=hh/2*sc,gx=h.x+10,gy=h.y+10;
   if(Math.abs(gx-cx)>ox-25-2*sc||Math.abs(gy-cy)>oy-25-2*sc)grazeHit(b);
  }
  const chainHist=()=>Array.from({length:41},()=>0);
@@ -29290,8 +29309,7 @@ const DR=(()=>{
    if(h&&S.inv<=0){
     const gx=h.x+10-25,gy=h.y+10-25;
     if(box[2]>gx&&box[0]<gx+50&&box[3]>gy&&box[1]<gy+50){
-     if(b.grazed){tensionheal(b.grazepoints/30);if(S.turntimer>=10)S.turntimer-=b.timepoints/30;if(S.grazebox.timer>=0&&S.grazebox.timer<4)S.grazebox.timer=3;if(S.grazebox.timer<2)S.grazebox.timer=2}
-     else{b.grazed=1;tensionheal(b.grazepoints);if(S.turntimer>=10)S.turntimer-=b.timepoints;snd('graze');S.grazebox.timer=10}
+     grazeHit(b);
     }
    }
   }
@@ -29299,12 +29317,19 @@ const DR=(()=>{
   if(S.grazebox.timer>-1)S.grazebox.timer--;
  }
  // scr_damage + scr_damage_calculation.
+ // online: a bullet hitting MY SOUL on my copy is sent through the host and lands on every
+ // copy the same step (on my hero; on everyone for hit-all attacks)
+ function mpAct(mi,name,arg){MP.acts.push([++MP.actSeq,mi,name,arg]);if(MP.acts.length>40)MP.acts.shift()}
  function damageHero(b){
+  if(MP){if(soulOff())return;const c=myHero();mpAct(b.target===3?3:c,'hit',Math.max(0,Math.round(b.dmg)||0));S.inv=Math.round(40*(S.invc||1));return}
+  applyHeroDamage(b);
+ }
+ function applyHeroDamage(b){
   if(b.target===3){
    // scr_damage_all: each standing hero takes the hit, one invincibility window.
    const alive=S.party.filter(p=>p.hp>0);if(!alive.length)return;
-   for(const p of alive)damageHero({...b,target:p.i,noInv:1});
-   S.inv=Math.round(40*(S.invc||1));return;
+   for(const p of alive)applyHeroDamage({...b,target:p.i,noInv:1});
+   if(!MP)S.inv=Math.round(40*(S.invc||1));return;
   }
   let target=b.target;let h=S.party[target];
   if(!h||h.hp<=0){const alive=S.party.filter(p=>p.hp>0);h=alive[Math.floor(R()*alive.length)]||S.party[0];target=h.i}
@@ -30012,6 +30037,15 @@ const DR=(()=>{
  }
  function drawHeart(g){
   const h=S.heart;
+  // online: everyone else's SOUL, in their hero's colour, with their name
+  if(MP&&S.mnfight===2)MP.players.forEach((p,i)=>{
+   if(i===MP.me||p.gone||!p.soul||S.t-p.soul.t>8)return;
+   let col='#ffffff';for(let c=0;c<3;c++){const hh=S.party[c];if(hh&&!hh.absent&&owner(c)===i){col=HPCOLOR[hh.char-1];break}}
+   const a=p.soul.b?.45+.3*Math.sin(S.t/2):.9;
+   draw(g,'spr_dodgeheart',0,p.soul.x,p.soul.y,1,1,0,a,{fog:col});
+   text(g,'fnt_main',p.name,p.soul.x+10,p.soul.y-14,col,{align:'center',alpha:.8});
+  });
+  if(h&&MP&&soulOff()){draw(g,'spr_dodgeheart',0,h.x,h.y,1,1,0,.35);return}
   if(h){
    if(S.grazebox.timer>0){const a=S.grazebox.timer/6;draw(g,'spr_grazeappear',0,h.x+10,h.y+10,1,1,0,a);draw(g,'spr_grazeappear',3,h.x+10,h.y+10,1,1,0,a-.2)}
    draw(g,'spr_dodgeheart',S.inv>0?h.img:0,h.x,h.y);
@@ -30151,7 +30185,7 @@ const DR=(()=>{
  }
  // after learning it, Susie keeps an icy aura, stronger with every cast
  function drawFrostAura(g,h){
-  const lv=Math.min(6,1+S.kw.uses),t=S.t,[n,i]=heroSprite(h),o=1+lv*.6,a=.12+.05*lv+.06*Math.sin(t/8);
+  const lv=Math.min(6,1+fbState().uses),t=S.t,[n,i]=heroSprite(h),o=1+lv*.6,a=.12+.05*lv+.06*Math.sin(t/8);
   for(const [dx,dy] of [[-1,0],[1,0],[0,-1],[0,1]])draw(g,n,i,h.x+dx*o,h.y+dy*o,2,2,0,a,{fog:'#9fe8ff'});
   const k=lv*2;for(let j=0;j<k;j++){const q=t/24+j*Math.PI*2/k;draw(g,'spr_icespell_snowflake',0,h.x+30+Math.cos(q)*(34+lv*4),h.y+44+Math.sin(q)*(16+lv*2),.4+lv*.05,.4+lv*.05,t*3,.55)}
  }
@@ -30420,7 +30454,7 @@ const DR=(()=>{
   g.translate(sh,0);
   drawBack(g);
   if(S.darkener){g.fillStyle='rgba(0,0,0,'+(S.darkener.amt/20)+')';g.fillRect(-40,-40,720,560)}
-  for(let i=S.party.length-1;i>=0;i--){const h=S.party[i];if(S.kw&&S.kw.learned&&h.id==='susie'&&!h.absent&&h.hp>0)drawFrostAura(g,h);drawHero(g,h)}
+  for(let i=S.party.length-1;i>=0;i--){const h=S.party[i];if(h.id==='susie'&&!h.absent&&h.hp>0&&((S.kw&&S.kw.learned)||(S.fbx&&S.fbx.uses)))drawFrostAura(g,h);drawHero(g,h)}
   for(const m of S.mons)drawMonster(g,m);
   drawFx(g);
   drawBox(g);
@@ -30451,7 +30485,7 @@ const DR=(()=>{
   try{music&&music.pause()}catch(_){}
   if(S.onExit)S.onExit(reason);
  }
- const api={start,update,render,onKey,load,exit,mpStep,mpAuth,mpFix,mpTick:null,get S(){return S},get ready(){return ready},items:ITEM,gear:DRGEAR,modes:DRMODES,modeMult:drModeMult,spells:SPELL,heroes:HERO,gfx:{draw,frame,meta,text,textWidth,darkbox,gridBack,C},enemies:ENEMY,enemyIds:ENEMY_IDS,maxSupports:MAX_SUPPORTS,parties:PARTIES,heroes:HERO,_dbg:{P,held,mercyadd,heroHit,dmgwriter}};
+ const api={start,update,render,onKey,load,exit,mpStep,mpAuth,mpFix,mpSoul,mpActs,mpTakeActs,mpTick:null,get S(){return S},get ready(){return ready},items:ITEM,gear:DRGEAR,modes:DRMODES,modeMult:drModeMult,spells:SPELL,heroes:HERO,gfx:{draw,frame,meta,text,textWidth,darkbox,gridBack,C},enemies:ENEMY,enemyIds:ENEMY_IDS,maxSupports:MAX_SUPPORTS,parties:PARTIES,heroes:HERO,_dbg:{P,held,mercyadd,heroHit,dmgwriter}};
 return api;
 })();
 
@@ -30617,7 +30651,7 @@ function drSaveCustom(){drLS('utbg.drCustom',JSON.stringify(drCustom))}
 function drCustomCfg(){drCustomReady();return JSON.parse(JSON.stringify(drCustom))}
 const drHub={tab:0,focus:0,row:0,hero:0,top:0},drShop={tab:0,row:0,top:0,msg:''};
 const DR_HUB_TABS=['PARTY','STATS','SPELLS','ITEMS','GEAR','MODES'];
-const DR_SPELL_LIST=[2,3,4,8,9,10,11];
+const DR_SPELL_LIST=[2,3,4,8,9,10,11,12];
 const STAT_KEYS=[['hp','HP',10,1,999],['at','ATTACK',1,0,99],['df','DEFENSE',1,0,99],['mag','MAGIC',1,0,99]];
 // one row = {label, value?, left?(), right?(), ok?(), on?}
 function drHubRows(){
@@ -30863,7 +30897,7 @@ boot().catch(err=>{
 const NBO=(()=>{
  // PROTO changes whenever online play changes, so two different builds never share a room
  // (they'd fall out of step); ONLINE_BUILD is shown in the panel to compare builds.
- const MAX=5,PROTO='nbo4',STEP=1000/30,ONLINE_BUILD='65';
+ const MAX=5,PROTO='nbo5',STEP=1000/30,ONLINE_BUILD='66';
  const KEYMAP={confirm:['z','enter'],cancel:['x','shift'],menu:['c','control'],up:['arrowup','w'],down:['arrowdown','s'],left:['arrowleft','a'],right:['arrowright','d']};
  const B64='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_',B64I={};[...B64].forEach((c,i)=>B64I[c]=i);
  const enc3=v=>B64[v&63]+B64[(v>>6)&63]+B64[(v>>12)&63];
@@ -31047,6 +31081,7 @@ const NBO=(()=>{
    if(game){st.g={id:game.id,ok:game.ok?1:0,k:game.ackT||game.lastT||0};const mineSb=game.sbs&&game.sbs[T.self];if(mineSb)st.sb={g:game.id,s:packSb(mineSb)}}
    const q=inQ.slice(-36);
    if(q.length){let d='';const a=[];for(const s of q){d+=enc3(s.h|(s.l<<7));if(s.a)a.push([s.q,s.a])}st.i={q:q[q.length-1].q,d};if(a.length)st.i.a=a}
+   if(game&&game.running&&game.dr){const p=DR.mpSoul();if(p)st.i=Object.assign(st.i||{},{p});const ac=DR.mpActs();if(ac.length)st.i=Object.assign(st.i||{},{ac:ac.slice(-12)})}
    const r=game&&game.running&&!game.dr?NB.mpReport():null;
    if(r){st.i=st.i||{};st.i.dm=r.total;if(r.own)st.i.p=[r.x,r.y,r.b,r.turn];const ac=NB.mpActs();if(ac.length)st.i.ac=ac.slice(-12)}
   }
@@ -31179,7 +31214,19 @@ const NBO=(()=>{
   });
   const fr={k};if(anyAt)fr.at=at;
   if(game.leaves.length){fr.ev=game.leaves.map(p=>({t:'leave',p}));game.leaves=[]}
-  if(game.dr){game.F.push(fr);return fr} // DELTARUNE: keys only, everything else follows from them
+  if(game.dr){
+   // DELTARUNE: keys, where everyone's SOUL is (by their own word) and what hit it
+   const S=DR.S,sp=[];let anyS=false;
+   game.p.forEach((id,i)=>{let r=null;
+    if(i===0){const m=DR.mpSoul();if(m)r=[m[0],m[1],m[2]]}
+    else{const c=game.clients[id];if(S&&S.mnfight===2&&c&&!c.gone&&c.pos&&c.pos[3]===S.turn)r=[c.pos[0],c.pos[1],c.pos[2]?1:0]}
+    if(r)anyS=true;sp.push(r)});
+   if(anyS)fr.s=sp;
+   const ac=DR.mpTakeActs().map(v=>[0,...v]);
+   game.p.forEach((id,i)=>{const c=game.clients[id];if(i&&c&&c.acNew.length){if(!c.gone)for(const v of c.acNew)ac.push([i,...v]);c.acNew=[]}});
+   if(ac.length)fr.ac=ac;
+   game.F.push(fr);return fr;
+  }
   // during the enemy's turn: where everyone's SOUL is, by their own word, and the HP
   // their own copies took since the last step
   const S=NB.S,mine=NB.mpReport(),atk=!!(S&&S.mnfight===2),sp=[],dm=[];let anyS=false;
@@ -31359,7 +31406,7 @@ const NBO=(()=>{
  };
  const ENG={
   nb:{S:()=>NB.S,step:fr=>NB.mpStep(fr),auth:()=>hostAuth(),fix:au=>checkAuth(au),pre:()=>NB.mpTakeActs()},
-  dr:{S:()=>DR.S,step:fr=>DR.mpStep(fr),auth:()=>{const S=DR.S;if(S&&S.mp&&!(S.t%30))game.au=DR.mpAuth()},fix:au=>{if(DR.mpFix(au))game.desync++},pre:()=>{}}};
+  dr:{S:()=>DR.S,step:fr=>DR.mpStep(fr),auth:()=>{const S=DR.S;if(S&&S.mp&&!(S.t%15))game.au=DR.mpAuth()},fix:au=>{if(DR.mpFix(au))game.desync++},pre:()=>{}}};
  NB.mpTick=(dt,now)=>{if(game&&!game.dr)tick(ENG.nb,dt)};
  DR.mpTick=dt=>{if(game&&game.dr)tick(ENG.dr,dt)};
  // Every second the host says what HP everyone and every monster has; a copy that drifted
@@ -31500,7 +31547,7 @@ const NBO=(()=>{
    else if(isHost&&lobby.length===0)setStatus('share the code. pick the fight on the title screen (or in the DELTARUNE tab), then START.');
    else if(isHost)setStatus(lobby.some(p=>!p.ready)?'waiting for everyone to be READY':'ready to start');
    else setStatus(ready?'waiting for the host to start':'press READY');
-   $('nboNote').textContent=`online build ${ONLINE_BUILD}, via ${T.label.toLowerCase()}. the host's fight, settings and items are used. FIGHT/ACT/ITEM/MERCY take turns; everyone dodges at once, each with their own SOUL. DELTARUNE (host it from the DELTARUNE tab): player 1 is the first hero and the SOUL, player 2 the next hero, player 3 the one after. ESC leaves a fight.`;
+   $('nboNote').textContent=`online build ${ONLINE_BUILD}, via ${T.label.toLowerCase()}. the host's fight, settings and items are used. FIGHT/ACT/ITEM/MERCY take turns; everyone dodges at once, each with their own SOUL. DELTARUNE (host it from the DELTARUNE tab): player 1 is the first hero, player 2 the next hero, player 3 the one after; everyone dodges with their own SOUL, and a hit hurts your own hero. ESC leaves a fight.`;
   }else{
    $('nboNote').textContent=inArtifact()?'in this app, everyone in the room needs access to this page (share it with them).':'works between copies of this page on the same site (e.g. GitHub Pages).';
   }
