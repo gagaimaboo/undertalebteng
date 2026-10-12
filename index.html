@@ -2457,7 +2457,7 @@ function play(name,rate=1){
    });
  }catch(_){}
 }
-const MENU_MUSIC_SCREENS=new Set(['title','enemies','drroster','drsupport','kills','spares','settings','creator','shop','customhub','customize','supportselect','lvselect','tutorialPrompt','tutorial']);
+const MENU_MUSIC_SCREENS=new Set(['title','enemies','drroster','drsupport','drcustom','drshop','kills','spares','settings','creator','shop','customhub','customize','supportselect','lvselect','tutorialPrompt','tutorial']);
 let menuMusicAutoplayTried=false;
 function menuMusicScreen(){return MENU_MUSIC_SCREENS.has(screen)}
 function battleMusicTracks(){
@@ -6622,7 +6622,7 @@ let ui6Hits=[],ui6Wheels=[],ui6Recording=true;
 function ui6Hit(r,click,hover){if(ui6Recording)ui6Hits.push({r,click,hover})}
 function ui6WheelArea(r,fn){if(ui6Recording)ui6Wheels.push({r,fn})}
 function ui6In(r,x,y){return x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h}
-const UI6_SCREENS=new Set(['title','enemies','supportselect','drroster','drsupport','customhub','creator','customize','kills','spares','shop','bossrush','bossrushBreak','bossrushCodex','bossrushResults','settings','mods','lvselect','tutorialPrompt','tutorial']);
+const UI6_SCREENS=new Set(['title','enemies','supportselect','drroster','drsupport','drcustom','drshop','customhub','creator','customize','kills','spares','shop','bossrush','bossrushBreak','bossrushCodex','bossrushResults','settings','mods','lvselect','tutorialPrompt','tutorial']);
 function ui6CanvasPoint(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height}}
 function ui6FindHit(x,y){for(let i=ui6Hits.length-1;i>=0;i--)if(ui6In(ui6Hits[i].r,x,y))return ui6Hits[i];return null}
 window.addEventListener('pointermove',e=>{
@@ -7309,6 +7309,8 @@ function render(now){
  if(screen==='enemies'){withMenuSkin(()=>drawEnemySelect(now));drawUiScreenCurtain(now);return}
  if(screen==='supportselect'){withMenuSkin(()=>drawSupportSelect(now));drawUiScreenCurtain(now);return}
  if(screen==='drroster'){withMenuSkin(()=>drawDrRoster(now));drawUiScreenCurtain(now);return}
+ if(screen==='drcustom'){withMenuSkin(()=>drawDrHub(now));drawUiScreenCurtain(now);return}
+ if(screen==='drshop'){withMenuSkin(()=>drawDrShop(now));drawUiScreenCurtain(now);return}
  if(screen==='drsupport'){withMenuSkin(()=>drawDrSupport(now));drawUiScreenCurtain(now);return}
  if(screen==='customhub'){withMenuSkin(()=>drawCustomHub(now));drawUiScreenCurtain(now);return}
  if(screen==='creator'){withMenuSkin(()=>drawCharacterCreator(now));drawUiScreenCurtain(now);return}
@@ -7529,6 +7531,7 @@ function keyDown(e){
 
  key[k]=true;key[low]=true;
  // The new engine polls key[] once per 30 fps step; only ESC (leave) is handled here.
+ if(screen==='drcustom'||screen==='drshop'){drHubKey(k,low,e.repeat);if(k.startsWith('Arrow')||k===' ')e.preventDefault();return}
  if(screen==='drroster'||screen==='drsupport'){if(!e.repeat)drRosterKey(k,low);if(k.startsWith('Arrow')||k===' ')e.preventDefault();return}
  if(screen==='dr'){if(!e.repeat)DR.onKey(low);if(k==='Escape'&&!e.repeat)DR.exit('quit');if(k.startsWith('Arrow')||k===' ')e.preventDefault();return}
  if(screen==='nb'){if(!e.repeat){NB.latch(low);if(low==='o'&&NB.floweySave)NB.floweySave();if(low==='p'&&NB.floweyLoad)NB.floweyLoad()}if(k==='Escape'&&!e.repeat)nbQuit();if(k.startsWith('Arrow')||k===' ')e.preventDefault();return}
@@ -26710,6 +26713,30 @@ const DR=(()=>{
   10:{name:'SnowGrave',desc:'Fatal',target:0,cost:250},
   11:{name:'FrostBite',desc:'Double#ICE#strike',target:2,cost:125}
  };
+ // weapons (one owner) and armors (anyone) the SHOP sells and the CUSTOM hub equips
+ const DRGEAR={
+  spookysword:{name:'Spookysword',type:'weapon',who:'kris',at:2,price:160,desc:'A black sword with a spooky aura.'},
+  mechasaber:{name:'Mechasaber',type:'weapon',who:'kris',at:4,price:400,desc:'A sword with a hinge in the blade.'},
+  braveax:{name:'Brave Ax',type:'weapon',who:'susie',at:2,price:160,desc:'A bold ax. Feels heroic.'},
+  devilsknife:{name:'Devilsknife',type:'weapon',who:'susie',at:5,mag:-1,price:500,desc:'An ax that laughs back.'},
+  ragger:{name:'Ragger',type:'weapon',who:'ralsei',at:2,mag:1,price:180,desc:'A rag that tears through.'},
+  daintyscarf:{name:'DaintyScarf',type:'weapon',who:'ralsei',mag:3,price:300,desc:'Soft and fancy. Healing up.'},
+  thornring:{name:'ThornRing',type:'weapon',who:'noelle',mag:4,hp:-10,price:350,desc:'Hurts to wear. Ice grows.'},
+  snowring:{name:'SnowRing',type:'weapon',who:'noelle',mag:2,price:180,desc:'A ring of frozen light.'},
+  ambercard:{name:'Amber Card',type:'armor',df:1,price:60,desc:'A thin square charm.'},
+  dicebrace:{name:'Dice Brace',type:'armor',df:2,price:150,desc:'A bracelet of chunky dice.'},
+  pinkribbon:{name:'Pink Ribbon',type:'armor',df:1,hp:10,price:120,desc:'Cute. Somehow sturdy.'},
+  whiteribbon:{name:'White Ribbon',type:'armor',df:2,hp:10,price:220,desc:'Crisp and clean.'},
+  ironshackle:{name:'IronShackle',type:'armor',at:1,df:2,price:260,desc:'Heavy. Hits harder.'},
+  glowwrist:{name:'GlowWrist',type:'armor',df:3,price:380,desc:'A glowing band of light.'}
+ };
+ const DRMODES=[
+  {id:'nohit',name:'NO HIT',mult:3,desc:'One hit and it\'s over.'},
+  {id:'hard',name:'HARD',mult:1.5,desc:'Enemies hit 50% harder.'},
+  {id:'glass',name:'GLASS',mult:1.5,desc:'The party\'s HP is halved.'},
+  {id:'lowtp',name:'LOW TP',mult:1.25,desc:'TP builds at half speed.'}
+ ];
+ const drModeMult=m=>{let k=1;for(const d of DRMODES)if(m&&m[d.id])k*=d.mult;return Math.round(k*100)/100};
  // obj_heroparent sprite sets and frame counts.
  const HERO={
   kris:{char:1,name:'Kris',hp:90,at:12,df:2,mag:0,spells:[],idle:'spr_krisb_idle',attackready:'spr_krisb_attackready',attack:'spr_krisb_attack',act:'spr_krisb_act',actready:'spr_krisb_actready',item:'spr_krisb_item',itemready:'spr_krisb_itemready',spellready:'spr_krisb_actready',spell:'spr_krisb_act',defend:'spr_krisb_defend',hurtspr:'spr_krisb_hurt',defeat:'spr_krisb_defeat',victory:'spr_krisb_victory',
@@ -26723,7 +26750,18 @@ const DR=(()=>{
    actframes:7,actreturnframes:11,attackframes:4,itemframes:9,defendframes:0,spellframes:6,attackspeed:.5,mywidth:52,myheight:86,head:'spr_headnoelle',bname:'spr_bnamenoelle',slash:'spr_attack_slap2',slashSpeed:.5,slashMax:4,pitch:1.5}
  };
  // scr_iteminfo case 1.
- const ITEM={1:{name:'Dark Candy',desc:'Heals#40HP',heal:40,target:1}};
+ // healing items (ch1/ch2); all:1 heals the whole party, revive:1 brings a downed ally back to full
+ const ITEM={
+  1:{name:'Dark Candy',desc:'Heals#40HP',heal:40,target:1,price:25},
+  2:{name:'ReviveMint',desc:'Revives#downed#ally',heal:0,revive:1,target:1,price:150},
+  3:{name:'Darkburger',desc:'Heals#70HP',heal:70,target:1,price:70},
+  4:{name:'LancerCookie',desc:'Heals#50HP',heal:50,target:1,price:40},
+  5:{name:'CD Bagel',desc:'Heals#80HP',heal:80,target:1,price:80},
+  6:{name:'ClubsSandwich',desc:'Heals#team#70HP',heal:70,all:1,target:1,price:120},
+  7:{name:'SpinCake',desc:'Heals#team#80HP',heal:80,all:1,target:1,price:150},
+  8:{name:'Butjuice',desc:'Heals#100HP',heal:100,target:1,price:100},
+  9:{name:'TopCake',desc:'Heals#team#160HP',heal:160,all:1,target:1,price:300}
+ };
 
  // ------------------------------------------------------------ writer ------
  // obj_writer with typer 4 (fnt_mainbig, 16px spacing, 1 char per step, special 1 shadow).
@@ -27605,6 +27643,10 @@ const DR=(()=>{
    spots=defs.map((e,i)=>{const sp=[Math.min(i%2?545:430,630-e.mx*2),Math.round(y)];y+=hs[i]+gap;return sp});
   }
   const names=ids.map(id=>ENEMY[id].name),intro=ids.length===1||(d.pair&&ids.length===1+d.pair.length)?d.intro:'* '+(names.length===2?names.join(' and '):names.slice(0,-1).join(', ')+' and '+names[names.length-1])+' blocked the way!';
+  // the CUSTOM hub: party slots, stats, spells, gear, items and modes
+  const cu=opt.custom||null;
+  if(cu&&!d.noSusie)opt={...opt,party:['kris','susie',cu.s3==='noelle'?'noelle':'ralsei']};
+  if(cu&&d.noSusie&&cu.s3==='noelle')opt={...opt,party:['kris','susie','noelle']};
   const party=opt.party.map((id,i)=>{const h=HERO[id];return {id,...h,i,x:80,y:50+80*i,maxhp:h.hp,hp:h.hp,state:0,hurt:0,hurttimer:0,siner:0,attacktimer:0,acttimer:0,defendtimer:0,victoryanim:0,attacked:0,itemed:0,points:0,flash:0,fsiner:0,darken:0,alarm1:-1,alarm4:-1}});
   S={
    t:0,acc:0,exited:false,onExit:opt.onExit||null,
@@ -27623,9 +27665,25 @@ const DR=(()=>{
    inv:0,gold:0,exp:0,bgsiner:0,bgsiner2:0,bgalpha:0,turn:0,gameover:null
   };
   // ACTs with Ralsei ("Hug Ralsei", "Warning") need him in the party.
+  if(cu){
+   for(const h of party){
+    const st=cu.stats&&cu.stats[h.id],gw=DRGEAR[cu.weapon&&cu.weapon[h.id]],ga=DRGEAR[cu.armor&&cu.armor[h.id]],b=k=>((gw&&gw[k])||0)+((ga&&ga[k])||0);
+    if(st){h.maxhp=st.hp;h.at=st.at;h.df=st.df;h.mag=st.mag}
+    h.at+=b('at');h.df+=b('df');h.mag+=b('mag');h.maxhp+=b('hp');
+    if(cu.modes&&cu.modes.glass)h.maxhp=Math.max(1,Math.ceil(h.maxhp/2));
+    h.hp=h.maxhp;
+    if(cu.spells&&cu.spells[h.id])h.spells=cu.spells[h.id].filter(sp=>SPELL[sp]).slice(0,6);
+   }
+   if(cu.s2==='none'&&!d.noSusie){const su=party[1];su.absent=1;su.hp=0}
+   if(cu.s3==='none'){const r=party[2];r.absent=1;r.hp=0}
+   const live=party.filter(h=>!h.absent);
+   if(live.length===2){live[0].y=100;live[1].y=180}else if(live.length===1)live[0].y=140;
+  }
   if(d.noSusie){const su=party[1];su.absent=1;su.hp=0;party[0].y=100;party[2].y=180}
   // the weird route (Noelle only): IceShock / FrostBite / SnowGrave endings
-  S.weird=!!(opt.weird&&d.noSusie&&party[2].id==='noelle');S.iceTries=0;S.weirdEnding=null;S.weirdDone=0;
+  S.weird=!!(opt.weird&&d.noSusie&&party[2].id==='noelle');
+  S.mode=cu&&cu.modes?{...cu.modes}:{};S.custom=!!cu;
+  if(cu&&cu.items){S.items=cu.items.filter(id=>ITEM[id]).slice(0,6);S.tempitem=[[...S.items],[...S.items],[...S.items]]}S.iceTries=0;S.weirdEnding=null;S.weirdDone=0;
   for(const h of party)h.spells=[...h.spells];
   const has=c=>party.some(h=>h.char===c&&!h.absent);
   // obj_king_boss susinit: Susie fights with her serious sprites.
@@ -27642,7 +27700,7 @@ const DR=(()=>{
  const coord=(menu,c=S.charturn)=>{S.coord[menu]=S.coord[menu]||[0,0,0];return S.coord[menu][c]};
  const setCoord=(menu,v,c=S.charturn)=>{S.coord[menu]=S.coord[menu]||[0,0,0];S.coord[menu][c]=v};
  const monsterpop=()=>S.mons.filter(m=>m.alive).length;
- const tensionheal=n=>{S.tension=Math.max(0,Math.min(S.maxtension,S.tension+n))};
+ const tensionheal=n=>{if(n>0&&S.mode&&S.mode.lowtp)n=n/2;S.tension=Math.max(0,Math.min(S.maxtension,S.tension+n))};
  // A wild Susie (setting) never takes a menu turn: she picks her own fights.
  const charcan=i=>{const h=S.party[i];return h&&h.hp>0&&!S.acting[i]&&!(i===1&&S.susieAuto)};
  function battletext(pages){S.writer=new Writer(Array.isArray(pages)?pages:[pages]);return S.writer}
@@ -27818,7 +27876,7 @@ const DR=(()=>{
    if(m.status)return ['* '+h.name+' spared '+m.name+'^2!&* But its name wasn\'t \\cYYELLOW\\cW.../','* (Try using Ralsei\'s \\cBPACIFY\\cW!)/%'];
    return ['* '+h.name+' spared '+m.name+'^2!&* But its name wasn\'t \\cYYELLOW\\cW.../%'];
   }
-  if(spell===201)return ['* '+h.name+' used the DARK CANDY!/%'];
+  if(spell>200&&ITEM[spell-200])return ['* '+h.name+' used the '+ITEM[spell-200].name.toUpperCase()+'!/%'];
   return ['* .../%'];
  }
  // scr_spell (alarm[4], 15 steps after the hero starts casting).
@@ -27893,15 +27951,21 @@ const DR=(()=>{
    if(monsterpop()===0){S.spelldelay=30;return}
    // altpath 1 (the Berdly fight): Noelle charges, floats up glowing while the snow comes
    // down, the enemies freeze, then she drops. Timer starts at -270.
+   // anyone but Noelle gets the plain SnowGrave (the floating one is her own animation)
+   if(h.id!=='noelle'){S.fx.push({kind:'snowgrave',h,damage:Math.ceil(h.mag*40+600),timer:0,bgalpha:0,snowspeed:0,stimer:0,flakes:[]});S.spelldelay=140;return}
    h.sgHidden=1;
    S.fx.push({kind:'snowgrave',alt:1,h,damage:Math.ceil(h.mag*40+600),timer:-270,bgalpha:0,snowspeed:0,stimer:0,flakes:[],dust:[],
     fn:{x:h.x,y:h.y,ystart:h.y,spr:'spr_noelleb_spell',f:0,speed:0,con:0,t:0,amp:0,vy:0,grav:0,shake:0,flash:0}});
    S.spelldelay=545;return;
   }
-  if(spell===201){
-   const t=S.party[star]||h;const got=healHero(t,40);
-   S.fx.push({kind:'heal',target:t,t:0,stars:[]});
-   S.dmgw.push(dmgwriter(t.x,t.y+t.myheight-24,40,3,{delay:8,special:t.hp>=t.maxhp?3:0}));
+  if(spell>200&&ITEM[spell-200]){
+   const it=ITEM[spell-200],tgt=it.all?S.party.filter(p=>!p.absent):[S.party[star]||h];
+   for(const t of tgt){
+    const n=it.revive?(t.hp<=0?t.maxhp-t.hp:Math.ceil(t.maxhp/2)):it.heal;
+    healHero(t,n);
+    S.fx.push({kind:'heal',target:t,t:0,stars:[]});
+    S.dmgw.push(dmgwriter(t.x,t.y+t.myheight-24,n,3,{delay:8,special:t.hp>=t.maxhp?3:0}));
+   }
   }
  }
  // scr_damage_enemy for Noelle's spells (dmgwriter type 6).
@@ -29159,6 +29223,7 @@ const DR=(()=>{
   let target=b.target;let h=S.party[target];
   if(!h||h.hp<=0){const alive=S.party.filter(p=>p.hp>0);h=alive[Math.floor(Math.random()*alive.length)]||S.party[0];target=h.i}
   let td=b.dmg;
+  if(S.mode&&S.mode.hard)td=Math.ceil(td*1.5);
   const thA=h.maxhp/5,thB=h.maxhp/8;
   for(let i=0;i<h.df;i++){if(td>thA)td-=3;else if(td>thB)td-=2;else td-=1}
   td=Math.max(td,1);
@@ -29172,7 +29237,7 @@ const DR=(()=>{
   else{h.hp-=td;if(h.hp<=0){diff=Math.abs(h.hp-h.maxhp/2);type=4;h.hp=Math.round(-h.maxhp/2)}}
   S.dmgw.push(dmgwriter(h.x,h.y+h.myheight-24,Math.round(diff),type));
   if(!b.noInv)S.inv=Math.round(40*(S.invc||1));
-  if(S.party.every(p=>p.hp<=0))gameover();
+  if(S.party.every(p=>p.hp<=0)||(S.mode&&S.mode.nohit))gameover();
  }
  function gameover(){S.gameover={t:0};S.bullets=[];try{music&&music.pause()}catch(_){}}
 
@@ -29307,7 +29372,8 @@ const DR=(()=>{
    for(const h of S.party){if(h.absent)continue;if(h.hp<1)h.hp=Math.round(h.maxhp/8);h.state=7;h.hurt=0}
    for(const m of S.mons)if(m.spared||m.killed)S.gold+=m.def.gold;
    S.gold+=Math.floor(S.tension/10)*2;
-   battletext(['* You won^1!&* Got '+S.exp+' EXP and '+S.gold+' D$./%']);
+   const mult=drModeMult(S.mode),earned=Math.round(S.gold*mult);drWalletAdd(earned);
+   battletext([mult>1?'* You won^1!&* Got '+S.exp+' EXP and '+S.gold+' D$ (x'+mult+' = '+earned+' D$)./%':'* You won^1!&* Got '+S.exp+' EXP and '+S.gold+' D$./%']);
    tb.out=1;tb.hs=-10;
   }
   if(S.victoried){S.victortimer++;if((!S.writer||S.writer.done)&&S.victortimer>=10){S.intro=2;if(S.bp<=0&&!S.exitQueued){S.exitQueued=1;S.exitT=10}}}
@@ -30206,7 +30272,7 @@ const DR=(()=>{
   try{music&&music.pause()}catch(_){}
   if(S.onExit)S.onExit(reason);
  }
- return {start,update,render,onKey,load,exit,get S(){return S},get ready(){return ready},gfx:{draw,frame,meta,text,textWidth,darkbox,gridBack,C},enemies:ENEMY,enemyIds:ENEMY_IDS,maxSupports:MAX_SUPPORTS,parties:PARTIES,heroes:HERO,_dbg:{P,held,mercyadd,heroHit,dmgwriter}};
+ return {start,update,render,onKey,load,exit,get S(){return S},get ready(){return ready},items:ITEM,gear:DRGEAR,modes:DRMODES,modeMult:drModeMult,spells:SPELL,heroes:HERO,gfx:{draw,frame,meta,text,textWidth,darkbox,gridBack,C},enemies:ENEMY,enemyIds:ENEMY_IDS,maxSupports:MAX_SUPPORTS,parties:PARTIES,heroes:HERO,_dbg:{P,held,mercyadd,heroHit,dmgwriter}};
 })();
 
 // DELTARUNE tab: an ENEMIES page and a SUPPORTS page laid out like the UNDERTALE ones,
@@ -30223,7 +30289,7 @@ function drSavePrefs(){drLS('utbg.drEnemy',DR.enemyIds[drSel]);drLS('utbg.drSupp
 function drStart(){drLoadPrefs();DR.load();drFocus=0;screen='drroster'}
 function drFight(){
  drSavePrefs();play('select');screen='dr';
- DR.start({party:DR.parties[drParty],enemy:DR.enemyIds[drSel],supports:drSup.slice(),susieAuto:drSusieAuto,weird:drWeird,onExit(){screen='drroster';drFocus=0;try{startMenuMusic()}catch(_){}}});
+ DR.start({party:DR.parties[drParty],enemy:DR.enemyIds[drSel],supports:drSup.slice(),susieAuto:drSusieAuto,weird:drWeird,custom:drCustom.on?drCustomCfg():null,onExit(){screen='drroster';drFocus=0;try{startMenuMusic()}catch(_){}}});
 }
 // The enemy's sprite for the menus (its idle animation once the DELTARUNE assets are in).
 function drEnemyImage(id,now){const e=DR.enemies[id];return e&&DR.ready?DR.gfx.frame(e.idle,Math.floor(now/(1000/30)/e.idleSpeed)):null}
@@ -30232,13 +30298,15 @@ function drCheckText(id){
  const e=DR.enemies[id];let t='';try{t=String(e.act('Check',{},0)[0]||'')}catch(_){}
  return t.replace(/\\c./g,'').replace(/\^\d/g,'').replace(/\/%?/g,'').split('&').map(l=>l.trim()).filter(Boolean).join('\n');
 }
-const DR_CHOICES=[[1,0,0],[2,0,1],[3,0,2],[4,1,0],[5,1,1],[6,1,2]];
-function drChoiceLabel(f){return f===1?'SUPPORT':f===2?(drParty?'PARTY: NOELLE':'PARTY: RALSEI'):f===3?(drSusieAuto?'SUSIE: WILD':'SUSIE: YOURS'):f===4?'FIGHT':f===6?(drWeird?'WEIRD: ON':'WEIRD: OFF'):'BACK'}
+const DR_CHOICES=[[1,0,0],[2,0,1],[3,0,2],[8,0,3],[4,1,0],[5,1,1],[6,1,2],[7,1,3]];
+function drChoiceLabel(f){return f===1?'SUPPORT':f===2?(drParty?'NOELLE':'RALSEI'):f===3?(drSusieAuto?'WILD':'TAME'):f===4?'FIGHT':f===6?(drWeird?'WEIRD ON':'WEIRD'):f===7?(drCustom.on?'CUSTOM ON':'CUSTOM'):f===8?'SHOP':'BACK'}
 function drActivate(f){
  if(f===1){drSupSel=0;drSupFocus=0;screen='drsupport';play('select')}
  else if(f===2){drParty=1-drParty;drSavePrefs();play('select')}
  else if(f===3){drSusieAuto=!drSusieAuto;drSavePrefs();play('select')}
  else if(f===6){drWeird=!drWeird;drSavePrefs();play('select')}
+ else if(f===7){drHub.tab=0;drHub.focus=0;drHub.row=0;screen='drcustom';play('select')}
+ else if(f===8){drShop.tab=0;drShop.row=0;drShop.msg='';screen='drshop';play('select')}
  else if(f===4)drFight();
  else{drSavePrefs();screen='title';mainSelected=9;play('select')}
 }
@@ -30290,7 +30358,7 @@ function drScrollMarks(g,top,n,onUp,onDown){
 function drawDrRoster(now=performance.now()){
  const ids=DR.enemyIds,g=drMenuBegin(now);
  if(!DR.ready){DR.gfx.text(g,'fnt_mainbig','',0,0);g.fillStyle='#fff';g.font='20px monospace';g.fillText('Loading DELTARUNE assets...',190,240);g.restore();return}
- drTitle(g,'ENEMIES',`${drSel+1} / ${ids.length}`);
+ drTitle(g,'ENEMIES',`D$ ${drWallet()}   ${drSel+1}/${ids.length}`);
  DR.gfx.darkbox(g,16,48,300,424,DRM.t);
  drTop=drScrollTop(drTop,drSel,ids.length);
  ids.forEach((id,i)=>{
@@ -30305,9 +30373,9 @@ function drawDrRoster(now=performance.now()){
  drPreview(g,id,now,467,184);
  DR.gfx.text(g,'fnt_mainbig',(e.rname||e.name).toUpperCase(),467,186,DRY,{align:'center'});
  const sup=drSup.length?drSup.map(s=>DR.enemies[s].name).join(', '):'none';
- drInfo(g,`${drCheckText(id)}\n* HP ${e.hp}. ${e.gold} D$.\n* Supports: ${sup}.`);
- for(const [f,col,row] of DR_CHOICES)drOption(g,drChoiceLabel(f),col?540:334,352+row*32,drFocus===f,()=>{drFocus=f;drActivate(f)},()=>{drFocus=f});
- drHint(g,drFocus===0?'UP/DOWN: Choose   Z: Pick   X: Back':(drFocus===3?'Z: Toggle   (WILD: Susie fights on her own, Warning works)':drFocus===6?'Z: Toggle   (Susie & Lancer with Noelle: a weirder way out)':'Arrows: Move   Z: Confirm   X: Back'));
+ drInfo(g,`${drCheckText(id)}\n* HP ${e.hp}. ${e.gold} D$.\n* Supports: ${sup}.`,216,320);
+ for(const [f,col,row] of DR_CHOICES)drOption(g,drChoiceLabel(f),col?486:334,328+row*30,drFocus===f,()=>{drFocus=f;drActivate(f)},()=>{drFocus=f});
+ drHint(g,drFocus===0?'UP/DOWN: Choose   Z: Pick   X: Back':drFocus===2?'Z: Switch the third member (Ralsei / Noelle)':drFocus===7?'Z: Open the CUSTOM hub (party, stats, spells, items, modes)':drFocus===8?'Z: Open the SHOP (spend your D$)':(drFocus===3?'Z: Toggle   (WILD: Susie attacks on her own, Warning works)':drFocus===6?'Z: Toggle   (Susie & Lancer with Noelle: a weirder way out)':'Arrows: Move   Z: Confirm   X: Back'));
  g.restore();
 }
 function drSupEntries(){return ['clear',...DR.enemyIds.filter(id=>!DR.enemies[id].noSupport)]}
@@ -30347,6 +30415,200 @@ function drawDrSupport(now=performance.now()){
  for(const [f,label,x,y] of choices)drOption(g,label,x,y,drSupFocus===f,()=>{drSupFocus=f;if(f===1)drSupAdd(drSupSel);else if(f===2){drSup.pop();drSavePrefs();play('select')}else{screen='drroster';play('select')}},()=>{drSupFocus=f});
  drHint(g,'Arrows: Choose   Z: Add   X: Done');
  g.restore();
+}
+
+// ---------------- DELTARUNE wallet, CUSTOM hub and SHOP ----------------
+// D$ you win in the DELTARUNE tab are kept here and spent in the SHOP, which unlocks items
+// and gear for the CUSTOM hub (unlocked things can be used as often as you like).
+function drWallet(){return Math.max(0,+(drLS('utbg.drDollars')||0)||0)}
+function drWalletAdd(n){drLS('utbg.drDollars',String(Math.max(0,drWallet()+Math.round(n||0))))}
+function drOwned(){try{const o=JSON.parse(drLS('utbg.drOwned')||'{}');o.items=o.items||{1:1};o.gear=o.gear||{};return o}catch(_){return {items:{1:1},gear:{}}}}
+function drSaveOwned(o){drLS('utbg.drOwned',JSON.stringify(o))}
+const DR_HEROES=['kris','susie','ralsei','noelle'];
+function drDefaultCustom(){
+ const H=DR.heroes,st={},sp={};
+ for(const id of DR_HEROES){st[id]={hp:H[id].hp,at:H[id].at,df:H[id].df,mag:H[id].mag};sp[id]=[...H[id].spells]}
+ return {on:false,s2:'susie',s3:'ralsei',stats:st,spells:sp,items:[1,1,1],weapon:{},armor:{},modes:{}};
+}
+let drCustom=(()=>{try{return JSON.parse(localStorage.getItem('utbg.drCustom'))||null}catch(_){return null}})();
+function drCustomReady(){if(!drCustom||!drCustom.stats){drCustom=drDefaultCustom()}for(const id of DR_HEROES){if(!drCustom.stats[id])drCustom.stats[id]=drDefaultCustom().stats[id];if(!drCustom.spells[id])drCustom.spells[id]=[...DR.heroes[id].spells]}}
+if(!drCustom)drCustom={on:false};
+function drSaveCustom(){drLS('utbg.drCustom',JSON.stringify(drCustom))}
+function drCustomCfg(){drCustomReady();return JSON.parse(JSON.stringify(drCustom))}
+const drHub={tab:0,focus:0,row:0,hero:0,top:0},drShop={tab:0,row:0,top:0,msg:''};
+const DR_HUB_TABS=['PARTY','STATS','SPELLS','ITEMS','GEAR','MODES'];
+const DR_SPELL_LIST=[2,3,4,8,9,10,11];
+const STAT_KEYS=[['hp','HP',10,1,999],['at','ATTACK',1,0,99],['df','DEFENSE',1,0,99],['mag','MAGIC',1,0,99]];
+// one row = {label, value?, left?(), right?(), ok?(), on?}
+function drHubRows(){
+ drCustomReady();if(drHub.tab===2&&drHub.hero===0)drHub.hero=1; // Kris ACTs, he has no MAGIC menu
+ const c=drCustom,hero=DR_HEROES[drHub.hero],own=drOwned(),H=DR.heroes;
+ const nextHero=d=>{do{drHub.hero=(drHub.hero+d+4)%4}while(drHub.tab===2&&drHub.hero===0)};
+ const heroRow={label:'HERO',value:H[hero].name.toUpperCase(),left:()=>nextHero(-1),right:()=>nextHero(1),ok:()=>nextHero(1)};
+ const cyc=(list,cur,d)=>list[(list.indexOf(cur)+d+list.length)%list.length];
+ const t=drHub.tab;
+ if(t===0)return [
+  {label:'USE CUSTOM',value:c.on?'ON':'OFF',on:c.on,ok:()=>{c.on=!c.on},left:()=>{c.on=!c.on},right:()=>{c.on=!c.on}},
+  {label:'SLOT 2',value:c.s2==='none'?'EMPTY':'SUSIE',ok:()=>{c.s2=c.s2==='none'?'susie':'none'},left:()=>{c.s2=c.s2==='none'?'susie':'none'},right:()=>{c.s2=c.s2==='none'?'susie':'none'}},
+  {label:'SLOT 3',value:c.s3==='none'?'EMPTY':c.s3.toUpperCase(),ok:()=>{c.s3=cyc(['ralsei','noelle','none'],c.s3,1)},left:()=>{c.s3=cyc(['ralsei','noelle','none'],c.s3,-1)},right:()=>{c.s3=cyc(['ralsei','noelle','none'],c.s3,1)}},
+  {label:'RESET ALL',value:'',ok:()=>{const on=c.on;drCustom=drDefaultCustom();drCustom.on=on;play('select')}}
+ ];
+ if(t===1)return [heroRow,...STAT_KEYS.map(([k,name,step,lo,hi])=>({label:name,value:String(c.stats[hero][k]),
+  left:()=>{c.stats[hero][k]=Math.max(lo,c.stats[hero][k]-step)},right:()=>{c.stats[hero][k]=Math.min(hi,c.stats[hero][k]+step)},
+  ok:()=>{c.stats[hero][k]=DR.heroes[hero][k==='hp'?'hp':k]}}))];
+ if(t===2)return [heroRow,...DR_SPELL_LIST.map(id=>{const has=c.spells[hero].includes(id);return {label:DR.spells[id].name,value:has?'[X]':'[ ]',on:has,
+  ok:()=>{const l=c.spells[hero];if(has)l.splice(l.indexOf(id),1);else if(l.length<6)l.push(id)}}})];
+ if(t===3){const owned=Object.keys(DR.items).map(Number).filter(id=>own.items[id]);
+  return [0,1,2,3,4,5].map(k=>{const cur=c.items[k];const opts=[0,...owned];const set=d=>{const n=cyc(opts,cur||0,d);if(n)c.items[k]=n;else c.items.splice(k,1);c.items=c.items.filter(Boolean)};
+   return {label:'SLOT '+(k+1),value:cur?DR.items[cur].name:'---',left:()=>set(-1),right:()=>set(1),ok:()=>set(1)}})}
+ if(t===4){const g=DR.gear,wl=['',...Object.keys(g).filter(k=>g[k].type==='weapon'&&g[k].who===hero&&own.gear[k])],al=['',...Object.keys(g).filter(k=>g[k].type==='armor'&&own.gear[k])];
+  const w=c.weapon[hero]||'',a=c.armor[hero]||'';
+  return [heroRow,
+   {label:'WEAPON',value:w?g[w].name:'---',left:()=>{c.weapon[hero]=cyc(wl,w,-1)},right:()=>{c.weapon[hero]=cyc(wl,w,1)},ok:()=>{c.weapon[hero]=cyc(wl,w,1)}},
+   {label:'ARMOR',value:a?g[a].name:'---',left:()=>{c.armor[hero]=cyc(al,a,-1)},right:()=>{c.armor[hero]=cyc(al,a,1)},ok:()=>{c.armor[hero]=cyc(al,a,1)}}];
+ }
+ return DR.modes.map(m=>({label:m.name,value:(c.modes[m.id]?'ON':'OFF')+'  x'+m.mult,on:!!c.modes[m.id],ok:()=>{c.modes[m.id]=!c.modes[m.id]},left:()=>{c.modes[m.id]=!c.modes[m.id]},right:()=>{c.modes[m.id]=!c.modes[m.id]}}));
+}
+function drHubDesc(){
+ const t=drHub.tab,hero=DR_HEROES[drHub.hero];
+ if(t===0)return '* Turn CUSTOM on to fight with this setup.\n* Slot 2 is Susie\'s, slot 3 is Ralsei or Noelle.';
+ if(t===1)return '* LEFT/RIGHT to change. Z puts it back to normal.\n* HP moves in 10s.';
+ if(t===2)return '* Any spell on anyone, up to 6 each.\n* SnowGrave and FrostBite work best with high MAGIC.';
+ if(t===3){const row=drHubRows()[drHub.row],id=drCustom.items[drHub.row];return id?'* '+DR.items[id].name+': '+DR.items[id].desc.replace(/#/g,' ')+'.\n* Buy more kinds in the SHOP.':'* Up to 6 items. Buy more kinds in the SHOP.'}
+ if(t===4){const w=drCustom.weapon[hero],a=drCustom.armor[hero],g=DR.gear,f=k=>{const x=g[k];return x.name+' ('+['at','df','mag','hp'].filter(s=>x[s]).map(s=>(x[s]>0?'+':'')+x[s]+' '+s.toUpperCase()).join(', ')+')'};
+  return (w?'* '+f(w)+'\n':'')+(a?'* '+f(a)+'\n':'')+'* Gear comes from the SHOP.'}
+ const mult=DR.modeMult(drCustom.modes),m=DR.modes[drHub.row];
+ return (m?'* '+m.desc+'\n':'')+'* D$ multiplier: x'+mult+(drCustom.on?'':' (turn CUSTOM on!)');
+}
+function drTab(g,x,y,w,h,on){
+ g.save();g.fillStyle=on?DRY:'#000000';g.fillRect(x,y,w,h);
+ g.strokeStyle=on?'#ffffff':'#808080';g.lineWidth=2;g.strokeRect(x+1,y+1,w-2,h-2);
+ if(on){g.globalAlpha=.35+.25*Math.sin(DRM.t/6);g.fillStyle='#ffffff';g.fillRect(x+3,y+h-6,w-6,3)}
+ g.restore();
+}
+function drHeroCard(g,id,x,y,on,cw=112){
+ const H=DR.heroes[id],c=drCustom,st=c.stats[id],gw=DR.gear[c.weapon[id]],ga=DR.gear[c.armor[id]],b=k=>((gw&&gw[k])||0)+((ga&&ga[k])||0);
+ g.save();g.fillStyle='#000000';g.fillRect(x,y,cw,178);g.strokeStyle='#ffffff';g.lineWidth=2;g.strokeRect(x+1,y+1,cw-2,176);g.restore();
+ const [w,h]=DR.gfx.meta(H.idle),sc=cw<100?1.5:2;
+ g.save();g.beginPath();g.rect(x+2,y+2,cw-4,174);g.clip();
+ DR.gfx.draw(g,H.idle,DRM.t/5,x+cw/2-w*sc/2,y+96-h*sc+Math.sin(DRM.t/12+x)*2,sc,sc,0,on?1:.35);g.restore();
+ DR.gfx.text(g,'fnt_main',H.name.toUpperCase(),x+cw/2,y+100,on?DRY:DRG,{align:'center'});
+ const hp=Math.max(1,(st.hp+b('hp'))*(c.modes.glass?.5:1)|0),col=on?'#ffffff':DRG,lx=x+8;
+ DR.gfx.text(g,'fnt_main','HP '+hp,lx,y+118,col);
+ DR.gfx.text(g,'fnt_main','AT '+(st.at+b('at')),lx,y+132,col);
+ DR.gfx.text(g,'fnt_main','DF '+(st.df+b('df')),lx,y+146,col);
+ DR.gfx.text(g,'fnt_main','MG '+(st.mag+b('mag')),lx,y+160,col);
+}
+function drawDrHub(now){
+ const g=drMenuBegin(now);
+ if(!DR.ready){g.restore();return}
+ drCustomReady();
+ drTitle(g,'CUSTOM',`D$ ${drWallet()}   x${DR.modeMult(drCustom.modes)}`);
+ // tab strip
+ DR_HUB_TABS.forEach((name,i)=>{
+  const x=16+i*102,on=i===drHub.tab,foc=on&&drHub.focus===0;
+  drTab(g,x,48,98,32,on);
+  DR.gfx.text(g,'fnt_main',name,x+49,57,on?'#000000':'#ffffff',{align:'center'});
+  if(foc)DR.gfx.draw(g,'spr_heart',0,x+2,56,.75,.75);
+  drHit(x,46,98,38,()=>{drHub.tab=i;drHub.row=0;drHub.focus=0;drHub.top=0;play('move')});
+ });
+ // the list
+ const rows=drHubRows();DR.gfx.darkbox(g,16,92,392,436,DRM.t);
+ if(drHub.row>=rows.length)drHub.row=rows.length-1;
+ const VIS=9;if(drHub.row<drHub.top)drHub.top=drHub.row;if(drHub.row>=drHub.top+VIS)drHub.top=drHub.row-VIS+1;
+ rows.forEach((r,i)=>{
+  if(i<drHub.top||i>=drHub.top+VIS)return;
+  const y=110+(i-drHub.top)*35,sel=drHub.focus===1&&i===drHub.row;
+  DR.gfx.text(g,'fnt_mainbig',r.label,56,y,sel?DRY:'#ffffff');
+  if(r.value!==undefined){
+   const vx=372;DR.gfx.text(g,'fnt_mainbig',r.value,vx,y,r.on?'#00ff00':(sel?DRY:'#c0c0c0'),{align:'right'});
+   if(sel&&(r.left||r.right)){const vw=DR.gfx.textWidth('fnt_mainbig',r.value);g.fillStyle=DRY;const ax=vx-vw-14,b=Math.sin(DRM.t/5)*2;g.beginPath();g.moveTo(ax-b,y+16);g.lineTo(ax+8-b,y+8);g.lineTo(ax+8-b,y+24);g.fill()}
+  }
+  if(sel)DR.gfx.draw(g,'spr_heart',0,30,y+8);
+  drHit(20,y-2,368,34,()=>{if(drHub.focus===1&&drHub.row===i){r.ok&&r.ok();drSaveCustom();play('select')}else{drHub.focus=1;drHub.row=i;play('move')}});
+ });
+ // party preview + description
+ const party=['kris',drCustom.s2==='none'?null:'susie',drCustom.s3==='none'?null:drCustom.s3];
+ const view=drHub.tab>=1&&drHub.tab<=4&&drHub.tab!==3?[DR_HEROES[drHub.hero]]:party.filter(Boolean);
+ const cw=view.length===3?72:view.length===2?110:112;
+ view.forEach((id,i)=>drHeroCard(g,id,view.length===1?456:400+i*(cw+4),92,true,cw));
+ DR.gfx.darkbox(g,400,276,624,436,DRM.t);
+ drWrap('fnt_main',drHubDesc(),200).slice(0,8).forEach((ln,i)=>DR.gfx.text(g,'fnt_main',ln,414,292+i*16));
+ drHint(g,drHub.focus===0?'LEFT/RIGHT: Tab   Z/DOWN: Enter   X: Back':'UP/DOWN: Choose   LEFT/RIGHT: Change   Z: Toggle   X: Tabs');
+ g.restore();
+}
+// The SHOP: buy items and gear with the D$ you've won
+const DR_SHOP_TABS=['ITEMS','WEAPONS','ARMOR'];
+function drShopRows(){
+ const own=drOwned(),t=drShop.tab;
+ if(t===0)return Object.keys(DR.items).map(Number).map(id=>({key:id,kind:'items',name:DR.items[id].name,price:DR.items[id].price,owned:!!own.items[id],desc:DR.items[id].desc.replace(/#/g,' ')}));
+ return Object.keys(DR.gear).filter(k=>DR.gear[k].type===(t===1?'weapon':'armor')).map(k=>{const x=DR.gear[k];
+  return {key:k,kind:'gear',name:x.name,price:x.price,owned:!!own.gear[k],desc:x.desc+(x.who?' ('+x.who.toUpperCase()+' only)':'')+' '+['at','df','mag','hp'].filter(s=>x[s]).map(s=>(x[s]>0?'+':'')+x[s]+' '+s.toUpperCase()).join(', ')}});
+}
+function drShopBuy(r){
+ if(!r)return;
+ if(r.owned){drShop.msg='* You already have that one.';play('move');return}
+ if(drWallet()<r.price){drShop.msg='* Not enough D$! Go win some fights.';play('move');return}
+ drWalletAdd(-r.price);const o=drOwned();o[r.kind][r.key]=1;drSaveOwned(o);
+ drShop.msg='* Bought '+r.name+'! It\'s in the CUSTOM hub now.';try{play('select')}catch(_){}
+}
+function drawDrShop(now){
+ const g=drMenuBegin(now);
+ if(!DR.ready){g.restore();return}
+ drTitle(g,'SHOP',`D$ ${drWallet()}`);
+ DR_SHOP_TABS.forEach((name,i)=>{
+  const x=16+i*126,on=i===drShop.tab;
+  drTab(g,x,48,120,32,on);
+  DR.gfx.text(g,'fnt_main',name,x+60,57,on?'#000000':'#ffffff',{align:'center'});
+  drHit(x,46,120,38,()=>{drShop.tab=i;drShop.row=0;drShop.top=0;play('move')});
+ });
+ const rows=drShopRows();DR.gfx.darkbox(g,16,92,392,436,DRM.t);
+ if(drShop.row>=rows.length)drShop.row=rows.length-1;
+ const VIS=9;if(drShop.row<drShop.top)drShop.top=drShop.row;if(drShop.row>=drShop.top+VIS)drShop.top=drShop.row-VIS+1;
+ rows.forEach((r,i)=>{
+  if(i<drShop.top||i>=drShop.top+VIS)return;
+  const y=110+(i-drShop.top)*35,sel=i===drShop.row;
+  DR.gfx.text(g,'fnt_mainbig',r.name,56,y,r.owned?DRG:(sel?DRY:'#ffffff'));
+  DR.gfx.text(g,'fnt_mainbig',r.owned?'OWNED':r.price+' D$',372,y,r.owned?'#00ff00':(drWallet()>=r.price?'#ffffff':'#ff4040'),{align:'right'});
+  if(sel)DR.gfx.draw(g,'spr_heart',0,30,y+8);
+  drHit(20,y-2,368,34,()=>{if(drShop.row===i)drShopBuy(r);else{drShop.row=i;play('move')}});
+ });
+ if(rows.length>VIS){if(drShop.top>0)DR.gfx.text(g,'fnt_main','more above',370,94,DRG,{align:'right'});if(drShop.top+VIS<rows.length)DR.gfx.text(g,'fnt_main','more below',370,420,DRG,{align:'right'})}
+ const r=rows[drShop.row];
+ DR.gfx.darkbox(g,400,92,624,276,DRM.t);
+ if(r){DR.gfx.text(g,'fnt_mainbig',r.name.toUpperCase(),512,108,DRY,{align:'center'});drWrap('fnt_main','* '+r.desc,196).slice(0,6).forEach((ln,i)=>DR.gfx.text(g,'fnt_main',ln,414,148+i*16))}
+ DR.gfx.darkbox(g,400,284,624,436,DRM.t);
+ drWrap('fnt_main',drShop.msg||'* Hey hey! Spend your D$ here.\n* Bought stuff unlocks for good in the CUSTOM hub.',196).slice(0,7).forEach((ln,i)=>DR.gfx.text(g,'fnt_main',ln,414,300+i*16));
+ drHint(g,'LEFT/RIGHT: Tab   UP/DOWN: Choose   Z: Buy   X: Back');
+ g.restore();
+}
+function drHubKey(k,low,repeat){
+ const up=k==='ArrowUp'||low==='w',down=k==='ArrowDown'||low==='s',left=k==='ArrowLeft'||low==='a',right=k==='ArrowRight'||low==='d',ok=low==='z'||k==='Enter',back=low==='x'||k==='Shift'||k==='Escape';
+ if(screen==='drshop'){
+  if(repeat&&!(up||down))return;
+  const rows=drShopRows();
+  if(back){screen='drroster';play('select');return}
+  if(left||right){drShop.tab=(drShop.tab+(right?1:2))%3;drShop.row=0;drShop.top=0;drShop.msg='';play('move')}
+  if(up){drShop.row=(drShop.row+rows.length-1)%rows.length;play('move')}
+  if(down){drShop.row=(drShop.row+1)%rows.length;play('move')}
+  if(ok)drShopBuy(rows[drShop.row]);
+  return;
+ }
+ drCustomReady();
+ if(drHub.focus===0){
+  if(repeat)return;
+  if(back){drSaveCustom();screen='drroster';play('select');return}
+  if(left||right){drHub.tab=(drHub.tab+(right?1:DR_HUB_TABS.length-1))%DR_HUB_TABS.length;drHub.row=0;drHub.top=0;play('move')}
+  if(ok||down){drHub.focus=1;drHub.row=0;play('select')}
+  return;
+ }
+ const rows=drHubRows(),r=rows[drHub.row];
+ if(back){drHub.focus=0;drSaveCustom();play('move');return}
+ if(up){if(drHub.row===0){drHub.focus=0}else drHub.row--;play('move');return}
+ if(down){drHub.row=Math.min(rows.length-1,drHub.row+1);play('move');return}
+ if(left&&r&&r.left){r.left();drSaveCustom();play('move')}
+ if(right&&r&&r.right){r.right();drSaveCustom();play('move')}
+ if(ok&&!repeat&&r&&r.ok){r.ok();drSaveCustom();play('select')}
 }
 function drRosterKey(k,low){
  const up=k==='ArrowUp'||low==='w',down=k==='ArrowDown'||low==='s',left=k==='ArrowLeft'||low==='a',right=k==='ArrowRight'||low==='d',ok=low==='z'||k==='Enter',back=low==='x'||k==='Shift'||k==='Escape';
