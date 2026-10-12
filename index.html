@@ -26738,6 +26738,7 @@ const DR=(()=>{
  ];
  const drModeMult=m=>{let k=1;for(const d of DRMODES)if(m&&m[d.id])k*=d.mult;return Math.round(k*100)/100};
  // obj_heroparent sprite sets and frame counts.
+ const DR_HEROES=['kris','susie','ralsei','noelle'];
  const HERO={
   kris:{char:1,name:'Kris',hp:90,at:12,df:2,mag:0,spells:[],idle:'spr_krisb_idle',attackready:'spr_krisb_attackready',attack:'spr_krisb_attack',act:'spr_krisb_act',actready:'spr_krisb_actready',item:'spr_krisb_item',itemready:'spr_krisb_itemready',spellready:'spr_krisb_actready',spell:'spr_krisb_act',defend:'spr_krisb_defend',hurtspr:'spr_krisb_hurt',defeat:'spr_krisb_defeat',victory:'spr_krisb_victory',
    actframes:7,actreturnframes:10,attackframes:6,itemframes:6,defendframes:5,spellframes:10,attackspeed:.5,mywidth:68,myheight:74,head:'spr_headkris',bname:'spr_bnamekris',slash:'spr_attack_cut1',slashSpeed:.334,slashMax:3,pitch:1},
@@ -27052,7 +27053,7 @@ const DR=(()=>{
     if(name==='Check')return ['* PONMAN - AT 8 DF 0&* Its nucleus doubles as an eyespot./%'];
     if(name==='Goodnight'){m.sleeping=1;m.sleepIdx=5;mercyadd(i,100);return ['* You whispered goodnight to Ponman^1.&* It fell asleep.../%']}
     if(name==='Lullaby'){
-     const r=S.party[2];
+     const r=ralseiOf();
      try{music&&music.pause()}catch(_){}
      snd(DRFLAG.lulla?'ralsing2':'ralsing1');DRFLAG.lulla=DRFLAG.lulla?0:1;
      if(r)r.singing=1;
@@ -27123,7 +27124,7 @@ const DR=(()=>{
    acts:[{name:'Check',actor:1},{name:'Bow',actor:1},{name:'Deep Bow',actor:3},{name:'Warning',actor:3}],
    act(name,m,i,a){
     const q=S.actPhase.queue,R=S.party.some(h=>h.id==='ralsei'),Su=S.party.some(h=>h.id==='susie');
-    const kris=S.party[0],ral=S.party[2];
+    const kris=S.party[0],ral=ralseiOf();
     const lecture=first=>{
      if(m.lecture)return [];m.lecture=1;
      return [...(R?[{face:'R',e:0,text:'* That\'s it^1, Kris^1! If we can get its crown off.../'},{face:'R',e:0,text:'\\E8* It should turn back into a little guy...!/'},{face:'R',e:0,text:'\\E0* Susie^1! Help us bow at it!/'}]:[]),
@@ -27192,7 +27193,7 @@ const DR=(()=>{
     // Sing: Ralsei's lullaby puts Susie to sleep (she wakes after three turns, or when hit).
     // Carol is Noelle's version: a choir hymn, just as drowsy.
     for(const o of S.mons)o.susieAct=3;
-    const carol=name==='Carol',r=carol?null:S.party[2];try{music&&music.pause()}catch(_){}
+    const carol=name==='Carol',r=carol?null:ralseiOf();try{music&&music.pause()}catch(_){}
     if(!carol){snd(DRFLAG.lulla?'ralsing2':'ralsing1');DRFLAG.lulla=DRFLAG.lulla?0:1}else snd('bell',.8);
     if(r)r.singing=1;
     S.actPhase.queue.push({wait:30},{fn:()=>{
@@ -27645,8 +27646,9 @@ const DR=(()=>{
   const names=ids.map(id=>ENEMY[id].name),intro=ids.length===1||(d.pair&&ids.length===1+d.pair.length)?d.intro:'* '+(names.length===2?names.join(' and '):names.slice(0,-1).join(', ')+' and '+names[names.length-1])+' blocked the way!';
   // the CUSTOM hub: party slots, stats, spells, gear, items and modes
   const cu=opt.custom||null;
-  if(cu&&!d.noSusie)opt={...opt,party:['kris','susie',cu.s3==='noelle'?'noelle':'ralsei']};
-  if(cu&&d.noSusie&&cu.s3==='noelle')opt={...opt,party:['kris','susie','noelle']};
+  // any character in any slot, duplicates welcome; an EMPTY slot is a stand-in marked absent
+  const pick=(v,dflt)=>DR_HEROES.includes(v)?v:dflt;
+  if(cu)opt={...opt,party:[pick(cu.s1,'kris'),d.noSusie?'susie':pick(cu.s2,'susie'),pick(cu.s3,'ralsei')]};
   const party=opt.party.map((id,i)=>{const h=HERO[id];return {id,...h,i,x:80,y:50+80*i,maxhp:h.hp,hp:h.hp,state:0,hurt:0,hurttimer:0,siner:0,attacktimer:0,acttimer:0,defendtimer:0,victoryanim:0,attacked:0,itemed:0,points:0,flash:0,fsiner:0,darken:0,alarm1:-1,alarm4:-1}});
   S={
    t:0,acc:0,exited:false,onExit:opt.onExit||null,
@@ -27675,6 +27677,7 @@ const DR=(()=>{
     if(cu.spells&&cu.spells[h.id])h.spells=cu.spells[h.id].filter(sp=>SPELL[sp]).slice(0,6);
    }
    if(cu.s2==='none'&&!d.noSusie){const su=party[1];su.absent=1;su.hp=0}
+   for(const h of party)h.spells=[...h.spells];
    if(cu.s3==='none'){const r=party[2];r.absent=1;r.hp=0}
    const live=party.filter(h=>!h.absent);
    if(live.length===2){live[0].y=100;live[1].y=180}else if(live.length===1)live[0].y=140;
@@ -27702,7 +27705,10 @@ const DR=(()=>{
  const monsterpop=()=>S.mons.filter(m=>m.alive).length;
  const tensionheal=n=>{if(n>0&&S.mode&&S.mode.lowtp)n=n/2;S.tension=Math.max(0,Math.min(S.maxtension,S.tension+n))};
  // A wild Susie (setting) never takes a menu turn: she picks her own fights.
- const charcan=i=>{const h=S.party[i];return h&&h.hp>0&&!S.acting[i]&&!(i===1&&S.susieAuto)};
+ // the teammate an X-ACT's actor refers to (2 Susie, 3 Ralsei, 4 Noelle): the first one in the party
+ const actorSlot=a=>{if(a<2)return -1;const i=S.party.findIndex((h,k)=>k>0&&h.char===a&&!h.absent);return i>=0?i:(a===2?1:2)};
+ const ralseiOf=()=>S.party.find(h=>h.id==='ralsei'&&!h.absent)||null;
+ const charcan=i=>{const h=S.party[i];return h&&h.hp>0&&!h.absent&&!S.acting[i]&&!(i===1&&S.susieAuto&&h.id==='susie')};
  function battletext(pages){S.writer=new Writer(Array.isArray(pages)?pages:[pages]);return S.writer}
 
  // ------------------------------------------------------- turn flow --------
@@ -27737,7 +27743,7 @@ const DR=(()=>{
   if(monsterpop()===0){wincombat();return}
   S.hittarget=S.mons.map(()=>0);S.charturn=3;
   // Wild Susie swings at a random enemy every turn (points 100-140); Warning makes it miss.
-  const su=S.party[1];
+  const su=S.party[1]&&S.party[1].id==='susie'?S.party[1]:null;
   if(S.susieAuto&&!S.susieSwung&&su&&!su.absent&&su.hp>0&&!S.acting[1]){
    S.susieSwung=1;const al=S.mons.map((m,i)=>m.alive?i:-1).filter(i=>i>=0);
    S.chartarget[1]=al[Math.floor(Math.random()*al.length)];S.faceaction[1]=1;heroAttack(1,100+Math.round(rnd(40)));
@@ -29705,7 +29711,7 @@ const DR=(()=>{
    if(P.down&&acts[k+2])k+=2;
    if(P.up&&k>=2)k-=2;
    if(k!==coord(9)){setCoord(9,k);snd('menumove')}
-   const actor=acts[k]?.actor||1,slot=actor===2?1:(actor>=3?2:-1),cost=acts[k]?.cost||0;
+   const actor=acts[k]?.actor||1,slot=actorSlot(actor),cost=acts[k]?.cost||0;
    S.tensionselect=cost;
    const can=(slot<0||S.party[slot].hp>0)&&S.tension>=cost;
    if(can&&P.confirm&&S.onebuffer<0){
@@ -30185,7 +30191,7 @@ const DR=(()=>{
    draw(g,'spr_heart',0,icx,icy);
    m.acts.forEach((a,i)=>{
     const xo=i%2?230:0,yo=Math.floor(i/2)*30;let off=0,col=C.white;
-    if(a.actor>=2){const sl=a.actor===2?1:2;draw(g,S.party[sl].head,0,30+xo,375+yo);off=30;if(S.party[sl].hp<=0)col=C.gray}
+    if(a.actor>=2){const sl=actorSlot(a.actor);draw(g,S.party[sl].head,0,30+xo,375+yo);off=30;if(S.party[sl].hp<=0)col=C.gray}
     if(a.cost&&S.tension<a.cost)col=C.gray;
     text(g,'fnt_mainbig',a.name,30+off+xo,375+yo,col);
    });
@@ -30428,7 +30434,7 @@ const DR_HEROES=['kris','susie','ralsei','noelle'];
 function drDefaultCustom(){
  const H=DR.heroes,st={},sp={};
  for(const id of DR_HEROES){st[id]={hp:H[id].hp,at:H[id].at,df:H[id].df,mag:H[id].mag};sp[id]=[...H[id].spells]}
- return {on:false,s2:'susie',s3:'ralsei',stats:st,spells:sp,items:[1,1,1],weapon:{},armor:{},modes:{}};
+ return {on:false,s1:'kris',s2:'susie',s3:'ralsei',stats:st,spells:sp,items:[1,1,1],weapon:{},armor:{},modes:{}};
 }
 let drCustom=(()=>{try{return JSON.parse(localStorage.getItem('utbg.drCustom'))||null}catch(_){return null}})();
 function drCustomReady(){if(!drCustom||!drCustom.stats){drCustom=drDefaultCustom()}for(const id of DR_HEROES){if(!drCustom.stats[id])drCustom.stats[id]=drDefaultCustom().stats[id];if(!drCustom.spells[id])drCustom.spells[id]=[...DR.heroes[id].spells]}}
@@ -30449,8 +30455,8 @@ function drHubRows(){
  const t=drHub.tab;
  if(t===0)return [
   {label:'USE CUSTOM',value:c.on?'ON':'OFF',on:c.on,ok:()=>{c.on=!c.on},left:()=>{c.on=!c.on},right:()=>{c.on=!c.on}},
-  {label:'SLOT 2',value:c.s2==='none'?'EMPTY':'SUSIE',ok:()=>{c.s2=c.s2==='none'?'susie':'none'},left:()=>{c.s2=c.s2==='none'?'susie':'none'},right:()=>{c.s2=c.s2==='none'?'susie':'none'}},
-  {label:'SLOT 3',value:c.s3==='none'?'EMPTY':c.s3.toUpperCase(),ok:()=>{c.s3=cyc(['ralsei','noelle','none'],c.s3,1)},left:()=>{c.s3=cyc(['ralsei','noelle','none'],c.s3,-1)},right:()=>{c.s3=cyc(['ralsei','noelle','none'],c.s3,1)}},
+  ...[['s1','SLOT 1',DR_HEROES],['s2','SLOT 2',[...DR_HEROES,'none']],['s3','SLOT 3',[...DR_HEROES,'none']]].map(([k,label,list])=>{const cur=c[k]||(k==='s1'?'kris':'none');
+   return {label,value:cur==='none'?'EMPTY':cur.toUpperCase(),ok:()=>{c[k]=cyc(list,cur,1)},left:()=>{c[k]=cyc(list,cur,-1)},right:()=>{c[k]=cyc(list,cur,1)}}}),
   {label:'RESET ALL',value:'',ok:()=>{const on=c.on;drCustom=drDefaultCustom();drCustom.on=on;play('select')}}
  ];
  if(t===1)return [heroRow,...STAT_KEYS.map(([k,name,step,lo,hi])=>({label:name,value:String(c.stats[hero][k]),
@@ -30471,7 +30477,7 @@ function drHubRows(){
 }
 function drHubDesc(){
  const t=drHub.tab,hero=DR_HEROES[drHub.hero];
- if(t===0)return '* Turn CUSTOM on to fight with this setup.\n* Slot 2 is Susie\'s, slot 3 is Ralsei or Noelle.';
+ if(t===0)return '* Turn CUSTOM on to fight with this setup.\n* Anyone in any slot. Three Susies? Go for it.\n* Only Kris can ACT.';
  if(t===1)return '* LEFT/RIGHT to change. Z puts it back to normal.\n* HP moves in 10s.';
  if(t===2)return '* Any spell on anyone, up to 6 each.\n* SnowGrave and FrostBite work best with high MAGIC.';
  if(t===3){const row=drHubRows()[drHub.row],id=drCustom.items[drHub.row];return id?'* '+DR.items[id].name+': '+DR.items[id].desc.replace(/#/g,' ')+'.\n* Buy more kinds in the SHOP.':'* Up to 6 items. Buy more kinds in the SHOP.'}
@@ -30528,7 +30534,7 @@ function drawDrHub(now){
   drHit(20,y-2,368,34,()=>{if(drHub.focus===1&&drHub.row===i){r.ok&&r.ok();drSaveCustom();play('select')}else{drHub.focus=1;drHub.row=i;play('move')}});
  });
  // party preview + description
- const party=['kris',drCustom.s2==='none'?null:'susie',drCustom.s3==='none'?null:drCustom.s3];
+ const party=[drCustom.s1||'kris',drCustom.s2==='none'?null:drCustom.s2,drCustom.s3==='none'?null:drCustom.s3];
  const view=drHub.tab>=1&&drHub.tab<=4&&drHub.tab!==3?[DR_HEROES[drHub.hero]]:party.filter(Boolean);
  const cw=view.length===3?72:view.length===2?110:112;
  view.forEach((id,i)=>drHeroCard(g,id,view.length===1?456:400+i*(cw+4),92,true,cw));
