@@ -2457,7 +2457,7 @@ function play(name,rate=1){
    });
  }catch(_){}
 }
-const MENU_MUSIC_SCREENS=new Set(['title','enemies','drroster','drsupport','kills','spares','settings','creator','shop','customhub','customize','supportselect','lvselect','tutorialPrompt','tutorial']);
+const MENU_MUSIC_SCREENS=new Set(['title','enemies','drroster','drsupport','drcustom','drshop','kills','spares','settings','creator','shop','customhub','customize','supportselect','lvselect','tutorialPrompt','tutorial']);
 let menuMusicAutoplayTried=false;
 function menuMusicScreen(){return MENU_MUSIC_SCREENS.has(screen)}
 function battleMusicTracks(){
@@ -6622,7 +6622,7 @@ let ui6Hits=[],ui6Wheels=[],ui6Recording=true;
 function ui6Hit(r,click,hover){if(ui6Recording)ui6Hits.push({r,click,hover})}
 function ui6WheelArea(r,fn){if(ui6Recording)ui6Wheels.push({r,fn})}
 function ui6In(r,x,y){return x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h}
-const UI6_SCREENS=new Set(['title','enemies','supportselect','drroster','drsupport','customhub','creator','customize','kills','spares','shop','bossrush','bossrushBreak','bossrushCodex','bossrushResults','settings','mods','lvselect','tutorialPrompt','tutorial']);
+const UI6_SCREENS=new Set(['title','enemies','supportselect','drroster','drsupport','drcustom','drshop','customhub','creator','customize','kills','spares','shop','bossrush','bossrushBreak','bossrushCodex','bossrushResults','settings','mods','lvselect','tutorialPrompt','tutorial']);
 function ui6CanvasPoint(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height}}
 function ui6FindHit(x,y){for(let i=ui6Hits.length-1;i>=0;i--)if(ui6In(ui6Hits[i].r,x,y))return ui6Hits[i];return null}
 window.addEventListener('pointermove',e=>{
@@ -7309,6 +7309,8 @@ function render(now){
  if(screen==='enemies'){withMenuSkin(()=>drawEnemySelect(now));drawUiScreenCurtain(now);return}
  if(screen==='supportselect'){withMenuSkin(()=>drawSupportSelect(now));drawUiScreenCurtain(now);return}
  if(screen==='drroster'){withMenuSkin(()=>drawDrRoster(now));drawUiScreenCurtain(now);return}
+ if(screen==='drcustom'){withMenuSkin(()=>drawDrHub(now));drawUiScreenCurtain(now);return}
+ if(screen==='drshop'){withMenuSkin(()=>drawDrShop(now));drawUiScreenCurtain(now);return}
  if(screen==='drsupport'){withMenuSkin(()=>drawDrSupport(now));drawUiScreenCurtain(now);return}
  if(screen==='customhub'){withMenuSkin(()=>drawCustomHub(now));drawUiScreenCurtain(now);return}
  if(screen==='creator'){withMenuSkin(()=>drawCharacterCreator(now));drawUiScreenCurtain(now);return}
@@ -7529,6 +7531,7 @@ function keyDown(e){
 
  key[k]=true;key[low]=true;
  // The new engine polls key[] once per 30 fps step; only ESC (leave) is handled here.
+ if(screen==='drcustom'||screen==='drshop'){drHubKey(k,low,e.repeat);if(k.startsWith('Arrow')||k===' ')e.preventDefault();return}
  if(screen==='drroster'||screen==='drsupport'){if(!e.repeat)drRosterKey(k,low);if(k.startsWith('Arrow')||k===' ')e.preventDefault();return}
  if(screen==='dr'){if(!e.repeat)DR.onKey(low);if(k==='Escape'&&!e.repeat)DR.exit('quit');if(k.startsWith('Arrow')||k===' ')e.preventDefault();return}
  if(screen==='nb'){if(!e.repeat){NB.latch(low);if(low==='o'&&NB.floweySave)NB.floweySave();if(low==='p'&&NB.floweyLoad)NB.floweyLoad()}if(k==='Escape'&&!e.repeat)nbQuit();if(k.startsWith('Arrow')||k===' ')e.preventDefault();return}
@@ -26588,7 +26591,7 @@ const DR_ASSETS={"spr":{"spr_face_n_matome":[54,62,0,0,["eb7ef490-c1a9-42a0-a320
    its obj_dbulletcontroller type 14 attack (obj_viro_needle).
    640x480 room space, one logic step per 1/30 s like the game.            */
 // Chapter 1 sprites/fonts (same layout as DR_ASSETS), loaded from DR_RAW1.
-const DR1_ASSETS={"spr":{"spr_rabbick_enemy":[37,41,0,0,["346e1b21-cf72-4de4-b821-c3d790f235b0","342723f9-3388-45d8-814d-27809d24141e","1489aa04-09c3-49a6-bbae-d71e6abdf911"]],"spr_rabbick_enemy_hurt":[37,41,0,0,["2448b8ee-db15-4cb9-8e6a-e7b9bf1add07","557a0167-063f-43db-9aa4-8e13f05fb0b3"]],"spr_rabbick_enemy_spared":[37,41,0,0,["f8c562bc-b68b-465e-9bf7-c78b4a489799"]],"spr_rabbick_dustorb":[13,13,6,6,["1813f4d1-9f52-4551-b5e7-9f39223f2d96","72b1eb0e-9a31-4286-9f26-3a1e36650246","bcb3559e-32c5-49be-85c9-158480046a4e","117677b7-efc4-41ba-8228-7a7e3f9cd3b1","f8e5c42d-297e-457b-bbd0-fcbe92c3eebe","df68397f-f32b-4417-97cb-012a849792ec","19d9d9c9-e532-47e6-9398-5d27eb6b740a"]],"spr_rabbitbullet":[30,30,15,20,["1490d429-75c4-4a9f-9915-3f0a409b78fe","59925f60-81e0-413c-96b2-05f3631f1be5","40b19516-e671-424b-b19b-9d4f7861611b"]],"spr_rabbitthrower":[28,24,11,17,["011e674e-1982-45a1-b534-fad6397c78ce","51dfd676-e3be-421d-b3ba-bb5222b0d645","cda34fc1-a68e-4790-83d1-cb28a718244d","ef0ecfdc-e948-4599-ad10-ccd7120f8990"]],"spr_carrotbullet":[13,13,6,6,["e2252957-9b15-481c-adbd-11fc52da3d01","565bb5df-1051-4ac8-a70b-24dbcede5408","72c74554-05ea-4a29-8e37-c9e401f2c0c2","aa2b5134-f853-481e-b5d2-606bf520c1e9"]],"spr_susie_enemy":[54,45,0,0,["67c6dcb7-267b-44bd-86b3-5963509a3f51","50bd0636-a89a-4e55-99d9-685c98763fe7","2d6bc170-3265-4e30-86d0-7fdc5fccbc61","cb6ffdcf-636e-4826-b1a1-990ab7b9730b"]],"spr_susie_enemy_hurt":[54,45,5,0,["19301635-8b88-45d1-89be-e75b8036898b"]],"spr_susie_enemy_defeat":[43,45,8,0,["2773adba-4cc1-4b44-8672-0f8e7226d727"]],"spr_susie_enemy_attack":[103,71,51,24,["c5117f6e-1edd-49b0-9eeb-111e597b28ff","03db081f-66db-4c25-b12d-359c27234ba9","0996aa08-b3d3-4d78-b004-dd0f9ed5b855","e2660968-7677-4a37-9c03-7d0841560cf5","79c1f123-99b9-4184-a1f3-99eb2fb188cf","46142e20-dd45-4a64-8306-ec0f0a7b8251"]],"spr_susiel_dark":[25,46,0,0,["4adafa9d-d513-4bc6-982d-9ab24e0a1c04","76981980-86b7-49d2-9949-71d0db7125d0","d381aea9-e72b-460b-afaf-714ac8bfcafa","93f6bac8-28c7-4727-b662-18834b3e5481"]],"spr_lancerbike":[61,46,28,44,["2be6cffe-3e28-485b-88b7-012a1b71c490","2387dbbe-3760-4dd8-9e8c-b3a41a29d6a1","166af490-8d88-4acf-a3a3-24440405db4a","13c74e97-664f-43b8-b6de-fa2987426c79","ee5fa5ae-ca82-4c9a-a00a-7afad2cd8fe5","a1564d75-e613-4bab-ab1c-39ff1a2e0805"]],"spr_lancerbike_l":[61,46,28,44,["146e489f-1e47-4cae-ad46-45635e3c84f8","3133a0d7-cac8-486a-912d-9444f4789dcd","f5c5a042-187e-49c4-92f0-f20fa31cccfc","6423172b-7e21-4179-b774-c77a8c5a8343","d2a14d95-399b-4a95-b4d4-d9a853ef7373","8c31c426-9c2e-4886-8e7b-271aaba46811"]],"spr_lancerbike_hurt":[61,46,28,44,["5d88f534-04f1-4219-9742-62230ebb0469","02a188a3-3565-469b-88f2-b3aacb34f689"]],"spr_lancerbike_earcover":[61,46,28,44,["1d5a2a32-dbc1-4ad4-bf69-59159b3aaa40"]],"spr_lancernoise":[20,20,15,12,["c180e9e4-553b-4f13-8215-b5d43c653b16"]],"spr_axebullet_b":[32,30,14,18,["84c0ede1-08db-4b2d-9f23-8707fd304c93"]],"spr_face_l0":[55,56,0,0,["95268e42-0988-427c-aff2-d12c50e4e4dd","5289901e-f83b-49d4-99b9-a86c6656fd83","8692c817-6132-48d7-a9a1-3abcc83fbfb6","126ae0de-9ff0-4c53-8878-6c549d502ea7","83de03fd-8d4e-492b-bc28-0cbb30daaea7","8dc0cf96-f701-47b9-9380-d307480fa4da","4549bb27-d063-4123-a11c-ee513878bdf7","8864a284-ec1f-4ab9-ba6d-ec57ee8dcb3b","fe85057b-a8f1-4bb3-96d3-c307203c783d","cd5dcbbf-c1f7-4b63-b15b-28360763c5de","35c3e7bc-d7f6-4daa-ba5f-1cbc4b9cb3eb","6ada543c-6384-4589-8195-f58118cadc0a","bb6c2589-245c-4be6-b11c-842916d66b69","c49ed82c-156e-4619-b471-1eaa4f4a4b0d","c9ff42ce-7ac4-4b26-91ae-8fac6d7d26fd"]],"spr_face_s9":[45,50,0,0,["4a8ccca9-ace7-4097-81bc-168f2e7d2115"]],"spr_checkers_idle":[43,77,0,0,["c70b221c-d23f-4a8b-86fe-aeb9fe5f2e52","ea5e9022-6c2d-42d0-92c7-b48bb42593ca","3fdbcb7a-4da1-4144-8649-ee4f900e4d30","8d853f62-4a8a-43b2-b756-0cdc42db8e8b","974896e7-c17b-4622-be08-548f618fcd6e","4f3ec94c-5cee-4f37-ae78-7ee0f2a3de61","7088157c-e87f-4114-89ea-a4a38143dcb5","886c424a-70b9-4ea2-a2e1-ef746027c5e4"]],"spr_checkers_crouch":[48,84,0,0,["a1c1067f-48e3-4389-9590-815f1e2ceb40"]],"spr_checkers_leap":[48,84,0,0,["cba562f6-b520-486d-a705-58e10df1398c","d165ad4c-92be-4fa7-808b-ecfa13589b33","26177470-face-4661-a571-f7947fbfcd0e"]],"spr_checkers_magnificent":[116,78,24,0,["29e1ea7f-5257-471f-a89d-ca5a1f6754a3","d6b85dac-94f1-4b3e-b723-4f52342f0d45","7932ab39-b129-4e6d-847b-b6da1c262ec8","0c1e0088-f829-4b94-90cf-6ad1890f01a1","b1ea40c6-ac33-4a1e-8d77-57ffc40713d0"]],"spr_checkers_leg":[70,77,29,0,["10cefb73-f93e-4696-8462-e93c891ad853","cc37a9c6-107e-4fe6-94b8-cef2617ba0db","cd2cbecf-dc2c-44b1-9965-18d7d4c79f2d","f35e297f-df4a-4bf3-a05d-2b9ffbf33b75","567e4a94-2b86-463c-b3d3-76df5dc8193f","66fa5b64-e9ac-4111-8783-f8e613088d9a"]],"spr_checkers_bow":[55,76,13,-1,["6cf53c5b-9f14-4b11-a976-2e8480845854","e60d8ed9-07b8-413b-ab43-eeb786350733","99ef49ce-0695-4fea-ad1c-ff29e21c3ae9","2b10b599-bf90-4a74-9cd8-2838e20650fc","7a884114-41ab-46f1-82d2-b40ede71349f","9d942bdc-c2c1-47d3-864f-da2eb6c26371"]],"spr_checkers_milk":[29,54,14,27,["1ed5c191-8c9a-4e60-8f4f-3a580931cd81"]],"spr_checkershrapnel":[16,16,8,8,["b92a3fea-de02-4729-b25b-ba3e8f30c783"]],"spr_krisb_bow":[32,40,0,0,["8a27cd8e-751f-4984-9eea-6460e6f321f4"]],"spr_ralseib_bow":[50,47,0,0,["8c100daa-f8db-49f9-b8ae-7bb701647dce"]],"spr_smallchecker_transform3":[43,81,0,0,["5549a9a8-a64d-40dc-a608-9d1ccb1aaea1","25037d89-1dea-4a24-b46d-1cf4c7562979"]],"spr_ponman_idle":[29,44,0,0,["8c939f96-9db5-4234-891a-12c9e052b3a9","80d47245-e585-4f11-9ce1-2115ae1ef43f","5eefe3bb-b854-4f1c-868b-c0676d0f7b60","f130f4bb-c5c6-4679-b8fe-c0d25b1e19ca"]],"spr_ponman_eye":[5,5,2,2,["db0eb395-9e14-47b3-8a22-f9341c8ed784"]],"spr_ponman_appear":[29,44,0,0,["2445270f-1296-407a-9603-2721dd2c3ea5","f96c5ecd-bf99-4ad0-a97c-3b8c3f01e4e7","9154c029-fd8e-431b-b7e8-92975bfd9898","46c2b702-111f-4418-9b76-827749491552","0379c1f8-2741-43b8-a7de-d5c659c4820a","07acf983-a71c-427c-b1c3-f56184c01dae"]],"spr_ralseib_sing":[40,47,4,0,["55ebbb81-1f21-44a2-9dca-142b196fb5c3","6298ad5e-e9fc-4449-8783-39010c6b97c8","a2feae14-e225-484a-aa13-dfe861e6ecda"]],"spr_clubs_idle":[95,74,0,0,["aa0ec40b-d427-429d-985b-01aabfb23ebe","3c5b42be-ecae-4e4f-a918-9176b07ba3fc","9f388b90-60c5-4c0d-8771-d221e16f55bd","eee4c483-baf8-4db0-ace3-b24b7cd63abd","abc18f41-bf7d-42be-a298-0944a6fddd97","2f210831-7d0f-42a6-ae40-fd6b29adb048","29ecf048-3b23-45cb-9773-216214f8cc7f"]],"spr_clubs_hurt":[123,83,0,4,["9b08b089-dade-4ef6-881f-3901063b0291"]],"spr_clubs_spared":[95,79,0,0,["d2612c88-0fd5-4325-a154-586d2f10b7c6"]],"spr_clubsbullet":[34,34,17,17,["b51fd357-2b2d-4453-b42d-d2d78580cb5c"]],"spr_clubsbullet_dark":[34,34,17,17,["65c8c66f-e152-4155-8101-ea0fb7121a5d"]],"spr_clubsball_a":[34,34,17,17,["9b6d395c-79f4-4ba7-9f80-b046cf41d686"]],"spr_clubsball_b":[34,34,17,17,["3616bff0-59d3-449b-9364-5b790787dc57"]],"spr_clubsball_c":[34,34,17,17,["f7169b4d-604c-40a1-be78-e22a98652dcc"]],"spr_battleblcon_clubs":[150,90,5,0,["8bd1503e-d216-4d96-8239-4d18a4ee6957","37ede4bb-05c6-4157-a8b6-8ae15b247dcd","29de4052-4414-4fa4-afbd-6276a137d683"]],"spr_diamondm_idle":[35,40,0,0,["852c64c8-0b96-430f-a5c2-a8e8ceb7e46c","610b6f3b-3def-42cd-bb05-6a6cb8b06b0c","a42610ef-29d6-4150-b0ea-57e688f75b02","5210c1c5-7c63-469f-9e8b-91bea98a1657"]],"spr_diamondm_hurt":[47,47,0,7,["034f2308-ffdb-412a-ad63-4d561ad1cd0e"]],"spr_diamondm_spared":[35,40,0,0,["020511ae-d352-4c3a-8ff8-fa681d227a28","34046a28-7ae7-4239-beaa-39cefb71b659","ff6673db-e331-4340-bdf8-e6e5ed397089"]],"spr_diamondbullet":[33,32,16,15,["8b39604a-9c7b-41c3-91bf-e77fc16195a1"]],"spr_diamondbullet_form":[33,32,16,15,["2f2c1899-a8a6-40f1-a2c9-df4933bbbee0"]],"spr_diamondbullet_vert":[33,33,16,16,["03944b35-fcd9-43fe-a81d-6f0c777eca03"]],"spr_battleblcon_long":[150,86,0,0,["0bd9e5ae-5220-41ab-b0b7-61a89548e6fb"]],"spr_heartenemy_idle":[53,48,0,0,["93d0f57f-9dad-4ffb-9d70-832a1cc00efd","c72fdb87-605a-46f9-8d32-3eec9ee0fc34","997c1773-9d77-4563-ab12-406cca2a3c62","610e2ad5-f6b3-46e5-a0d8-652f51accb51"]],"spr_heartenemy_hurt":[67,76,1,24,["10da12f6-1ab5-410c-8b26-040e2b21f57e","31f52c91-5c3f-4e54-b8d0-4794d300e7c6"]],"spr_heartenemy_spared":[47,48,0,0,["41df1dda-7937-4c66-b2d2-7ff4415f3254"]],"spr_jigsawry_idle":[38,36,0,0,["4b696a20-1d7f-4a38-956b-0472f65dffa7","775d11bf-6ef2-470e-839f-deda4dc33275","b742886d-9e09-4a6c-a17d-e8b3222dc945","44ab5851-8892-4dba-bfb2-e4b561833a13","73ceecdb-5659-41d9-a6bc-09e2f7b939db","c8ed6073-fc4a-4195-9ad7-eb1664f5258e"]],"spr_jigsawry_hurt":[37,38,0,0,["7bb3b4d5-1ff5-4496-a6de-977c4a544c8b"]],"spr_jigsawry_spared":[38,36,0,0,["c364404c-7a1b-4830-9ad6-65b0466012ae","941a5678-145c-4382-9b5f-ab2db9a73101","16fdcf4b-2ce8-46a4-97dc-75ddda8e08c5","f7febcc5-f436-4a82-9ed8-d11c1bd2d663","186653a1-03e6-434a-a2d7-ad4052cb9df9","9c879220-eb2d-4b00-94f6-e40c91d8ca77"]],"spr_jigsawbullet":[40,40,20,20,["baf777b2-d660-447b-a55a-8e1294bc82f1"]],"spr_spinheart":[41,41,20,20,["4d26f6a6-4355-4fd6-862f-8e6bb70fc6af"]],"spr_spinheartmask":[41,41,20,20,["cfbfa52c-2f80-49f5-8eee-6244aab54700"]],"spr_heartblcon_0":[50,50,0,0,["242ee46d-db89-4aeb-836d-37a03a8b434c","f3b65ce8-514f-477d-a45d-a02179342967","05fa3179-0e1e-458b-b183-cd2d3698c215","f2918309-dea8-48c9-8dde-1993527925cb","455663f7-e56d-437c-98c8-eb7af7d52bbb","89b87537-7774-4874-b4d0-c3ef69ba811a"]],"spr_heartblcon_1":[50,50,0,0,["4304a9d1-6bce-40c4-9b27-8f2bf8f5b4a0","84927f30-9da2-4c0e-8f3b-0d9e26bf81ac","d83684f2-7bc8-49bc-a87c-038b40f46f23","391545ef-89a2-4239-a464-92b1eef84b02","de6ac876-01a6-4c57-bc90-da0a1b73a06d","a9646ca4-668d-4b48-b779-54c38ee3131a"]],"spr_heartblcon_2":[50,50,0,0,["d4ac65a5-4816-44f9-93eb-8451112dd011","da5348da-e64d-41b1-aa0c-ef37e8464e81","29329402-47c0-407a-9eef-86dab5ecf4fc"]],"spr_heartblcon_3":[50,50,0,0,["8ef1642c-1060-4574-a6de-39e06835ff7d","780573dd-67c2-406f-858b-58a5943c9354","5588a5f6-f84c-4067-83c1-075692d66270"]],"spr_battleblcon":[140,80,0,0,["f8f9ebeb-448e-4890-8ba5-6add2f29ff88"]],"spr_face_r_dark":[57,59,0,0,["d9d259f0-87e9-4c3a-9b06-cd295ac9e8ee","b7a57aa8-49d5-468e-bdf4-d757e331daaa","22aa97ee-c91a-4fc1-a495-36859fdbad45","9f351c47-4fc5-4a58-be6c-39843068ba41","8eeb62ee-936c-4ff1-9e5c-fc44874ce7c9","8c834d17-cca5-4291-a417-c753254e018d","efd9e198-bb89-49b5-8da6-bbea8b1fe221","624e4e7d-696f-419d-b2dc-5ffb03773b36","15a567c4-ba81-446c-b160-ad447e35985e","8d44fbc9-0d09-4cae-9a55-cf15220df4d6","b72f9088-44f8-4bc5-afa5-5b7ae0be441e","75167ab4-276b-417b-b9f0-07282c6c4d05","9e151565-85ea-4ec4-a7c3-06b66f70df9e"]],"spr_hathyx_idle":[53,48,0,0,["f857fa20-562e-4187-a3ec-4121f267ead7","b239fd64-c8e3-485c-b8b1-71ef1a697cdd","07a9b07b-b27f-4411-a6c4-0d6ed119e4ae","9ad39355-9c92-46d9-b85e-7ea25a3e742a"]],"spr_hathyx_hurt":[67,76,1,24,["ce7aff41-8447-4ad4-9e0f-03422b220949"]],"spr_hathyx_spared":[47,48,0,0,["04083775-73e5-4401-9f70-2ba01234e130"]],"spr_heartblcon_4":[50,50,0,0,["5cba490d-1e19-4eda-ae47-4a3adc865da5","66025b01-29de-49a4-a0cc-772a5e3157bf","dd563013-7e13-4b71-8b7b-4274b4b57089","e6139c73-0d44-4b3a-89ac-d1e9566a16f5","660cce1a-342f-4f2e-9701-cb27e57ec91c","2bd5b3ab-5dc4-4177-9f0e-d45fc490475c"]],"spr_heartblcon_5":[50,50,0,0,["6323f32f-16a8-4718-83b0-ca74d6c30251","e614c0ac-6860-4a8b-a71a-fc329851f01b","293b7a7f-511f-4287-a1e9-381b0db54ba9","7540094a-f362-4d92-837b-c58c562b7391","89425f8b-d8ec-4690-80bf-58685055f198"]],"spr_daimond_knight_idle":[35,40,0,0,["13d7722a-ebd3-4fb4-acdc-16a53f9d1eb3","bc7ba02e-a0b1-4a48-aafc-51c5f00f6ec5","8f481a01-f64f-4af9-87e6-a29b24aa353b","17ad2deb-0fee-4d0a-a145-55e344050fc5"]],"spr_diamond_knight_hurt":[45,50,5,10,["3886f73b-5a42-450b-aaa8-e176814a57b6"]],"spr_diamond_knight_spared":[35,40,0,0,["432b225d-a2f7-4d6e-a23d-70b516c65292","e3996384-4939-4f06-92be-9cbcb0b47bf6","153259a3-8511-4149-80a3-429c5128e8e4","7a839aac-3c46-47bf-adb1-591d46d516f0"]],"spr_diamond_knight_slash":[75,50,20,10,["be8e1641-f9a9-4b9d-8125-5bb8e2ade515","1610c3a7-c7ec-4515-a414-23357d010731","71b99b7b-4552-4e94-8194-3490d4240e1c","492fdb9d-f56b-4dd4-a58f-a5939c56de27","1aa5b2a5-e0ee-4272-9e9c-a7f5f161ef45","5d69d47f-f85e-43a5-9170-9071962bebfa"]],"spr_diamondswordbullet":[29,29,12,14,["b82e4105-af39-4590-b946-58bc238fcadd"]],"spr_heartbullet":[18,18,9,9,["331d8126-c95f-4041-b764-b30ce5186aa0"]],"spr_face_s0":[45,50,0,0,["0f779806-ff68-4aa9-a91c-3fd9b3b61dde"]],"spr_face_s1":[45,50,0,0,["2d127e25-cee9-4ab2-9f7d-d787a40bd747"]],"spr_face_s2":[45,50,0,0,["e46c3382-3c8c-47f8-859c-a77e2474ac7f"]],"spr_face_s7":[45,50,0,0,["858d6848-2378-4af9-8907-b07f4515db8b"]],"spr_textbox_left":[16,1,0,0,["36e08b8f-c266-4cb3-9832-093d8ab5d474"]],"spr_textbox_top":[1,16,0,0,["1db995e8-21ff-4719-8fc5-b10cc9c834b6"]],"spr_textbox_topleft":[16,16,0,0,["10425707-3390-4473-8b0f-ad00914690ac","db8d13ce-3d4f-4bcc-ab98-c00ea77167ce","df2d6c9a-1600-4a94-8cb6-b7245cbe71c1","7d12ae40-fdb6-4985-8c04-064de4ecb8b8","3271248c-99be-4d6e-9cc7-d5528522bf02","11f5c04e-cbf5-45b0-8064-7458024d899c","c7a5351b-112f-47e8-bb40-25248b84d228","c54b5b37-5564-46e5-ad89-bdc097167f64"]],"spr_chainking_idle":[75,75,7,0,["6a79d1f5-e068-480e-9254-1cce65b9f9d2","4efaf2b7-44ba-4b16-88ad-64442b11ca4b","edd9fa63-98cc-4e34-b3e2-d1b835116464","ebddc129-2479-4916-9a00-557b3a1bbe82","be89560e-0efb-4aa2-bb9b-0e3be2e7fa67"]],"spr_chainking_hurt":[80,75,7,0,["096142c2-5022-41c5-a4e7-5b3571eb868b"]],"spr_chainking_toss":[120,89,32,8,["8eff6516-4e64-4e6c-9951-a95ea72ca5a6","cb7e43e5-6ce9-4b9b-8809-f234be44f18d","07f9c4e6-2d7b-44d6-8d0e-578f7a3a034a","254b2a00-f4cc-40f2-aa58-0a3d620a28a3","99fd0a36-53fe-4eb4-adc6-68dbffd59769"]],"spr_chainking_toss_idle":[106,85,32,5,["ae2c6ae8-dfc3-4dd9-b2e6-8ed467b8102d","70b4e602-7db5-4468-8a94-5e4ac8afeffb","952e04bd-350c-424b-b392-cbf9ae6bbff1"]],"spr_chainking_pullback":[125,100,32,9,["cb42a340-ac68-4cea-8fbf-107c95fe0705"]],"spr_chainking_receive":[125,100,32,9,["cfeb7d9e-2a8d-49da-9275-d4ffb9e8659a"]],"spr_battlebg_1":[49,49,24,24,["fa6e7252-a7ab-4845-ae9d-7816edac3101","fba46218-c823-494f-873f-f6f85a676b0c"]],"spr_battlebg_2":[59,59,29,29,["57b73fb8-c135-4104-a26c-699894461548","b7da48da-d7d8-40aa-abcd-aeae5b9a9a50"]],"spr_battlebg_wavechain":[59,39,29,19,["11efce02-a2d3-4b2c-b210-033dbd4d2e68","acca356c-1159-4dd9-95f6-54862ad7166a"]],"spr_battlebg_spikes":[49,49,24,24,["08d65f65-26f0-472c-87bf-f50f2e336205"]],"spr_bouncebox_spike":[7,13,0,0,["c925f229-301c-4a6a-b146-677b6d42505b"]],"spr_spadebullet":[36,34,18,17,["916a7f48-c26b-40f8-af5d-eb4403249092"]],"spr_chainfront":[39,39,19,19,["e3fd7d90-f7ad-4991-b545-dabded5303e8"]],"spr_chainpiece":[28,10,14,5,["54f3bd40-c51d-4e8e-bd30-280b041fafc8"]],"spr_heartoutline":[20,20,10,10,["88b89abf-9c06-4b7f-841b-f8c052c4db86"]],"spr_soulshining":[32,32,16,16,["b8b3b962-1d0e-4f4d-84b2-4e0b9be38a4d","27d12e5c-4081-434d-84a3-90e6b87ab178","6ae1d4b2-b695-4899-92b8-892677d18c67","4747bfa6-2bc7-45f1-9210-5efe20944168","a925897f-15db-439d-acdb-abe58d74385c","f805d8a3-84ac-4136-8f8d-86705d93c701","b2c4e5a4-2feb-4761-b092-14bb6fdfdb50","2d76cf47-171f-4765-8308-1ab284304ae0","8bea62fb-5aa6-4d04-9556-4a1b04194008","e892b055-32e4-45f2-9d42-3833b17dfd52","a160a26b-b43e-4fcd-b8ea-4ceacb0991ef","184835ca-6d91-43ba-b026-29318b8517ac"]],"spr_susieb_idle_serious":[54,45,19,0,["c66126cc-34a7-4031-95cb-fd9890765607","b84c47fb-166a-4463-bec9-50ddff323896","610fee02-0218-422f-8f10-6f92f76e19cc","5f606bed-6043-44d4-b22d-d2bc5bab4944"]],"spr_susieb_attack_serious":[103,71,21,24,["bc3e125e-1a18-4632-b31e-b485f73883f5","922e4d22-34cb-4de2-9536-fa2e61b49af5","f5cb24c8-97d4-4661-8bed-24fb974625e6","038ce7c3-69a0-4f6e-89f9-cd4e0e6e1709","cd7de351-9816-4ba9-a474-6b6172e5423c","40884871-bdce-47c5-ab07-fc78664f7159"]],"spr_battleblcon_long_tall":[150,140,0,0,["b03323ed-91ac-4ab4-ae94-efa22d94b5fa"]],"spr_face_s3":[45,50,0,0,["f244d4e8-3dde-4291-a178-28e6ebb3d747"]],"spr_face_sC":[45,50,0,0,["8400d201-6bc0-4c9a-bc3b-426ecb18a99e"]],"spr_face_s4":[45,50,0,0,["1137009a-ee81-45ba-ac58-fba5d94f5399"]],"bg_cc_arena":[320,240,0,0,["f1bc3c9f-6c7a-4d06-8485-b0076609161f"]]},"font":{"fnt_dotumche":{"32":[2,2,9,16,9,0],"33":[96,102,2,14,9,4],"34":[77,102,5,6,9,3],"35":[13,2,9,14,9,0],"36":[75,2,8,15,9,1],"37":[32,20,8,14,9,1],"38":[92,52,8,14,9,1],"39":[122,102,2,6,9,4],"40":[9,102,5,15,9,3],"41":[16,102,5,15,9,1],"42":[43,102,6,10,9,1],"43":[63,85,8,11,9,1],"44":[63,102,3,15,9,3],"45":[23,102,8,8,9,1],"46":[84,102,2,14,9,4],"47":[38,85,7,13,9,1],"48":[82,36,8,14,9,1],"49":[57,102,4,14,9,2],"50":[92,69,7,14,9,1],"51":[74,69,7,14,9,1],"52":[82,20,8,14,9,1],"53":[11,69,7,14,9,1],"54":[83,69,7,14,9,1],"55":[29,69,7,14,9,1],"56":[38,69,7,14,9,1],"57":[20,85,7,14,9,1],"58":[112,102,2,12,9,3],"59":[68,102,3,14,9,3],"60":[73,85,8,11,9,1],"61":[109,85,8,10,9,1],"62":[83,85,8,11,9,1],"63":[52,20,8,14,9,1],"64":[12,20,8,14,9,1],"65":[102,20,8,14,9,1],"66":[72,20,8,14,9,1],"67":[52,36,8,14,9,1],"68":[72,52,8,14,9,1],"69":[42,20,8,14,9,1],"70":[62,20,8,14,9,1],"71":[2,36,8,14,9,1],"72":[62,52,8,14,9,1],"73":[92,102,2,14,9,4],"74":[101,85,6,14,9,1],"75":[32,52,8,14,9,1],"76":[11,85,7,14,9,1],"77":[42,52,8,14,9,1],"78":[42,36,8,14,9,1],"79":[112,36,8,14,9,1],"80":[2,52,8,14,9,1],"81":[55,2,8,15,9,1],"82":[92,36,8,14,9,1],"83":[2,20,8,14,9,1],"84":[92,20,8,14,9,1],"85":[12,52,8,14,9,1],"86":[22,20,8,14,9,1],"87":[22,52,8,14,9,1],"88":[22,36,8,14,9,1],"89":[95,2,8,14,9,1],"90":[56,69,7,14,9,1],"91":[2,102,5,15,9,3],"92":[24,2,9,14,9,0],"93":[119,85,5,15,9,1],"94":[104,102,6,4,9,2],"95":[85,2,8,15,9,1],"96":[116,102,4,4,9,2],"97":[102,36,8,14,9,1],"98":[52,52,8,14,9,1],"99":[32,36,8,14,9,1],"100":[82,52,8,14,9,1],"101":[12,36,8,14,9,1],"102":[110,69,7,14,9,1],"103":[102,52,7,15,9,1],"104":[2,85,7,14,9,1],"105":[88,102,2,14,9,4],"106":[51,102,4,15,9,2],"107":[101,69,7,14,9,1],"108":[100,102,2,14,9,4],"109":[72,36,8,14,9,1],"110":[2,69,7,14,9,1],"111":[115,2,8,14,9,1],"112":[35,2,8,15,9,1],"113":[65,2,8,15,9,1],"114":[93,85,6,14,9,2],"115":[20,69,7,14,9,1],"116":[65,69,7,14,9,1],"117":[47,69,7,14,9,1],"118":[62,36,8,14,9,1],"119":[112,20,8,14,9,1],"120":[105,2,8,14,9,1],"121":[45,2,8,15,9,1],"122":[29,85,7,14,9,1],"123":[47,85,6,15,9,2],"124":[73,102,2,15,9,4],"125":[55,85,6,15,9,1],"126":[33,102,8,8,9,1],"127":[111,52,7,14,9,1]}}};
+const DR1_ASSETS={"spr":{"spr_blockguy_part":[26,14,0,0,["67fcb502-060f-45ab-b91f-fe048513fca3","aa63875f-5dbe-4c6c-8ff0-a2e67673d6a9","b5bad8de-7184-49f4-9498-63b5bfdf6e2d","cee78c16-984b-441d-b07c-42facfdf0f80","d17447cd-e21b-47ee-b036-e75fab8f248c","9a402a53-d279-470b-b173-5b4c8211da54","7dc77c77-7773-4d1c-a5aa-41c168899ec2"]],"spr_blockguy_part_hurt":[26,14,0,0,["fe773511-db34-4bab-a787-2a592354c2a8","1e997ed7-7041-416d-9130-ce5beee256c5","ea1a8296-9516-4a7d-98c5-37e88e46010a","979ff32f-c0cb-4b3a-bbca-1e2d2c9abe3b","b5d98fee-ef44-4c11-9791-0f62c111663e","2858d8a9-9920-4ac9-aaa9-93e42da6a5e3","9486c1cc-77a8-42cf-9cbc-d30646771c78"]],"spr_blockguy_spared":[38,54,13,-6,["c19d3e4c-b960-4bf5-9c70-e98712f08860"]],"spr_blockguy_overworld":[25,64,0,0,["ece32556-e579-46f9-930c-4fdc4ad2efde","326568b5-f613-4782-bb05-e9e128975c92","f7d79d78-ed1f-4e89-a4e0-fe271a2151ff","01fc7c87-8bd1-4dfa-9c71-e4432d30dad8"]],"spr_blockbullet":[40,40,0,0,["4a7af432-a25e-461e-9f6a-388f92b38f59"]],"spr_blockbullet_mini":[34,28,0,0,["72da43df-c149-4869-9eef-c0c1811c14f2"]],"spr_rabbick_enemy":[37,41,0,0,["346e1b21-cf72-4de4-b821-c3d790f235b0","342723f9-3388-45d8-814d-27809d24141e","1489aa04-09c3-49a6-bbae-d71e6abdf911"]],"spr_rabbick_enemy_hurt":[37,41,0,0,["2448b8ee-db15-4cb9-8e6a-e7b9bf1add07","557a0167-063f-43db-9aa4-8e13f05fb0b3"]],"spr_rabbick_enemy_spared":[37,41,0,0,["f8c562bc-b68b-465e-9bf7-c78b4a489799"]],"spr_rabbick_dustorb":[13,13,6,6,["1813f4d1-9f52-4551-b5e7-9f39223f2d96","72b1eb0e-9a31-4286-9f26-3a1e36650246","bcb3559e-32c5-49be-85c9-158480046a4e","117677b7-efc4-41ba-8228-7a7e3f9cd3b1","f8e5c42d-297e-457b-bbd0-fcbe92c3eebe","df68397f-f32b-4417-97cb-012a849792ec","19d9d9c9-e532-47e6-9398-5d27eb6b740a"]],"spr_rabbitbullet":[30,30,15,20,["1490d429-75c4-4a9f-9915-3f0a409b78fe","59925f60-81e0-413c-96b2-05f3631f1be5","40b19516-e671-424b-b19b-9d4f7861611b"]],"spr_rabbitthrower":[28,24,11,17,["011e674e-1982-45a1-b534-fad6397c78ce","51dfd676-e3be-421d-b3ba-bb5222b0d645","cda34fc1-a68e-4790-83d1-cb28a718244d","ef0ecfdc-e948-4599-ad10-ccd7120f8990"]],"spr_carrotbullet":[13,13,6,6,["e2252957-9b15-481c-adbd-11fc52da3d01","565bb5df-1051-4ac8-a70b-24dbcede5408","72c74554-05ea-4a29-8e37-c9e401f2c0c2","aa2b5134-f853-481e-b5d2-606bf520c1e9"]],"spr_susie_enemy":[54,45,0,0,["67c6dcb7-267b-44bd-86b3-5963509a3f51","50bd0636-a89a-4e55-99d9-685c98763fe7","2d6bc170-3265-4e30-86d0-7fdc5fccbc61","cb6ffdcf-636e-4826-b1a1-990ab7b9730b"]],"spr_susie_enemy_hurt":[54,45,5,0,["19301635-8b88-45d1-89be-e75b8036898b"]],"spr_susie_enemy_defeat":[43,45,8,0,["2773adba-4cc1-4b44-8672-0f8e7226d727"]],"spr_susie_enemy_attack":[103,71,51,24,["c5117f6e-1edd-49b0-9eeb-111e597b28ff","03db081f-66db-4c25-b12d-359c27234ba9","0996aa08-b3d3-4d78-b004-dd0f9ed5b855","e2660968-7677-4a37-9c03-7d0841560cf5","79c1f123-99b9-4184-a1f3-99eb2fb188cf","46142e20-dd45-4a64-8306-ec0f0a7b8251"]],"spr_susiel_dark":[25,46,0,0,["4adafa9d-d513-4bc6-982d-9ab24e0a1c04","76981980-86b7-49d2-9949-71d0db7125d0","d381aea9-e72b-460b-afaf-714ac8bfcafa","93f6bac8-28c7-4727-b662-18834b3e5481"]],"spr_lancerbike":[61,46,28,44,["2be6cffe-3e28-485b-88b7-012a1b71c490","2387dbbe-3760-4dd8-9e8c-b3a41a29d6a1","166af490-8d88-4acf-a3a3-24440405db4a","13c74e97-664f-43b8-b6de-fa2987426c79","ee5fa5ae-ca82-4c9a-a00a-7afad2cd8fe5","a1564d75-e613-4bab-ab1c-39ff1a2e0805"]],"spr_lancerbike_l":[61,46,28,44,["146e489f-1e47-4cae-ad46-45635e3c84f8","3133a0d7-cac8-486a-912d-9444f4789dcd","f5c5a042-187e-49c4-92f0-f20fa31cccfc","6423172b-7e21-4179-b774-c77a8c5a8343","d2a14d95-399b-4a95-b4d4-d9a853ef7373","8c31c426-9c2e-4886-8e7b-271aaba46811"]],"spr_lancerbike_hurt":[61,46,28,44,["5d88f534-04f1-4219-9742-62230ebb0469","02a188a3-3565-469b-88f2-b3aacb34f689"]],"spr_lancerbike_earcover":[61,46,28,44,["1d5a2a32-dbc1-4ad4-bf69-59159b3aaa40"]],"spr_lancernoise":[20,20,15,12,["c180e9e4-553b-4f13-8215-b5d43c653b16"]],"spr_axebullet_b":[32,30,14,18,["84c0ede1-08db-4b2d-9f23-8707fd304c93"]],"spr_face_l0":[55,56,0,0,["95268e42-0988-427c-aff2-d12c50e4e4dd","5289901e-f83b-49d4-99b9-a86c6656fd83","8692c817-6132-48d7-a9a1-3abcc83fbfb6","126ae0de-9ff0-4c53-8878-6c549d502ea7","83de03fd-8d4e-492b-bc28-0cbb30daaea7","8dc0cf96-f701-47b9-9380-d307480fa4da","4549bb27-d063-4123-a11c-ee513878bdf7","8864a284-ec1f-4ab9-ba6d-ec57ee8dcb3b","fe85057b-a8f1-4bb3-96d3-c307203c783d","cd5dcbbf-c1f7-4b63-b15b-28360763c5de","35c3e7bc-d7f6-4daa-ba5f-1cbc4b9cb3eb","6ada543c-6384-4589-8195-f58118cadc0a","bb6c2589-245c-4be6-b11c-842916d66b69","c49ed82c-156e-4619-b471-1eaa4f4a4b0d","c9ff42ce-7ac4-4b26-91ae-8fac6d7d26fd"]],"spr_face_s9":[45,50,0,0,["4a8ccca9-ace7-4097-81bc-168f2e7d2115"]],"spr_checkers_idle":[43,77,0,0,["c70b221c-d23f-4a8b-86fe-aeb9fe5f2e52","ea5e9022-6c2d-42d0-92c7-b48bb42593ca","3fdbcb7a-4da1-4144-8649-ee4f900e4d30","8d853f62-4a8a-43b2-b756-0cdc42db8e8b","974896e7-c17b-4622-be08-548f618fcd6e","4f3ec94c-5cee-4f37-ae78-7ee0f2a3de61","7088157c-e87f-4114-89ea-a4a38143dcb5","886c424a-70b9-4ea2-a2e1-ef746027c5e4"]],"spr_checkers_crouch":[48,84,0,0,["a1c1067f-48e3-4389-9590-815f1e2ceb40"]],"spr_checkers_leap":[48,84,0,0,["cba562f6-b520-486d-a705-58e10df1398c","d165ad4c-92be-4fa7-808b-ecfa13589b33","26177470-face-4661-a571-f7947fbfcd0e"]],"spr_checkers_magnificent":[116,78,24,0,["29e1ea7f-5257-471f-a89d-ca5a1f6754a3","d6b85dac-94f1-4b3e-b723-4f52342f0d45","7932ab39-b129-4e6d-847b-b6da1c262ec8","0c1e0088-f829-4b94-90cf-6ad1890f01a1","b1ea40c6-ac33-4a1e-8d77-57ffc40713d0"]],"spr_checkers_leg":[70,77,29,0,["10cefb73-f93e-4696-8462-e93c891ad853","cc37a9c6-107e-4fe6-94b8-cef2617ba0db","cd2cbecf-dc2c-44b1-9965-18d7d4c79f2d","f35e297f-df4a-4bf3-a05d-2b9ffbf33b75","567e4a94-2b86-463c-b3d3-76df5dc8193f","66fa5b64-e9ac-4111-8783-f8e613088d9a"]],"spr_checkers_bow":[55,76,13,-1,["6cf53c5b-9f14-4b11-a976-2e8480845854","e60d8ed9-07b8-413b-ab43-eeb786350733","99ef49ce-0695-4fea-ad1c-ff29e21c3ae9","2b10b599-bf90-4a74-9cd8-2838e20650fc","7a884114-41ab-46f1-82d2-b40ede71349f","9d942bdc-c2c1-47d3-864f-da2eb6c26371"]],"spr_checkers_milk":[29,54,14,27,["1ed5c191-8c9a-4e60-8f4f-3a580931cd81"]],"spr_checkershrapnel":[16,16,8,8,["b92a3fea-de02-4729-b25b-ba3e8f30c783"]],"spr_krisb_bow":[32,40,0,0,["8a27cd8e-751f-4984-9eea-6460e6f321f4"]],"spr_ralseib_bow":[50,47,0,0,["8c100daa-f8db-49f9-b8ae-7bb701647dce"]],"spr_smallchecker_transform3":[43,81,0,0,["5549a9a8-a64d-40dc-a608-9d1ccb1aaea1","25037d89-1dea-4a24-b46d-1cf4c7562979"]],"spr_ponman_idle":[29,44,0,0,["8c939f96-9db5-4234-891a-12c9e052b3a9","80d47245-e585-4f11-9ce1-2115ae1ef43f","5eefe3bb-b854-4f1c-868b-c0676d0f7b60","f130f4bb-c5c6-4679-b8fe-c0d25b1e19ca"]],"spr_ponman_eye":[5,5,2,2,["db0eb395-9e14-47b3-8a22-f9341c8ed784"]],"spr_ponman_appear":[29,44,0,0,["2445270f-1296-407a-9603-2721dd2c3ea5","f96c5ecd-bf99-4ad0-a97c-3b8c3f01e4e7","9154c029-fd8e-431b-b7e8-92975bfd9898","46c2b702-111f-4418-9b76-827749491552","0379c1f8-2741-43b8-a7de-d5c659c4820a","07acf983-a71c-427c-b1c3-f56184c01dae"]],"spr_ralseib_sing":[40,47,4,0,["55ebbb81-1f21-44a2-9dca-142b196fb5c3","6298ad5e-e9fc-4449-8783-39010c6b97c8","a2feae14-e225-484a-aa13-dfe861e6ecda"]],"spr_clubs_idle":[95,74,0,0,["aa0ec40b-d427-429d-985b-01aabfb23ebe","3c5b42be-ecae-4e4f-a918-9176b07ba3fc","9f388b90-60c5-4c0d-8771-d221e16f55bd","eee4c483-baf8-4db0-ace3-b24b7cd63abd","abc18f41-bf7d-42be-a298-0944a6fddd97","2f210831-7d0f-42a6-ae40-fd6b29adb048","29ecf048-3b23-45cb-9773-216214f8cc7f"]],"spr_clubs_hurt":[123,83,0,4,["9b08b089-dade-4ef6-881f-3901063b0291"]],"spr_clubs_spared":[95,79,0,0,["d2612c88-0fd5-4325-a154-586d2f10b7c6"]],"spr_clubsbullet":[34,34,17,17,["b51fd357-2b2d-4453-b42d-d2d78580cb5c"]],"spr_clubsbullet_dark":[34,34,17,17,["65c8c66f-e152-4155-8101-ea0fb7121a5d"]],"spr_clubsball_a":[34,34,17,17,["9b6d395c-79f4-4ba7-9f80-b046cf41d686"]],"spr_clubsball_b":[34,34,17,17,["3616bff0-59d3-449b-9364-5b790787dc57"]],"spr_clubsball_c":[34,34,17,17,["f7169b4d-604c-40a1-be78-e22a98652dcc"]],"spr_battleblcon_clubs":[150,90,5,0,["8bd1503e-d216-4d96-8239-4d18a4ee6957","37ede4bb-05c6-4157-a8b6-8ae15b247dcd","29de4052-4414-4fa4-afbd-6276a137d683"]],"spr_diamondm_idle":[35,40,0,0,["852c64c8-0b96-430f-a5c2-a8e8ceb7e46c","610b6f3b-3def-42cd-bb05-6a6cb8b06b0c","a42610ef-29d6-4150-b0ea-57e688f75b02","5210c1c5-7c63-469f-9e8b-91bea98a1657"]],"spr_diamondm_hurt":[47,47,0,7,["034f2308-ffdb-412a-ad63-4d561ad1cd0e"]],"spr_diamondm_spared":[35,40,0,0,["020511ae-d352-4c3a-8ff8-fa681d227a28","34046a28-7ae7-4239-beaa-39cefb71b659","ff6673db-e331-4340-bdf8-e6e5ed397089"]],"spr_diamondbullet":[33,32,16,15,["8b39604a-9c7b-41c3-91bf-e77fc16195a1"]],"spr_diamondbullet_form":[33,32,16,15,["2f2c1899-a8a6-40f1-a2c9-df4933bbbee0"]],"spr_diamondbullet_vert":[33,33,16,16,["03944b35-fcd9-43fe-a81d-6f0c777eca03"]],"spr_battleblcon_long":[150,86,0,0,["0bd9e5ae-5220-41ab-b0b7-61a89548e6fb"]],"spr_heartenemy_idle":[53,48,0,0,["93d0f57f-9dad-4ffb-9d70-832a1cc00efd","c72fdb87-605a-46f9-8d32-3eec9ee0fc34","997c1773-9d77-4563-ab12-406cca2a3c62","610e2ad5-f6b3-46e5-a0d8-652f51accb51"]],"spr_heartenemy_hurt":[67,76,1,24,["10da12f6-1ab5-410c-8b26-040e2b21f57e","31f52c91-5c3f-4e54-b8d0-4794d300e7c6"]],"spr_heartenemy_spared":[47,48,0,0,["41df1dda-7937-4c66-b2d2-7ff4415f3254"]],"spr_jigsawry_idle":[38,36,0,0,["4b696a20-1d7f-4a38-956b-0472f65dffa7","775d11bf-6ef2-470e-839f-deda4dc33275","b742886d-9e09-4a6c-a17d-e8b3222dc945","44ab5851-8892-4dba-bfb2-e4b561833a13","73ceecdb-5659-41d9-a6bc-09e2f7b939db","c8ed6073-fc4a-4195-9ad7-eb1664f5258e"]],"spr_jigsawry_hurt":[37,38,0,0,["7bb3b4d5-1ff5-4496-a6de-977c4a544c8b"]],"spr_jigsawry_spared":[38,36,0,0,["c364404c-7a1b-4830-9ad6-65b0466012ae","941a5678-145c-4382-9b5f-ab2db9a73101","16fdcf4b-2ce8-46a4-97dc-75ddda8e08c5","f7febcc5-f436-4a82-9ed8-d11c1bd2d663","186653a1-03e6-434a-a2d7-ad4052cb9df9","9c879220-eb2d-4b00-94f6-e40c91d8ca77"]],"spr_jigsawbullet":[40,40,20,20,["baf777b2-d660-447b-a55a-8e1294bc82f1"]],"spr_spinheart":[41,41,20,20,["4d26f6a6-4355-4fd6-862f-8e6bb70fc6af"]],"spr_spinheartmask":[41,41,20,20,["cfbfa52c-2f80-49f5-8eee-6244aab54700"]],"spr_heartblcon_0":[50,50,0,0,["242ee46d-db89-4aeb-836d-37a03a8b434c","f3b65ce8-514f-477d-a45d-a02179342967","05fa3179-0e1e-458b-b183-cd2d3698c215","f2918309-dea8-48c9-8dde-1993527925cb","455663f7-e56d-437c-98c8-eb7af7d52bbb","89b87537-7774-4874-b4d0-c3ef69ba811a"]],"spr_heartblcon_1":[50,50,0,0,["4304a9d1-6bce-40c4-9b27-8f2bf8f5b4a0","84927f30-9da2-4c0e-8f3b-0d9e26bf81ac","d83684f2-7bc8-49bc-a87c-038b40f46f23","391545ef-89a2-4239-a464-92b1eef84b02","de6ac876-01a6-4c57-bc90-da0a1b73a06d","a9646ca4-668d-4b48-b779-54c38ee3131a"]],"spr_heartblcon_2":[50,50,0,0,["d4ac65a5-4816-44f9-93eb-8451112dd011","da5348da-e64d-41b1-aa0c-ef37e8464e81","29329402-47c0-407a-9eef-86dab5ecf4fc"]],"spr_heartblcon_3":[50,50,0,0,["8ef1642c-1060-4574-a6de-39e06835ff7d","780573dd-67c2-406f-858b-58a5943c9354","5588a5f6-f84c-4067-83c1-075692d66270"]],"spr_battleblcon":[140,80,0,0,["f8f9ebeb-448e-4890-8ba5-6add2f29ff88"]],"spr_face_r_dark":[57,59,0,0,["d9d259f0-87e9-4c3a-9b06-cd295ac9e8ee","b7a57aa8-49d5-468e-bdf4-d757e331daaa","22aa97ee-c91a-4fc1-a495-36859fdbad45","9f351c47-4fc5-4a58-be6c-39843068ba41","8eeb62ee-936c-4ff1-9e5c-fc44874ce7c9","8c834d17-cca5-4291-a417-c753254e018d","efd9e198-bb89-49b5-8da6-bbea8b1fe221","624e4e7d-696f-419d-b2dc-5ffb03773b36","15a567c4-ba81-446c-b160-ad447e35985e","8d44fbc9-0d09-4cae-9a55-cf15220df4d6","b72f9088-44f8-4bc5-afa5-5b7ae0be441e","75167ab4-276b-417b-b9f0-07282c6c4d05","9e151565-85ea-4ec4-a7c3-06b66f70df9e"]],"spr_hathyx_idle":[53,48,0,0,["f857fa20-562e-4187-a3ec-4121f267ead7","b239fd64-c8e3-485c-b8b1-71ef1a697cdd","07a9b07b-b27f-4411-a6c4-0d6ed119e4ae","9ad39355-9c92-46d9-b85e-7ea25a3e742a"]],"spr_hathyx_hurt":[67,76,1,24,["ce7aff41-8447-4ad4-9e0f-03422b220949"]],"spr_hathyx_spared":[47,48,0,0,["04083775-73e5-4401-9f70-2ba01234e130"]],"spr_heartblcon_4":[50,50,0,0,["5cba490d-1e19-4eda-ae47-4a3adc865da5","66025b01-29de-49a4-a0cc-772a5e3157bf","dd563013-7e13-4b71-8b7b-4274b4b57089","e6139c73-0d44-4b3a-89ac-d1e9566a16f5","660cce1a-342f-4f2e-9701-cb27e57ec91c","2bd5b3ab-5dc4-4177-9f0e-d45fc490475c"]],"spr_heartblcon_5":[50,50,0,0,["6323f32f-16a8-4718-83b0-ca74d6c30251","e614c0ac-6860-4a8b-a71a-fc329851f01b","293b7a7f-511f-4287-a1e9-381b0db54ba9","7540094a-f362-4d92-837b-c58c562b7391","89425f8b-d8ec-4690-80bf-58685055f198"]],"spr_daimond_knight_idle":[35,40,0,0,["13d7722a-ebd3-4fb4-acdc-16a53f9d1eb3","bc7ba02e-a0b1-4a48-aafc-51c5f00f6ec5","8f481a01-f64f-4af9-87e6-a29b24aa353b","17ad2deb-0fee-4d0a-a145-55e344050fc5"]],"spr_diamond_knight_hurt":[45,50,5,10,["3886f73b-5a42-450b-aaa8-e176814a57b6"]],"spr_diamond_knight_spared":[35,40,0,0,["432b225d-a2f7-4d6e-a23d-70b516c65292","e3996384-4939-4f06-92be-9cbcb0b47bf6","153259a3-8511-4149-80a3-429c5128e8e4","7a839aac-3c46-47bf-adb1-591d46d516f0"]],"spr_diamond_knight_slash":[75,50,20,10,["be8e1641-f9a9-4b9d-8125-5bb8e2ade515","1610c3a7-c7ec-4515-a414-23357d010731","71b99b7b-4552-4e94-8194-3490d4240e1c","492fdb9d-f56b-4dd4-a58f-a5939c56de27","1aa5b2a5-e0ee-4272-9e9c-a7f5f161ef45","5d69d47f-f85e-43a5-9170-9071962bebfa"]],"spr_diamondswordbullet":[29,29,12,14,["b82e4105-af39-4590-b946-58bc238fcadd"]],"spr_heartbullet":[18,18,9,9,["331d8126-c95f-4041-b764-b30ce5186aa0"]],"spr_face_s0":[45,50,0,0,["0f779806-ff68-4aa9-a91c-3fd9b3b61dde"]],"spr_face_s1":[45,50,0,0,["2d127e25-cee9-4ab2-9f7d-d787a40bd747"]],"spr_face_s2":[45,50,0,0,["e46c3382-3c8c-47f8-859c-a77e2474ac7f"]],"spr_face_s7":[45,50,0,0,["858d6848-2378-4af9-8907-b07f4515db8b"]],"spr_textbox_left":[16,1,0,0,["36e08b8f-c266-4cb3-9832-093d8ab5d474"]],"spr_textbox_top":[1,16,0,0,["1db995e8-21ff-4719-8fc5-b10cc9c834b6"]],"spr_textbox_topleft":[16,16,0,0,["10425707-3390-4473-8b0f-ad00914690ac","db8d13ce-3d4f-4bcc-ab98-c00ea77167ce","df2d6c9a-1600-4a94-8cb6-b7245cbe71c1","7d12ae40-fdb6-4985-8c04-064de4ecb8b8","3271248c-99be-4d6e-9cc7-d5528522bf02","11f5c04e-cbf5-45b0-8064-7458024d899c","c7a5351b-112f-47e8-bb40-25248b84d228","c54b5b37-5564-46e5-ad89-bdc097167f64"]],"spr_chainking_idle":[75,75,7,0,["6a79d1f5-e068-480e-9254-1cce65b9f9d2","4efaf2b7-44ba-4b16-88ad-64442b11ca4b","edd9fa63-98cc-4e34-b3e2-d1b835116464","ebddc129-2479-4916-9a00-557b3a1bbe82","be89560e-0efb-4aa2-bb9b-0e3be2e7fa67"]],"spr_chainking_hurt":[80,75,7,0,["096142c2-5022-41c5-a4e7-5b3571eb868b"]],"spr_chainking_toss":[120,89,32,8,["8eff6516-4e64-4e6c-9951-a95ea72ca5a6","cb7e43e5-6ce9-4b9b-8809-f234be44f18d","07f9c4e6-2d7b-44d6-8d0e-578f7a3a034a","254b2a00-f4cc-40f2-aa58-0a3d620a28a3","99fd0a36-53fe-4eb4-adc6-68dbffd59769"]],"spr_chainking_toss_idle":[106,85,32,5,["ae2c6ae8-dfc3-4dd9-b2e6-8ed467b8102d","70b4e602-7db5-4468-8a94-5e4ac8afeffb","952e04bd-350c-424b-b392-cbf9ae6bbff1"]],"spr_chainking_pullback":[125,100,32,9,["cb42a340-ac68-4cea-8fbf-107c95fe0705"]],"spr_chainking_receive":[125,100,32,9,["cfeb7d9e-2a8d-49da-9275-d4ffb9e8659a"]],"spr_battlebg_1":[49,49,24,24,["fa6e7252-a7ab-4845-ae9d-7816edac3101","fba46218-c823-494f-873f-f6f85a676b0c"]],"spr_battlebg_2":[59,59,29,29,["57b73fb8-c135-4104-a26c-699894461548","b7da48da-d7d8-40aa-abcd-aeae5b9a9a50"]],"spr_battlebg_wavechain":[59,39,29,19,["11efce02-a2d3-4b2c-b210-033dbd4d2e68","acca356c-1159-4dd9-95f6-54862ad7166a"]],"spr_battlebg_spikes":[49,49,24,24,["08d65f65-26f0-472c-87bf-f50f2e336205"]],"spr_bouncebox_spike":[7,13,0,0,["c925f229-301c-4a6a-b146-677b6d42505b"]],"spr_spadebullet":[36,34,18,17,["916a7f48-c26b-40f8-af5d-eb4403249092"]],"spr_chainfront":[39,39,19,19,["e3fd7d90-f7ad-4991-b545-dabded5303e8"]],"spr_chainpiece":[28,10,14,5,["54f3bd40-c51d-4e8e-bd30-280b041fafc8"]],"spr_heartoutline":[20,20,10,10,["88b89abf-9c06-4b7f-841b-f8c052c4db86"]],"spr_soulshining":[32,32,16,16,["b8b3b962-1d0e-4f4d-84b2-4e0b9be38a4d","27d12e5c-4081-434d-84a3-90e6b87ab178","6ae1d4b2-b695-4899-92b8-892677d18c67","4747bfa6-2bc7-45f1-9210-5efe20944168","a925897f-15db-439d-acdb-abe58d74385c","f805d8a3-84ac-4136-8f8d-86705d93c701","b2c4e5a4-2feb-4761-b092-14bb6fdfdb50","2d76cf47-171f-4765-8308-1ab284304ae0","8bea62fb-5aa6-4d04-9556-4a1b04194008","e892b055-32e4-45f2-9d42-3833b17dfd52","a160a26b-b43e-4fcd-b8ea-4ceacb0991ef","184835ca-6d91-43ba-b026-29318b8517ac"]],"spr_susieb_idle_serious":[54,45,19,0,["c66126cc-34a7-4031-95cb-fd9890765607","b84c47fb-166a-4463-bec9-50ddff323896","610fee02-0218-422f-8f10-6f92f76e19cc","5f606bed-6043-44d4-b22d-d2bc5bab4944"]],"spr_susieb_attack_serious":[103,71,21,24,["bc3e125e-1a18-4632-b31e-b485f73883f5","922e4d22-34cb-4de2-9536-fa2e61b49af5","f5cb24c8-97d4-4661-8bed-24fb974625e6","038ce7c3-69a0-4f6e-89f9-cd4e0e6e1709","cd7de351-9816-4ba9-a474-6b6172e5423c","40884871-bdce-47c5-ab07-fc78664f7159"]],"spr_battleblcon_long_tall":[150,140,0,0,["b03323ed-91ac-4ab4-ae94-efa22d94b5fa"]],"spr_face_s3":[45,50,0,0,["f244d4e8-3dde-4291-a178-28e6ebb3d747"]],"spr_face_sC":[45,50,0,0,["8400d201-6bc0-4c9a-bc3b-426ecb18a99e"]],"spr_face_s4":[45,50,0,0,["1137009a-ee81-45ba-ac58-fba5d94f5399"]],"bg_cc_arena":[320,240,0,0,["f1bc3c9f-6c7a-4d06-8485-b0076609161f"]]},"font":{"fnt_dotumche":{"32":[2,2,9,16,9,0],"33":[96,102,2,14,9,4],"34":[77,102,5,6,9,3],"35":[13,2,9,14,9,0],"36":[75,2,8,15,9,1],"37":[32,20,8,14,9,1],"38":[92,52,8,14,9,1],"39":[122,102,2,6,9,4],"40":[9,102,5,15,9,3],"41":[16,102,5,15,9,1],"42":[43,102,6,10,9,1],"43":[63,85,8,11,9,1],"44":[63,102,3,15,9,3],"45":[23,102,8,8,9,1],"46":[84,102,2,14,9,4],"47":[38,85,7,13,9,1],"48":[82,36,8,14,9,1],"49":[57,102,4,14,9,2],"50":[92,69,7,14,9,1],"51":[74,69,7,14,9,1],"52":[82,20,8,14,9,1],"53":[11,69,7,14,9,1],"54":[83,69,7,14,9,1],"55":[29,69,7,14,9,1],"56":[38,69,7,14,9,1],"57":[20,85,7,14,9,1],"58":[112,102,2,12,9,3],"59":[68,102,3,14,9,3],"60":[73,85,8,11,9,1],"61":[109,85,8,10,9,1],"62":[83,85,8,11,9,1],"63":[52,20,8,14,9,1],"64":[12,20,8,14,9,1],"65":[102,20,8,14,9,1],"66":[72,20,8,14,9,1],"67":[52,36,8,14,9,1],"68":[72,52,8,14,9,1],"69":[42,20,8,14,9,1],"70":[62,20,8,14,9,1],"71":[2,36,8,14,9,1],"72":[62,52,8,14,9,1],"73":[92,102,2,14,9,4],"74":[101,85,6,14,9,1],"75":[32,52,8,14,9,1],"76":[11,85,7,14,9,1],"77":[42,52,8,14,9,1],"78":[42,36,8,14,9,1],"79":[112,36,8,14,9,1],"80":[2,52,8,14,9,1],"81":[55,2,8,15,9,1],"82":[92,36,8,14,9,1],"83":[2,20,8,14,9,1],"84":[92,20,8,14,9,1],"85":[12,52,8,14,9,1],"86":[22,20,8,14,9,1],"87":[22,52,8,14,9,1],"88":[22,36,8,14,9,1],"89":[95,2,8,14,9,1],"90":[56,69,7,14,9,1],"91":[2,102,5,15,9,3],"92":[24,2,9,14,9,0],"93":[119,85,5,15,9,1],"94":[104,102,6,4,9,2],"95":[85,2,8,15,9,1],"96":[116,102,4,4,9,2],"97":[102,36,8,14,9,1],"98":[52,52,8,14,9,1],"99":[32,36,8,14,9,1],"100":[82,52,8,14,9,1],"101":[12,36,8,14,9,1],"102":[110,69,7,14,9,1],"103":[102,52,7,15,9,1],"104":[2,85,7,14,9,1],"105":[88,102,2,14,9,4],"106":[51,102,4,15,9,2],"107":[101,69,7,14,9,1],"108":[100,102,2,14,9,4],"109":[72,36,8,14,9,1],"110":[2,69,7,14,9,1],"111":[115,2,8,14,9,1],"112":[35,2,8,15,9,1],"113":[65,2,8,15,9,1],"114":[93,85,6,14,9,2],"115":[20,69,7,14,9,1],"116":[65,69,7,14,9,1],"117":[47,69,7,14,9,1],"118":[62,36,8,14,9,1],"119":[112,20,8,14,9,1],"120":[105,2,8,14,9,1],"121":[45,2,8,15,9,1],"122":[29,85,7,14,9,1],"123":[47,85,6,15,9,2],"124":[73,102,2,15,9,4],"125":[55,85,6,15,9,1],"126":[33,102,8,8,9,1],"127":[111,52,7,14,9,1]}}};
 const DR=(()=>{
  const A=DR_ASSETS,A1=DR1_ASSETS,STEP_MS=1000/30;
  const imgs={},masks={};let ready=false,loading=null,S=null;
@@ -26710,7 +26713,32 @@ const DR=(()=>{
   10:{name:'SnowGrave',desc:'Fatal',target:0,cost:250},
   11:{name:'FrostBite',desc:'Double#ICE#strike',target:2,cost:125}
  };
+ // weapons (one owner) and armors (anyone) the SHOP sells and the CUSTOM hub equips
+ const DRGEAR={
+  spookysword:{name:'Spookysword',type:'weapon',who:'kris',at:2,price:160,desc:'A black sword with a spooky aura.'},
+  mechasaber:{name:'Mechasaber',type:'weapon',who:'kris',at:4,price:400,desc:'A sword with a hinge in the blade.'},
+  braveax:{name:'Brave Ax',type:'weapon',who:'susie',at:2,price:160,desc:'A bold ax. Feels heroic.'},
+  devilsknife:{name:'Devilsknife',type:'weapon',who:'susie',at:5,mag:-1,price:500,desc:'An ax that laughs back.'},
+  ragger:{name:'Ragger',type:'weapon',who:'ralsei',at:2,mag:1,price:180,desc:'A rag that tears through.'},
+  daintyscarf:{name:'DaintyScarf',type:'weapon',who:'ralsei',mag:3,price:300,desc:'Soft and fancy. Healing up.'},
+  thornring:{name:'ThornRing',type:'weapon',who:'noelle',mag:4,hp:-10,price:350,desc:'Hurts to wear. Ice grows.'},
+  snowring:{name:'SnowRing',type:'weapon',who:'noelle',mag:2,price:180,desc:'A ring of frozen light.'},
+  ambercard:{name:'Amber Card',type:'armor',df:1,price:60,desc:'A thin square charm.'},
+  dicebrace:{name:'Dice Brace',type:'armor',df:2,price:150,desc:'A bracelet of chunky dice.'},
+  pinkribbon:{name:'Pink Ribbon',type:'armor',df:1,hp:10,price:120,desc:'Cute. Somehow sturdy.'},
+  whiteribbon:{name:'White Ribbon',type:'armor',df:2,hp:10,price:220,desc:'Crisp and clean.'},
+  ironshackle:{name:'IronShackle',type:'armor',at:1,df:2,price:260,desc:'Heavy. Hits harder.'},
+  glowwrist:{name:'GlowWrist',type:'armor',df:3,price:380,desc:'A glowing band of light.'}
+ };
+ const DRMODES=[
+  {id:'nohit',name:'NO HIT',mult:3,desc:'One hit and it\'s over.'},
+  {id:'hard',name:'HARD',mult:1.5,desc:'Enemies hit 50% harder.'},
+  {id:'glass',name:'GLASS',mult:1.5,desc:'The party\'s HP is halved.'},
+  {id:'lowtp',name:'LOW TP',mult:1.25,desc:'TP builds at half speed.'}
+ ];
+ const drModeMult=m=>{let k=1;for(const d of DRMODES)if(m&&m[d.id])k*=d.mult;return Math.round(k*100)/100};
  // obj_heroparent sprite sets and frame counts.
+ const DR_HEROES=['kris','susie','ralsei','noelle'];
  const HERO={
   kris:{char:1,name:'Kris',hp:90,at:12,df:2,mag:0,spells:[],idle:'spr_krisb_idle',attackready:'spr_krisb_attackready',attack:'spr_krisb_attack',act:'spr_krisb_act',actready:'spr_krisb_actready',item:'spr_krisb_item',itemready:'spr_krisb_itemready',spellready:'spr_krisb_actready',spell:'spr_krisb_act',defend:'spr_krisb_defend',hurtspr:'spr_krisb_hurt',defeat:'spr_krisb_defeat',victory:'spr_krisb_victory',
    actframes:7,actreturnframes:10,attackframes:6,itemframes:6,defendframes:5,spellframes:10,attackspeed:.5,mywidth:68,myheight:74,head:'spr_headkris',bname:'spr_bnamekris',slash:'spr_attack_cut1',slashSpeed:.334,slashMax:3,pitch:1},
@@ -26723,7 +26751,18 @@ const DR=(()=>{
    actframes:7,actreturnframes:11,attackframes:4,itemframes:9,defendframes:0,spellframes:6,attackspeed:.5,mywidth:52,myheight:86,head:'spr_headnoelle',bname:'spr_bnamenoelle',slash:'spr_attack_slap2',slashSpeed:.5,slashMax:4,pitch:1.5}
  };
  // scr_iteminfo case 1.
- const ITEM={1:{name:'Dark Candy',desc:'Heals#40HP',heal:40,target:1}};
+ // healing items (ch1/ch2); all:1 heals the whole party, revive:1 brings a downed ally back to full
+ const ITEM={
+  1:{name:'Dark Candy',desc:'Heals#40HP',heal:40,target:1,price:25},
+  2:{name:'ReviveMint',desc:'Revives#downed#ally',heal:0,revive:1,target:1,price:150},
+  3:{name:'Darkburger',desc:'Heals#70HP',heal:70,target:1,price:70},
+  4:{name:'LancerCookie',desc:'Heals#50HP',heal:50,target:1,price:40},
+  5:{name:'CD Bagel',desc:'Heals#80HP',heal:80,target:1,price:80},
+  6:{name:'ClubsSandwich',desc:'Heals#team#70HP',heal:70,all:1,target:1,price:120},
+  7:{name:'SpinCake',desc:'Heals#team#80HP',heal:80,all:1,target:1,price:150},
+  8:{name:'Butjuice',desc:'Heals#100HP',heal:100,target:1,price:100},
+  9:{name:'TopCake',desc:'Heals#team#160HP',heal:160,all:1,target:1,price:300}
+ };
 
  // ------------------------------------------------------------ writer ------
  // obj_writer with typer 4 (fnt_mainbig, 16px spacing, 1 char per step, special 1 shadow).
@@ -27014,7 +27053,7 @@ const DR=(()=>{
     if(name==='Check')return ['* PONMAN - AT 8 DF 0&* Its nucleus doubles as an eyespot./%'];
     if(name==='Goodnight'){m.sleeping=1;m.sleepIdx=5;mercyadd(i,100);return ['* You whispered goodnight to Ponman^1.&* It fell asleep.../%']}
     if(name==='Lullaby'){
-     const r=S.party[2];
+     const r=ralseiOf();
      try{music&&music.pause()}catch(_){}
      snd(DRFLAG.lulla?'ralsing2':'ralsing1');DRFLAG.lulla=DRFLAG.lulla?0:1;
      if(r)r.singing=1;
@@ -27085,7 +27124,7 @@ const DR=(()=>{
    acts:[{name:'Check',actor:1},{name:'Bow',actor:1},{name:'Deep Bow',actor:3},{name:'Warning',actor:3}],
    act(name,m,i,a){
     const q=S.actPhase.queue,R=S.party.some(h=>h.id==='ralsei'),Su=S.party.some(h=>h.id==='susie');
-    const kris=S.party[0],ral=S.party[2];
+    const kris=S.party[0],ral=ralseiOf();
     const lecture=first=>{
      if(m.lecture)return [];m.lecture=1;
      return [...(R?[{face:'R',e:0,text:'* That\'s it^1, Kris^1! If we can get its crown off.../'},{face:'R',e:0,text:'\\E8* It should turn back into a little guy...!/'},{face:'R',e:0,text:'\\E0* Susie^1! Help us bow at it!/'}]:[]),
@@ -27154,7 +27193,7 @@ const DR=(()=>{
     // Sing: Ralsei's lullaby puts Susie to sleep (she wakes after three turns, or when hit).
     // Carol is Noelle's version: a choir hymn, just as drowsy.
     for(const o of S.mons)o.susieAct=3;
-    const carol=name==='Carol',r=carol?null:S.party[2];try{music&&music.pause()}catch(_){}
+    const carol=name==='Carol',r=carol?null:ralseiOf();try{music&&music.pause()}catch(_){}
     if(!carol){snd(DRFLAG.lulla?'ralsing2':'ralsing1');DRFLAG.lulla=DRFLAG.lulla?0:1}else snd('bell',.8);
     if(r)r.singing=1;
     S.actPhase.queue.push({wait:30},{fn:()=>{
@@ -27223,7 +27262,7 @@ const DR=(()=>{
     }
     let win=0;
     if(c>=3){
-     const canBlock=su&&su.alive&&!su.sleeping&&monsterpop()>1;
+     const canBlock=su&&su.alive&&!su.sleeping;
      if(canBlock){
       m.ears++;
       if(m.ears>=3)win=1;
@@ -27237,7 +27276,7 @@ const DR=(()=>{
    talk(m){
     const su=susieOf();
     // alone for three turns: he hauls Susie back up (40 HP)
-    if(su&&!su.alive&&su.down&&monsterpop()===1&&++m.revive>=3){
+    if(su&&!su.alive&&su.down&&++m.revive>=3){
      m.revive=0;su.alive=true;su.killed=false;su.down=0;su.drawGone=0;su.hp=40;su.state=0;snd('power');su.target=randomTarget();
     }
     if(m.defeated){lancerEnding(0);return 'stop'}
@@ -27349,6 +27388,108 @@ const DR=(()=>{
     for(const d of m.dust)if(d.front)draw(g,'spr_rabbick_dustorb',d.f,d.x,d.y,2,2);
    }
   },
+  // obj_bloxer_enemy (monstertype 14): a stack of blocks with its parts in the wrong order.
+  // Rearrange: pick HEAD, BODY, LEGS in order as the parts float past the arrow.
+  bloxer:{name:'Bloxer',hp:130,at:9,df:2,gold:38,x:490,y:90,mx:26,my:64,turn:170,
+   idle:'spr_blockguy_overworld',idleSpeed:5,hurt:'spr_blockguy_overworld',spared:'spr_blockguy_spared',still:'spr_blockguy_overworld',
+   intro:'* Bloxer stacked up!',attack:'bloxer',
+   init(m){
+    const orders=[[3,2,3,1],[3,3,2,1],[1,1,3,2],[2,2,1,3]][Math.floor(rnd(4))];
+    Object.assign(m,{part:[0,orders[1],orders[2],orders[3],4],sw:10,swapx:0,bsiner:0,tb:0,intro:0})
+   },
+   acts:[{name:'Check',actor:1},{name:'Rearrange',actor:1},{name:'Rival',actor:2}],
+   act(name,m,i){
+    if(name==='Check')return ['* BLOXER - AT 9 DF 2&* Loves: Training^1. Hates: Body being the wrong shape/%'];
+    if(name==='Rearrange'){
+     m.mercy=0;
+     Object.assign(m,{sw:1,swapx:0,fsin:0,smom:0,partyb:[m.y+28,m.y+54,m.y+70],sel:[-1,-1,-1],selpart:[],stotal:0,movex:[0,0,0],fin:0,tb:0});
+     S.actPhase.mash={step:()=>m.sw===0};
+     S.actPhase.queue.push({fn:()=>battletext([m.mercy>=100?'* Bloxer is pleased with its new self!/%':'* Bloxer is still unhappy with its self.../%'])});
+     return ['* Press \\cYZ\\cW to choose:&  #1 HEAD^1, #2 BODY^1, #3 LEGS.'];
+    }
+    for(const o of S.mons)if(o.alive){o.comment='(Tired)';o.status=1}
+    return ['* Susie became antagonistic!/',{face:'S',e:2,text:choose('* Why bother training^1? You\'ll NEVER beat me./','* Why train^1? You\'re still 100 years too early to beat me./','* Training^1? Yeah^1, like I need that to beat you down./')},'* The enemies became \\cBTIRED\\cW.../%'];
+   },
+   talk(m){
+    let t=choose('HOOH...! You&interrupted my&training...!','GOOH...! I\'m&gonna knock&your block&off...!','Let\'s see how&you stack&up...! HIYA!!','Let me show&you my&training!&YIHA!!');
+    if(m.lastAct==='Rearrange'){
+     const p=m.part;t='ARRGH!!';
+     if(p[2]===3)t='ARRGH!! NO!!&MY BUTT IS&MY ABS!';
+     if(p[1]===3)t='ARRGH!! NO!!&MY BUTT IS&MY FACE!!';
+     if(p[1]===2)t='ARRGH!! NO!!&MY ABS ARE&MY FACE!!';
+     if(p[1]===1)t='ARRGH!! NO!!&MY FACE IS&MY FACE!!&Wait...';
+     if(m.mercy>=100)t='Oh, you mixed&me up all&nice~';
+    }
+    if(m.lastAct==='Rival')t='My momentum&is totally&blocked&up...';
+    return t;
+   },
+   flavor(m){
+    let s=choose('* Bloxer is thinking about training.','* Bloxer is thinking about trains.','* Bloxer is thinking about training wheels.','* Bloxer considers building a house out of its own body.','* Smells like freshly-printed plastic.');
+    if(m.status===1)s='* Bloxer is starting to break apart with exhaustion.';
+    if(m.mercy>=m.mercymax)s='* Bloxer radiates with the spirit of joy.';
+    return s;
+   },
+   // Draw_0's logic (the swap minigame lives in the draw event in the game)
+   step(m){
+    m.tb--;
+    if(m.sw===11){m.intro++;if(m.intro>=16)m.sw=0}
+    if(m.sw===10){m.sw=11;m.intro=0}
+    if(m.sw===5){
+     let back=0;for(let k=0;k<3;k++){m.movex[k]+=m.xsp;if(m.movex[k]<=0){m.movex[k]=0;back++}}
+     if(back>=3){m.sw=6;m.part[1]=m.selpart[0];m.part[2]=m.selpart[1];m.part[3]=m.selpart[2];if(m.part[1]===1&&m.part[2]===2&&m.part[3]===3){m.part[1]=6;mercyadd(S.mons.indexOf(m),100)}}
+     else m.xsp-=2;
+    }
+    if(m.sw===2||m.sw===3){
+     if(m.smom<.8)m.smom+=.05;m.fsin+=m.smom;
+     if(m.tb<=0)m.selecty=m.y+30+m.stotal*26;
+     const cu=[4.5,3,1.5];
+     for(let k=0;k<3;k++)if(m.sel[k]<0)m.partyb[k]=m.y+53+Math.sin(m.fsin/8+cu[k])*25;
+     let close=-1,cf=99;
+     for(let k=0;k<3;k++){
+      if(m.sel[k]<0){const f=Math.abs(m.partyb[k]-m.selecty);if(f<cf&&f<24){cf=f;close=k}}
+      else{if(m.movex[k]<60)m.movex[k]+=6;const iy=m.y+28+m.sel[k]*25;if(Math.abs(m.partyb[k]-iy)<6)m.partyb[k]=iy;if(m.partyb[k]<iy)m.partyb[k]+=6;if(m.partyb[k]>iy)m.partyb[k]-=6}
+     }
+     m.close=close;
+     if(P.confirm&&m.tb<0&&m.stotal<3){
+      P.confirm=false;
+      if(close>=0){m.selpart[m.stotal]=m.part[1+close];m.sel[close]=m.stotal;m.stotal++;m.tb=6;snd('select')}
+      if(m.stotal>=3)m.sw=3;
+     }
+     if(m.sw===3&&++m.fin>=13){m.sw=5;m.xsp=4}
+    }
+    if(m.sw===0)m.bsiner++;
+    if(m.sw===1){m.swapx+=2;if(m.part[1]===6)m.part[1]=1;if(m.swapx>=16)m.sw=2}
+    if(m.sw===6){if(m.swapx>0)m.swapx-=2;if(m.swapx<=0)m.sw=0}
+    if(m.sw===0&&m.part[1]===1&&m.part[2]===2&&m.part[3]===3)m.part[1]=6;
+   },
+   draw(g,m,flash){
+    const x=m.x,y=m.y,P_='spr_blockguy_part';
+    if(m.sw===11){
+     const ideal=[0,28,54,78,100],t=m.intro;
+     draw(g,P_,5,x-t*2+6,y+100-(100-54)/16*t,2,2);
+     for(let k=4;k>=0;k--){const cy=k===0?78-4.875*t:100-(100-ideal[k])/16*t;draw(g,P_,m.part[k],x,y+cy,2,2)}
+     return;
+    }
+    if(m.sw===2||m.sw===3||m.sw===5){
+     const col=k=>m.sw===5?null:(m.sel[k]>=0?'#ffff00':(m.close===k?null:'#808080'));
+     for(const k of [2,1,0]){const c=col(k);draw(g,P_,m.part[1+k],x+m.movex[k],m.partyb[k],2,2,0,1,c?{tint:c}:{})}
+     if(m.sw!==5&&m.fin<8&&m.stotal<3){
+      const push=Math.max(0,m.tb*4),yp=m.tb===1?15:0,ay=m.selecty+10+yp,ax=x-50+Math.sin(m.fsin/6)*2+push;
+      g.save();g.strokeStyle=g.fillStyle=m.close>=0?'#ffff00':'#ffffff';g.lineWidth=2;g.beginPath();g.moveTo(ax,ay);g.lineTo(ax+32,ay);g.stroke();
+      g.beginPath();g.moveTo(ax+40,ay);g.lineTo(ax+28,ay-7);g.lineTo(ax+28,ay+7);g.closePath();g.fill();g.restore();
+     }
+     return;
+    }
+    const ss=Math.sin(m.bsiner/4),ssb=Math.cos(m.bsiner/4),sx=m.state===3?m.shakex:0,n=m.state===3?'spr_blockguy_part_hurt':P_,o={flash:m.state===3?0:flash};
+    draw(g,n,5,x-24+ss*2+m.swapx*1.5+sx,y+54+ssb*2,2,2,0,1,o);
+    draw(g,n,m.part[4],x-ss+sx,y+100-m.swapx,2,2,0,1,o);
+    if(m.sw!==0)draw(g,n,m.part[0],x+ss*2+sx,y+m.swapx,2,2,0,1,o);
+    draw(g,n,m.part[3],x-4+ss*2+sx,y+78,2,2,0,1,o);
+    draw(g,n,m.part[2],x+4-ss*2+sx,y+54,2,2,0,1,o);
+    draw(g,n,m.part[1],x+ss*2+sx,y+28,2,2,0,1,o);
+    if(m.sw===0)draw(g,n,m.part[0],x+ss*2+sx,y+m.swapx,2,2,0,1,o);
+   }
+  },
   // obj_king_boss (monstertype 25): an 11-attack script, Talk ACTs that unlock X-ACTs.
   king:{name:'King',hp:2800,at:8,df:0,gold:0,x:460,y:70,mx:75,my:75,mercymax:999,boss:1,customBox:1,susieSerious:1,turn:180,music:'king',arena:'bg_cc_arena',
    idle:'spr_chainking_idle',idleSpeed:6,hurt:'spr_chainking_hurt',spared:null,still:'spr_chainking_idle',
@@ -27458,7 +27599,7 @@ const DR=(()=>{
   }
  };
  // Chapter 1 order.
- const ENEMY_IDS=['dummy','rudinn','hathy','jigsawry','ranger','headhathy','rabbick','clover','ponman','kround','lancersolo','susie','king'].filter(id=>ENEMY[id]);
+ const ENEMY_IDS=['dummy','rudinn','hathy','jigsawry','ranger','headhathy','rabbick','bloxer','clover','ponman','kround','lancersolo','susie','king'].filter(id=>ENEMY[id]);
  // Story flags that outlive one fight (global.flag[503], [504]); kept for this session.
  const DRFLAG={503:0,504:0};
  // typer 50: the enemy speech bubble (fnt_dotumche, black, 9x20 spacing).
@@ -27486,8 +27627,14 @@ const DR=(()=>{
   if(!opt.party){S={picking:true,k:savedParty(),e:savedEnemy(),sup:savedSupports(),se:savedEnemy(),row:0,t:0,acc:0,exited:false,onExit:opt.onExit||null};return S}
   const eid=ENEMY[opt.enemy]?opt.enemy:'dummy',d=ENEMY[eid];
   if(d.noSusie)opt={...opt,party:['kris','susie',(opt.party||[])[2]==='noelle'?'noelle':'ralsei']};
-  const ids=d.pair?[eid,...d.pair]:[eid,...(opt.supports||[]).filter(id=>ENEMY[id]&&!ENEMY[id].noSupport).slice(0,MAX_SUPPORTS)];let spots=enemySpots(ids.length,d);
-  if(d.pair)spots=ids.map(id=>[ENEMY[id].x,ENEMY[id].y]);
+  const sup=(opt.supports||[]).filter(id=>ENEMY[id]&&!ENEMY[id].noSupport).slice(0,MAX_SUPPORTS);
+  const ids=d.pair?[eid,...d.pair,...sup]:[eid,...sup];let spots=enemySpots(ids.length,d);
+  // the pair keeps its own spots; supports line up in front of them, stacked by size
+  if(d.pair){
+   const np=1+d.pair.length,extra=ids.slice(np).map(id=>ENEMY[id]),hs=extra.map(e=>e.my*2),sum=hs.reduce((a,b)=>a+b,0);
+   const gap=extra.length?(sum<=290?(290-sum)/extra.length:-(sum-290)/Math.max(1,extra.length-1)):0;let y=10+(sum<=290?gap/2:0);
+   spots=ids.map((id,i)=>{if(i<np)return [ENEMY[id].x,ENEMY[id].y];const e=ENEMY[id],k=i-np,sp=[Math.min(k%2?400:350,470-e.mx*2),Math.round(y)];y+=hs[k]+gap;return sp});
+  }
   // the game's 2-3 enemy spots are made for small enemies; with a big one (Clover, King)
   // stack them down the right side by their real heights instead
   const defs=ids.map(id=>ENEMY[id]);
@@ -27496,7 +27643,12 @@ const DR=(()=>{
    const gap=sum<=300?(300-sum)/n:-(sum-300)/(n-1);let y=10+(sum<=300?gap/2:0);
    spots=defs.map((e,i)=>{const sp=[Math.min(i%2?545:430,630-e.mx*2),Math.round(y)];y+=hs[i]+gap;return sp});
   }
-  const names=ids.map(id=>ENEMY[id].name),intro=ids.length===1||d.pair?d.intro:'* '+(names.length===2?names.join(' and '):names.slice(0,-1).join(', ')+' and '+names[names.length-1])+' blocked the way!';
+  const names=ids.map(id=>ENEMY[id].name),intro=ids.length===1||(d.pair&&ids.length===1+d.pair.length)?d.intro:'* '+(names.length===2?names.join(' and '):names.slice(0,-1).join(', ')+' and '+names[names.length-1])+' blocked the way!';
+  // the CUSTOM hub: party slots, stats, spells, gear, items and modes
+  const cu=opt.custom||null;
+  // any character in any slot, duplicates welcome; an EMPTY slot is a stand-in marked absent
+  const pick=(v,dflt)=>DR_HEROES.includes(v)?v:dflt;
+  if(cu)opt={...opt,party:[pick(cu.s1,'kris'),d.noSusie?'susie':pick(cu.s2,'susie'),pick(cu.s3,'ralsei')]};
   const party=opt.party.map((id,i)=>{const h=HERO[id];return {id,...h,i,x:80,y:50+80*i,maxhp:h.hp,hp:h.hp,state:0,hurt:0,hurttimer:0,siner:0,attacktimer:0,acttimer:0,defendtimer:0,victoryanim:0,attacked:0,itemed:0,points:0,flash:0,fsiner:0,darken:0,alarm1:-1,alarm4:-1}});
   S={
    t:0,acc:0,exited:false,onExit:opt.onExit||null,
@@ -27515,9 +27667,26 @@ const DR=(()=>{
    inv:0,gold:0,exp:0,bgsiner:0,bgsiner2:0,bgalpha:0,turn:0,gameover:null
   };
   // ACTs with Ralsei ("Hug Ralsei", "Warning") need him in the party.
+  if(cu){
+   for(const h of party){
+    const st=cu.stats&&cu.stats[h.id],gw=DRGEAR[cu.weapon&&cu.weapon[h.id]],ga=DRGEAR[cu.armor&&cu.armor[h.id]],b=k=>((gw&&gw[k])||0)+((ga&&ga[k])||0);
+    if(st){h.maxhp=st.hp;h.at=st.at;h.df=st.df;h.mag=st.mag}
+    h.at+=b('at');h.df+=b('df');h.mag+=b('mag');h.maxhp+=b('hp');
+    if(cu.modes&&cu.modes.glass)h.maxhp=Math.max(1,Math.ceil(h.maxhp/2));
+    h.hp=h.maxhp;
+    if(cu.spells&&cu.spells[h.id])h.spells=cu.spells[h.id].filter(sp=>SPELL[sp]).slice(0,6);
+   }
+   if(cu.s2==='none'&&!d.noSusie){const su=party[1];su.absent=1;su.hp=0}
+   for(const h of party)h.spells=[...h.spells];
+   if(cu.s3==='none'){const r=party[2];r.absent=1;r.hp=0}
+   const live=party.filter(h=>!h.absent);
+   if(live.length===2){live[0].y=100;live[1].y=180}else if(live.length===1)live[0].y=140;
+  }
   if(d.noSusie){const su=party[1];su.absent=1;su.hp=0;party[0].y=100;party[2].y=180}
   // the weird route (Noelle only): IceShock / FrostBite / SnowGrave endings
-  S.weird=!!(opt.weird&&d.noSusie&&party[2].id==='noelle');S.iceTries=0;S.weirdEnding=null;S.weirdDone=0;
+  S.weird=!!(opt.weird&&d.noSusie&&party[2].id==='noelle');
+  S.mode=cu&&cu.modes?{...cu.modes}:{};S.custom=!!cu;
+  if(cu&&cu.items){S.items=cu.items.filter(id=>ITEM[id]).slice(0,6);S.tempitem=[[...S.items],[...S.items],[...S.items]]}S.iceTries=0;S.weirdEnding=null;S.weirdDone=0;
   for(const h of party)h.spells=[...h.spells];
   const has=c=>party.some(h=>h.char===c&&!h.absent);
   // obj_king_boss susinit: Susie fights with her serious sprites.
@@ -27534,9 +27703,12 @@ const DR=(()=>{
  const coord=(menu,c=S.charturn)=>{S.coord[menu]=S.coord[menu]||[0,0,0];return S.coord[menu][c]};
  const setCoord=(menu,v,c=S.charturn)=>{S.coord[menu]=S.coord[menu]||[0,0,0];S.coord[menu][c]=v};
  const monsterpop=()=>S.mons.filter(m=>m.alive).length;
- const tensionheal=n=>{S.tension=Math.max(0,Math.min(S.maxtension,S.tension+n))};
+ const tensionheal=n=>{if(n>0&&S.mode&&S.mode.lowtp)n=n/2;S.tension=Math.max(0,Math.min(S.maxtension,S.tension+n))};
  // A wild Susie (setting) never takes a menu turn: she picks her own fights.
- const charcan=i=>{const h=S.party[i];return h&&h.hp>0&&!S.acting[i]&&!(i===1&&S.susieAuto)};
+ // the teammate an X-ACT's actor refers to (2 Susie, 3 Ralsei, 4 Noelle): the first one in the party
+ const actorSlot=a=>{if(a<2)return -1;const i=S.party.findIndex((h,k)=>k>0&&h.char===a&&!h.absent);return i>=0?i:(a===2?1:2)};
+ const ralseiOf=()=>S.party.find(h=>h.id==='ralsei'&&!h.absent)||null;
+ const charcan=i=>{const h=S.party[i];return h&&h.hp>0&&!h.absent&&!S.acting[i]&&!(i===1&&S.susieAuto&&h.id==='susie')};
  function battletext(pages){S.writer=new Writer(Array.isArray(pages)?pages:[pages]);return S.writer}
 
  // ------------------------------------------------------- turn flow --------
@@ -27571,7 +27743,7 @@ const DR=(()=>{
   if(monsterpop()===0){wincombat();return}
   S.hittarget=S.mons.map(()=>0);S.charturn=3;
   // Wild Susie swings at a random enemy every turn (points 100-140); Warning makes it miss.
-  const su=S.party[1];
+  const su=S.party[1]&&S.party[1].id==='susie'?S.party[1]:null;
   if(S.susieAuto&&!S.susieSwung&&su&&!su.absent&&su.hp>0&&!S.acting[1]){
    S.susieSwung=1;const al=S.mons.map((m,i)=>m.alive?i:-1).filter(i=>i>=0);
    S.chartarget[1]=al[Math.floor(Math.random()*al.length)];S.faceaction[1]=1;heroAttack(1,100+Math.round(rnd(40)));
@@ -27622,7 +27794,7 @@ const DR=(()=>{
  function actPhaseStep(){
   const ap=S.actPhase,m=ap.m;
   // Rabbick's Blow On: the Z-mashing runs while the prompt is still up
-  if(ap.mash){if(!rabbickMash(ap.mash))return;ap.mash=null;S.writer=null}
+  if(ap.mash){if(!(ap.mash.step?ap.mash.step(ap.mash):rabbickMash(ap.mash)))return;ap.mash=null;S.writer=null}
   if(S.writer&&!S.writer.done)return;
   // one Z press moves every bubble on (Clover's three heads each have a writer)
   if(S.bubbles.length){const c=P.confirm;for(const b of S.bubbles)if(b.w){P.confirm=c;b.w.step()}P.confirm=false;if(S.bubbles.some(b=>b.w&&!b.w.done))return;S.bubbles=[]}
@@ -27710,7 +27882,7 @@ const DR=(()=>{
    if(m.status)return ['* '+h.name+' spared '+m.name+'^2!&* But its name wasn\'t \\cYYELLOW\\cW.../','* (Try using Ralsei\'s \\cBPACIFY\\cW!)/%'];
    return ['* '+h.name+' spared '+m.name+'^2!&* But its name wasn\'t \\cYYELLOW\\cW.../%'];
   }
-  if(spell===201)return ['* '+h.name+' used the DARK CANDY!/%'];
+  if(spell>200&&ITEM[spell-200])return ['* '+h.name+' used the '+ITEM[spell-200].name.toUpperCase()+'!/%'];
   return ['* .../%'];
  }
  // scr_spell (alarm[4], 15 steps after the hero starts casting).
@@ -27785,15 +27957,21 @@ const DR=(()=>{
    if(monsterpop()===0){S.spelldelay=30;return}
    // altpath 1 (the Berdly fight): Noelle charges, floats up glowing while the snow comes
    // down, the enemies freeze, then she drops. Timer starts at -270.
+   // anyone but Noelle gets the plain SnowGrave (the floating one is her own animation)
+   if(h.id!=='noelle'){S.fx.push({kind:'snowgrave',h,damage:Math.ceil(h.mag*40+600),timer:0,bgalpha:0,snowspeed:0,stimer:0,flakes:[]});S.spelldelay=140;return}
    h.sgHidden=1;
    S.fx.push({kind:'snowgrave',alt:1,h,damage:Math.ceil(h.mag*40+600),timer:-270,bgalpha:0,snowspeed:0,stimer:0,flakes:[],dust:[],
     fn:{x:h.x,y:h.y,ystart:h.y,spr:'spr_noelleb_spell',f:0,speed:0,con:0,t:0,amp:0,vy:0,grav:0,shake:0,flash:0}});
    S.spelldelay=545;return;
   }
-  if(spell===201){
-   const t=S.party[star]||h;const got=healHero(t,40);
-   S.fx.push({kind:'heal',target:t,t:0,stars:[]});
-   S.dmgw.push(dmgwriter(t.x,t.y+t.myheight-24,40,3,{delay:8,special:t.hp>=t.maxhp?3:0}));
+  if(spell>200&&ITEM[spell-200]){
+   const it=ITEM[spell-200],tgt=it.all?S.party.filter(p=>!p.absent):[S.party[star]||h];
+   for(const t of tgt){
+    const n=it.revive?(t.hp<=0?t.maxhp-t.hp:Math.ceil(t.maxhp/2)):it.heal;
+    healHero(t,n);
+    S.fx.push({kind:'heal',target:t,t:0,stars:[]});
+    S.dmgw.push(dmgwriter(t.x,t.y+t.myheight-24,n,3,{delay:8,special:t.hp>=t.maxhp?3:0}));
+   }
   }
  }
  // scr_damage_enemy for Noelle's spells (dmgwriter type 6).
@@ -27991,6 +28169,7 @@ const DR=(()=>{
   else if(g.kind==='kround')kroundGen(g);
   else if(g.kind==='susie')susieGen(g);
   else if(g.kind==='rabbick')rabbickGen(g);
+  else if(g.kind==='bloxer')bloxerGen(g);
   else if(g.ctl&&g.ctl.type===33)ringGen(g);
  }
  function kingAttack(g){
@@ -28421,6 +28600,45 @@ const DR=(()=>{
   }
   if(b.con===7&&--b.wait<=0){b.f=0;b.con=0}
  }
+ // obj_dbulletcontroller 26: 2x2 formations of spr_blockbullet sliding in from the right
+ // (speeding up); 27: obj_blockbullet_fall, a 4-wide falling-block stack whose full
+ // bottom row clears.
+ const BLKBOX=[8,8,32,32],MINIBOX=[4,4,30,24];
+ function bloxerGen(g){
+  const c=g.ctl,box=S.box;if(!c||!box)return;
+  c.btimer++;const pop=monsterpop();
+  if(c.type===26){
+   for(const b of S.bullets)if(b.kind==='block'&&b.alpha<1)b.alpha+=.1;
+   if(c.btimer>=(pop===2?52.5:pop===3?77:35)){
+    const xc=300,yc=140,yoo=-80+rnd(160),yo=-60+yoo,vs=-yoo/160;
+    for(let i=0;i<2;i++){const up=choose(0,1,2);for(let j=0;j<2;j++){
+     let bx=xc+200+i*80,by=yc+yo+j*80;if(j===up)by+=choose(0,40);
+     if(i===1&&j===1){bx+=choose(0,-40);by=yc+yo+choose(0,40)+j*80}
+     S.bullets.push({kind:'block',x:bx,y:by,hs:-2,vs,fric:pop>=2?-.1:-.07,alpha:0,dmg:g.dmg,target:g.target,grazed:0,grazepoints:5,timepoints:2});
+    }}
+    c.btimer=0;
+   }
+  }
+  if(c.type===27){
+   const [bw,bh]=boxHalf(box),lx=box.x-bw+8,bottom=box.y+bh-3-28;
+   const fall=S.bullets.filter(b=>b.kind==='lego'&&!b.dead);
+   const at=(col,yp)=>fall.find(b=>b.col===col&&b.yp===yp&&b.con<3);
+   if(c.btimer>=(pop===2?25.5:pop===3?34.5:15)){
+    let made=choose(0,1,2,3);if(made===c.made)made=choose(0,1,2,3);c.made=made;c.btimer=0;
+    const top=at(made,-3);
+    if(!(top&&top.halt))S.bullets.push({kind:'lego',col:made,yp:-8,con:0,alpha:0,ft:0,halt:0,dmg:g.dmg,target:g.target,grazed:0,grazepoints:5,timepoints:2});
+   }
+   for(const b of fall){
+    if(b.con===0)b.con=1;
+    else if(b.con===1){b.alpha+=.15;if(b.alpha>=1)b.con=2}
+    else if(b.con===2&&++b.ft>=5){if(b.yp<0&&!at(b.col,b.yp+1))b.yp++;else b.halt=1;b.ft=0}
+    else if(b.con===3){b.alpha-=.2;if(b.alpha<=.2)b.dead=true}
+    b.x=lx+b.col*34;b.y=bottom+b.yp*28;
+   }
+   const row=[0,1,2,3].map(k=>at(k,0));
+   if(row.every(Boolean))for(const b of row)b.con=3;
+  }
+ }
  function makeBouncer(type,dmg,target){
   const dir=choose(45,135,225,315)*Math.PI/180;
   return {kind:'bouncer',type,x:310,y:165,hs:Math.cos(dir)*.1,vs:-Math.sin(dir)*.1,con:0,timer:0,mt:0,lx:140,rx:480,ux:0,dx:320,fadein:0,dmg,target,grazed:0,gt:0,tb:0,grazepoints:3,timepoints:0};
@@ -28447,6 +28665,11 @@ const DR=(()=>{
    S.turntimer=999;m.hidden=1;m.turns++;
    S.bullets.push(makeBike(m,g,m.bikeTurn===0?'race':'lap'));m.bikeTurn=m.bikeTurn?0:1;
   }
+  if(g.kind==='bloxer'){
+   // only the first Bloxer throws the big block formations (biglegoqual)
+   const big=!(monsterpop()>=2&&S.mons.filter(o=>o.alive&&o.id==='bloxer').indexOf(m)>0);
+   g.ctl={type:choose(0,1)===0&&big?26:27,btimer:99,made:-1};
+  }
   if(g.kind==='rabbick'){
    // type 32 makes one carrot thrower; with one already out it's rabbits instead
    let type=choose(30,32);if(type===32&&S.bullets.some(b=>b.kind==='thrower'))type=30;
@@ -28463,7 +28686,7 @@ const DR=(()=>{
   }
   if(g.kind==='lancer'){
    const su=susieOf();
-   if(monsterpop()===1||(su&&su.sleeping)){
+   if(!su||!su.alive||su.sleeping){
     S.turntimer=999;m.hidden=1;
     S.bullets.push(makeBike(m,g,m.bikeTurn===0?'race':'lap'));m.bikeTurn=m.bikeTurn?0:1;
    }
@@ -28622,6 +28845,12 @@ const DR=(()=>{
   if(b.kind==='kleap'){kleapStep(b);return}
   if(b.kind==='bike'){bikeStep(b);return}
   if(b.kind==='rabbit'){rabbitStep(b);return}
+  if(b.kind==='block'){
+   const sp=Math.hypot(b.hs,b.vs);if(sp>0){const n=(sp-b.fric)/sp;b.hs*=n;b.vs*=n}
+   b.x+=b.hs;b.y+=b.vs;if(b.x<-60){b.dead=true;return}
+   if(b.alpha>.5)collide(b,BLKBOX,0);return;
+  }
+  if(b.kind==='lego'){if(b.con>=1&&b.con<3&&b.alpha>.3)collide(b,MINIBOX,0);return}
   if(b.kind==='thrower'){throwerStep(b);return}
   if(b.kind==='carrot'){b.y+=b.vs;b.f+=.25;if(b.y>520){b.dead=true;return}collide(b,CARBOX,0);return}
   if(b.kind==='bikeneo'){bikeNeoStep(b);return}
@@ -29000,6 +29229,7 @@ const DR=(()=>{
   let target=b.target;let h=S.party[target];
   if(!h||h.hp<=0){const alive=S.party.filter(p=>p.hp>0);h=alive[Math.floor(Math.random()*alive.length)]||S.party[0];target=h.i}
   let td=b.dmg;
+  if(S.mode&&S.mode.hard)td=Math.ceil(td*1.5);
   const thA=h.maxhp/5,thB=h.maxhp/8;
   for(let i=0;i<h.df;i++){if(td>thA)td-=3;else if(td>thB)td-=2;else td-=1}
   td=Math.max(td,1);
@@ -29013,7 +29243,7 @@ const DR=(()=>{
   else{h.hp-=td;if(h.hp<=0){diff=Math.abs(h.hp-h.maxhp/2);type=4;h.hp=Math.round(-h.maxhp/2)}}
   S.dmgw.push(dmgwriter(h.x,h.y+h.myheight-24,Math.round(diff),type));
   if(!b.noInv)S.inv=Math.round(40*(S.invc||1));
-  if(S.party.every(p=>p.hp<=0))gameover();
+  if(S.party.every(p=>p.hp<=0)||(S.mode&&S.mode.nohit))gameover();
  }
  function gameover(){S.gameover={t:0};S.bullets=[];try{music&&music.pause()}catch(_){}}
 
@@ -29148,7 +29378,8 @@ const DR=(()=>{
    for(const h of S.party){if(h.absent)continue;if(h.hp<1)h.hp=Math.round(h.maxhp/8);h.state=7;h.hurt=0}
    for(const m of S.mons)if(m.spared||m.killed)S.gold+=m.def.gold;
    S.gold+=Math.floor(S.tension/10)*2;
-   battletext(['* You won^1!&* Got '+S.exp+' EXP and '+S.gold+' D$./%']);
+   const mult=drModeMult(S.mode),earned=Math.round(S.gold*mult);drWalletAdd(earned);
+   battletext([mult>1?'* You won^1!&* Got '+S.exp+' EXP and '+S.gold+' D$ (x'+mult+' = '+earned+' D$)./%':'* You won^1!&* Got '+S.exp+' EXP and '+S.gold+' D$./%']);
    tb.out=1;tb.hs=-10;
   }
   if(S.victoried){S.victortimer++;if((!S.writer||S.writer.done)&&S.victortimer>=10){S.intro=2;if(S.bp<=0&&!S.exitQueued){S.exitQueued=1;S.exitT=10}}}
@@ -29480,7 +29711,7 @@ const DR=(()=>{
    if(P.down&&acts[k+2])k+=2;
    if(P.up&&k>=2)k-=2;
    if(k!==coord(9)){setCoord(9,k);snd('menumove')}
-   const actor=acts[k]?.actor||1,slot=actor===2?1:(actor>=3?2:-1),cost=acts[k]?.cost||0;
+   const actor=acts[k]?.actor||1,slot=actorSlot(actor),cost=acts[k]?.cost||0;
    S.tensionselect=cost;
    const can=(slot<0||S.party[slot].hp>0)&&S.tension>=cost;
    if(can&&P.confirm&&S.onebuffer<0){
@@ -29632,6 +29863,8 @@ const DR=(()=>{
     draw(g,'spr_diamondbullet_form',0,b.x,b.y,2-b.alpha,2-b.alpha,b.dir,b.alpha);
    }
    else if(b.kind==='dbullet')draw(g,'spr_diamondbullet',0,b.x,b.y,1,1,b.dir);
+   else if(b.kind==='block')draw(g,'spr_blockbullet',0,b.x,b.y,1,1,0,Math.min(1,b.alpha));
+   else if(b.kind==='lego'){if(b.x!==undefined)draw(g,'spr_blockbullet_mini',0,b.x,b.y,1,1,0,Math.max(0,Math.min(1,b.alpha)))}
    else if(b.kind==='rabbit')draw(g,'spr_rabbitbullet',b.f,b.x,b.y,2,2,0,Math.max(0,b.alpha));
    else if(b.kind==='thrower')draw(g,'spr_rabbitthrower',b.f,b.x,b.y,2,2);
    else if(b.kind==='carrot')draw(g,'spr_carrotbullet',b.f,b.x,b.y,2,2);
@@ -29958,7 +30191,7 @@ const DR=(()=>{
    draw(g,'spr_heart',0,icx,icy);
    m.acts.forEach((a,i)=>{
     const xo=i%2?230:0,yo=Math.floor(i/2)*30;let off=0,col=C.white;
-    if(a.actor>=2){const sl=a.actor===2?1:2;draw(g,S.party[sl].head,0,30+xo,375+yo);off=30;if(S.party[sl].hp<=0)col=C.gray}
+    if(a.actor>=2){const sl=actorSlot(a.actor);draw(g,S.party[sl].head,0,30+xo,375+yo);off=30;if(S.party[sl].hp<=0)col=C.gray}
     if(a.cost&&S.tension<a.cost)col=C.gray;
     text(g,'fnt_mainbig',a.name,30+off+xo,375+yo,col);
    });
@@ -30045,7 +30278,7 @@ const DR=(()=>{
   try{music&&music.pause()}catch(_){}
   if(S.onExit)S.onExit(reason);
  }
- return {start,update,render,onKey,load,exit,get S(){return S},get ready(){return ready},gfx:{draw,frame,meta,text,textWidth,darkbox,gridBack,C},enemies:ENEMY,enemyIds:ENEMY_IDS,maxSupports:MAX_SUPPORTS,parties:PARTIES,heroes:HERO,_dbg:{P,held,mercyadd,heroHit,dmgwriter}};
+ return {start,update,render,onKey,load,exit,get S(){return S},get ready(){return ready},items:ITEM,gear:DRGEAR,modes:DRMODES,modeMult:drModeMult,spells:SPELL,heroes:HERO,gfx:{draw,frame,meta,text,textWidth,darkbox,gridBack,C},enemies:ENEMY,enemyIds:ENEMY_IDS,maxSupports:MAX_SUPPORTS,parties:PARTIES,heroes:HERO,_dbg:{P,held,mercyadd,heroHit,dmgwriter}};
 })();
 
 // DELTARUNE tab: an ENEMIES page and a SUPPORTS page laid out like the UNDERTALE ones,
@@ -30062,7 +30295,7 @@ function drSavePrefs(){drLS('utbg.drEnemy',DR.enemyIds[drSel]);drLS('utbg.drSupp
 function drStart(){drLoadPrefs();DR.load();drFocus=0;screen='drroster'}
 function drFight(){
  drSavePrefs();play('select');screen='dr';
- DR.start({party:DR.parties[drParty],enemy:DR.enemyIds[drSel],supports:drSup.slice(),susieAuto:drSusieAuto,weird:drWeird,onExit(){screen='drroster';drFocus=0;try{startMenuMusic()}catch(_){}}});
+ DR.start({party:DR.parties[drParty],enemy:DR.enemyIds[drSel],supports:drSup.slice(),susieAuto:drSusieAuto,weird:drWeird,custom:drCustom.on?drCustomCfg():null,onExit(){screen='drroster';drFocus=0;try{startMenuMusic()}catch(_){}}});
 }
 // The enemy's sprite for the menus (its idle animation once the DELTARUNE assets are in).
 function drEnemyImage(id,now){const e=DR.enemies[id];return e&&DR.ready?DR.gfx.frame(e.idle,Math.floor(now/(1000/30)/e.idleSpeed)):null}
@@ -30071,13 +30304,15 @@ function drCheckText(id){
  const e=DR.enemies[id];let t='';try{t=String(e.act('Check',{},0)[0]||'')}catch(_){}
  return t.replace(/\\c./g,'').replace(/\^\d/g,'').replace(/\/%?/g,'').split('&').map(l=>l.trim()).filter(Boolean).join('\n');
 }
-const DR_CHOICES=[[1,0,0],[2,0,1],[3,0,2],[4,1,0],[5,1,1],[6,1,2]];
-function drChoiceLabel(f){return f===1?'SUPPORT':f===2?(drParty?'PARTY: NOELLE':'PARTY: RALSEI'):f===3?(drSusieAuto?'SUSIE: WILD':'SUSIE: YOURS'):f===4?'FIGHT':f===6?(drWeird?'WEIRD: ON':'WEIRD: OFF'):'BACK'}
+const DR_CHOICES=[[1,0,0],[2,0,1],[3,0,2],[8,0,3],[4,1,0],[5,1,1],[6,1,2],[7,1,3]];
+function drChoiceLabel(f){return f===1?'SUPPORT':f===2?(drParty?'NOELLE':'RALSEI'):f===3?(drSusieAuto?'WILD':'TAME'):f===4?'FIGHT':f===6?(drWeird?'WEIRD ON':'WEIRD'):f===7?(drCustom.on?'CUSTOM ON':'CUSTOM'):f===8?'SHOP':'BACK'}
 function drActivate(f){
  if(f===1){drSupSel=0;drSupFocus=0;screen='drsupport';play('select')}
  else if(f===2){drParty=1-drParty;drSavePrefs();play('select')}
  else if(f===3){drSusieAuto=!drSusieAuto;drSavePrefs();play('select')}
  else if(f===6){drWeird=!drWeird;drSavePrefs();play('select')}
+ else if(f===7){drHub.tab=0;drHub.focus=0;drHub.row=0;screen='drcustom';play('select')}
+ else if(f===8){drShop.tab=0;drShop.row=0;drShop.msg='';screen='drshop';play('select')}
  else if(f===4)drFight();
  else{drSavePrefs();screen='title';mainSelected=9;play('select')}
 }
@@ -30129,7 +30364,7 @@ function drScrollMarks(g,top,n,onUp,onDown){
 function drawDrRoster(now=performance.now()){
  const ids=DR.enemyIds,g=drMenuBegin(now);
  if(!DR.ready){DR.gfx.text(g,'fnt_mainbig','',0,0);g.fillStyle='#fff';g.font='20px monospace';g.fillText('Loading DELTARUNE assets...',190,240);g.restore();return}
- drTitle(g,'ENEMIES',`${drSel+1} / ${ids.length}`);
+ drTitle(g,'ENEMIES',`D$ ${drWallet()}   ${drSel+1}/${ids.length}`);
  DR.gfx.darkbox(g,16,48,300,424,DRM.t);
  drTop=drScrollTop(drTop,drSel,ids.length);
  ids.forEach((id,i)=>{
@@ -30144,9 +30379,9 @@ function drawDrRoster(now=performance.now()){
  drPreview(g,id,now,467,184);
  DR.gfx.text(g,'fnt_mainbig',(e.rname||e.name).toUpperCase(),467,186,DRY,{align:'center'});
  const sup=drSup.length?drSup.map(s=>DR.enemies[s].name).join(', '):'none';
- drInfo(g,`${drCheckText(id)}\n* HP ${e.hp}. ${e.gold} D$.\n* Supports: ${sup}.`);
- for(const [f,col,row] of DR_CHOICES)drOption(g,drChoiceLabel(f),col?540:334,352+row*32,drFocus===f,()=>{drFocus=f;drActivate(f)},()=>{drFocus=f});
- drHint(g,drFocus===0?'UP/DOWN: Choose   Z: Pick   X: Back':(drFocus===3?'Z: Toggle   (WILD: Susie fights on her own, Warning works)':drFocus===6?'Z: Toggle   (Susie & Lancer with Noelle: a weirder way out)':'Arrows: Move   Z: Confirm   X: Back'));
+ drInfo(g,`${drCheckText(id)}\n* HP ${e.hp}. ${e.gold} D$.\n* Supports: ${sup}.`,216,320);
+ for(const [f,col,row] of DR_CHOICES)drOption(g,drChoiceLabel(f),col?486:334,328+row*30,drFocus===f,()=>{drFocus=f;drActivate(f)},()=>{drFocus=f});
+ drHint(g,drFocus===0?'UP/DOWN: Choose   Z: Pick   X: Back':drFocus===2?'Z: Switch the third member (Ralsei / Noelle)':drFocus===7?'Z: Open the CUSTOM hub (party, stats, spells, items, modes)':drFocus===8?'Z: Open the SHOP (spend your D$)':(drFocus===3?'Z: Toggle   (WILD: Susie attacks on her own, Warning works)':drFocus===6?'Z: Toggle   (Susie & Lancer with Noelle: a weirder way out)':'Arrows: Move   Z: Confirm   X: Back'));
  g.restore();
 }
 function drSupEntries(){return ['clear',...DR.enemyIds.filter(id=>!DR.enemies[id].noSupport)]}
@@ -30186,6 +30421,200 @@ function drawDrSupport(now=performance.now()){
  for(const [f,label,x,y] of choices)drOption(g,label,x,y,drSupFocus===f,()=>{drSupFocus=f;if(f===1)drSupAdd(drSupSel);else if(f===2){drSup.pop();drSavePrefs();play('select')}else{screen='drroster';play('select')}},()=>{drSupFocus=f});
  drHint(g,'Arrows: Choose   Z: Add   X: Done');
  g.restore();
+}
+
+// ---------------- DELTARUNE wallet, CUSTOM hub and SHOP ----------------
+// D$ you win in the DELTARUNE tab are kept here and spent in the SHOP, which unlocks items
+// and gear for the CUSTOM hub (unlocked things can be used as often as you like).
+function drWallet(){return Math.max(0,+(drLS('utbg.drDollars')||0)||0)}
+function drWalletAdd(n){drLS('utbg.drDollars',String(Math.max(0,drWallet()+Math.round(n||0))))}
+function drOwned(){try{const o=JSON.parse(drLS('utbg.drOwned')||'{}');o.items=o.items||{1:1};o.gear=o.gear||{};return o}catch(_){return {items:{1:1},gear:{}}}}
+function drSaveOwned(o){drLS('utbg.drOwned',JSON.stringify(o))}
+const DR_HEROES=['kris','susie','ralsei','noelle'];
+function drDefaultCustom(){
+ const H=DR.heroes,st={},sp={};
+ for(const id of DR_HEROES){st[id]={hp:H[id].hp,at:H[id].at,df:H[id].df,mag:H[id].mag};sp[id]=[...H[id].spells]}
+ return {on:false,s1:'kris',s2:'susie',s3:'ralsei',stats:st,spells:sp,items:[1,1,1],weapon:{},armor:{},modes:{}};
+}
+let drCustom=(()=>{try{return JSON.parse(localStorage.getItem('utbg.drCustom'))||null}catch(_){return null}})();
+function drCustomReady(){if(!drCustom||!drCustom.stats){drCustom=drDefaultCustom()}for(const id of DR_HEROES){if(!drCustom.stats[id])drCustom.stats[id]=drDefaultCustom().stats[id];if(!drCustom.spells[id])drCustom.spells[id]=[...DR.heroes[id].spells]}}
+if(!drCustom)drCustom={on:false};
+function drSaveCustom(){drLS('utbg.drCustom',JSON.stringify(drCustom))}
+function drCustomCfg(){drCustomReady();return JSON.parse(JSON.stringify(drCustom))}
+const drHub={tab:0,focus:0,row:0,hero:0,top:0},drShop={tab:0,row:0,top:0,msg:''};
+const DR_HUB_TABS=['PARTY','STATS','SPELLS','ITEMS','GEAR','MODES'];
+const DR_SPELL_LIST=[2,3,4,8,9,10,11];
+const STAT_KEYS=[['hp','HP',10,1,999],['at','ATTACK',1,0,99],['df','DEFENSE',1,0,99],['mag','MAGIC',1,0,99]];
+// one row = {label, value?, left?(), right?(), ok?(), on?}
+function drHubRows(){
+ drCustomReady();if(drHub.tab===2&&drHub.hero===0)drHub.hero=1; // Kris ACTs, he has no MAGIC menu
+ const c=drCustom,hero=DR_HEROES[drHub.hero],own=drOwned(),H=DR.heroes;
+ const nextHero=d=>{do{drHub.hero=(drHub.hero+d+4)%4}while(drHub.tab===2&&drHub.hero===0)};
+ const heroRow={label:'HERO',value:H[hero].name.toUpperCase(),left:()=>nextHero(-1),right:()=>nextHero(1),ok:()=>nextHero(1)};
+ const cyc=(list,cur,d)=>list[(list.indexOf(cur)+d+list.length)%list.length];
+ const t=drHub.tab;
+ if(t===0)return [
+  {label:'USE CUSTOM',value:c.on?'ON':'OFF',on:c.on,ok:()=>{c.on=!c.on},left:()=>{c.on=!c.on},right:()=>{c.on=!c.on}},
+  ...[['s1','SLOT 1',DR_HEROES],['s2','SLOT 2',[...DR_HEROES,'none']],['s3','SLOT 3',[...DR_HEROES,'none']]].map(([k,label,list])=>{const cur=c[k]||(k==='s1'?'kris':'none');
+   return {label,value:cur==='none'?'EMPTY':cur.toUpperCase(),ok:()=>{c[k]=cyc(list,cur,1)},left:()=>{c[k]=cyc(list,cur,-1)},right:()=>{c[k]=cyc(list,cur,1)}}}),
+  {label:'RESET ALL',value:'',ok:()=>{const on=c.on;drCustom=drDefaultCustom();drCustom.on=on;play('select')}}
+ ];
+ if(t===1)return [heroRow,...STAT_KEYS.map(([k,name,step,lo,hi])=>({label:name,value:String(c.stats[hero][k]),
+  left:()=>{c.stats[hero][k]=Math.max(lo,c.stats[hero][k]-step)},right:()=>{c.stats[hero][k]=Math.min(hi,c.stats[hero][k]+step)},
+  ok:()=>{c.stats[hero][k]=DR.heroes[hero][k==='hp'?'hp':k]}}))];
+ if(t===2)return [heroRow,...DR_SPELL_LIST.map(id=>{const has=c.spells[hero].includes(id);return {label:DR.spells[id].name,value:has?'[X]':'[ ]',on:has,
+  ok:()=>{const l=c.spells[hero];if(has)l.splice(l.indexOf(id),1);else if(l.length<6)l.push(id)}}})];
+ if(t===3){const owned=Object.keys(DR.items).map(Number).filter(id=>own.items[id]);
+  return [0,1,2,3,4,5].map(k=>{const cur=c.items[k];const opts=[0,...owned];const set=d=>{const n=cyc(opts,cur||0,d);if(n)c.items[k]=n;else c.items.splice(k,1);c.items=c.items.filter(Boolean)};
+   return {label:'SLOT '+(k+1),value:cur?DR.items[cur].name:'---',left:()=>set(-1),right:()=>set(1),ok:()=>set(1)}})}
+ if(t===4){const g=DR.gear,wl=['',...Object.keys(g).filter(k=>g[k].type==='weapon'&&g[k].who===hero&&own.gear[k])],al=['',...Object.keys(g).filter(k=>g[k].type==='armor'&&own.gear[k])];
+  const w=c.weapon[hero]||'',a=c.armor[hero]||'';
+  return [heroRow,
+   {label:'WEAPON',value:w?g[w].name:'---',left:()=>{c.weapon[hero]=cyc(wl,w,-1)},right:()=>{c.weapon[hero]=cyc(wl,w,1)},ok:()=>{c.weapon[hero]=cyc(wl,w,1)}},
+   {label:'ARMOR',value:a?g[a].name:'---',left:()=>{c.armor[hero]=cyc(al,a,-1)},right:()=>{c.armor[hero]=cyc(al,a,1)},ok:()=>{c.armor[hero]=cyc(al,a,1)}}];
+ }
+ return DR.modes.map(m=>({label:m.name,value:(c.modes[m.id]?'ON':'OFF')+'  x'+m.mult,on:!!c.modes[m.id],ok:()=>{c.modes[m.id]=!c.modes[m.id]},left:()=>{c.modes[m.id]=!c.modes[m.id]},right:()=>{c.modes[m.id]=!c.modes[m.id]}}));
+}
+function drHubDesc(){
+ const t=drHub.tab,hero=DR_HEROES[drHub.hero];
+ if(t===0)return '* Turn CUSTOM on to fight with this setup.\n* Anyone in any slot. Three Susies? Go for it.\n* Only Kris can ACT.';
+ if(t===1)return '* LEFT/RIGHT to change. Z puts it back to normal.\n* HP moves in 10s.';
+ if(t===2)return '* Any spell on anyone, up to 6 each.\n* SnowGrave and FrostBite work best with high MAGIC.';
+ if(t===3){const row=drHubRows()[drHub.row],id=drCustom.items[drHub.row];return id?'* '+DR.items[id].name+': '+DR.items[id].desc.replace(/#/g,' ')+'.\n* Buy more kinds in the SHOP.':'* Up to 6 items. Buy more kinds in the SHOP.'}
+ if(t===4){const w=drCustom.weapon[hero],a=drCustom.armor[hero],g=DR.gear,f=k=>{const x=g[k];return x.name+' ('+['at','df','mag','hp'].filter(s=>x[s]).map(s=>(x[s]>0?'+':'')+x[s]+' '+s.toUpperCase()).join(', ')+')'};
+  return (w?'* '+f(w)+'\n':'')+(a?'* '+f(a)+'\n':'')+'* Gear comes from the SHOP.'}
+ const mult=DR.modeMult(drCustom.modes),m=DR.modes[drHub.row];
+ return (m?'* '+m.desc+'\n':'')+'* D$ multiplier: x'+mult+(drCustom.on?'':' (turn CUSTOM on!)');
+}
+function drTab(g,x,y,w,h,on){
+ g.save();g.fillStyle=on?DRY:'#000000';g.fillRect(x,y,w,h);
+ g.strokeStyle=on?'#ffffff':'#808080';g.lineWidth=2;g.strokeRect(x+1,y+1,w-2,h-2);
+ if(on){g.globalAlpha=.35+.25*Math.sin(DRM.t/6);g.fillStyle='#ffffff';g.fillRect(x+3,y+h-6,w-6,3)}
+ g.restore();
+}
+function drHeroCard(g,id,x,y,on,cw=112){
+ const H=DR.heroes[id],c=drCustom,st=c.stats[id],gw=DR.gear[c.weapon[id]],ga=DR.gear[c.armor[id]],b=k=>((gw&&gw[k])||0)+((ga&&ga[k])||0);
+ g.save();g.fillStyle='#000000';g.fillRect(x,y,cw,178);g.strokeStyle='#ffffff';g.lineWidth=2;g.strokeRect(x+1,y+1,cw-2,176);g.restore();
+ const [w,h]=DR.gfx.meta(H.idle),sc=cw<100?1.5:2;
+ g.save();g.beginPath();g.rect(x+2,y+2,cw-4,174);g.clip();
+ DR.gfx.draw(g,H.idle,DRM.t/5,x+cw/2-w*sc/2,y+96-h*sc+Math.sin(DRM.t/12+x)*2,sc,sc,0,on?1:.35);g.restore();
+ DR.gfx.text(g,'fnt_main',H.name.toUpperCase(),x+cw/2,y+100,on?DRY:DRG,{align:'center'});
+ const hp=Math.max(1,(st.hp+b('hp'))*(c.modes.glass?.5:1)|0),col=on?'#ffffff':DRG,lx=x+8;
+ DR.gfx.text(g,'fnt_main','HP '+hp,lx,y+118,col);
+ DR.gfx.text(g,'fnt_main','AT '+(st.at+b('at')),lx,y+132,col);
+ DR.gfx.text(g,'fnt_main','DF '+(st.df+b('df')),lx,y+146,col);
+ DR.gfx.text(g,'fnt_main','MG '+(st.mag+b('mag')),lx,y+160,col);
+}
+function drawDrHub(now){
+ const g=drMenuBegin(now);
+ if(!DR.ready){g.restore();return}
+ drCustomReady();
+ drTitle(g,'CUSTOM',`D$ ${drWallet()}   x${DR.modeMult(drCustom.modes)}`);
+ // tab strip
+ DR_HUB_TABS.forEach((name,i)=>{
+  const x=16+i*102,on=i===drHub.tab,foc=on&&drHub.focus===0;
+  drTab(g,x,48,98,32,on);
+  DR.gfx.text(g,'fnt_main',name,x+49,57,on?'#000000':'#ffffff',{align:'center'});
+  if(foc)DR.gfx.draw(g,'spr_heart',0,x+2,56,.75,.75);
+  drHit(x,46,98,38,()=>{drHub.tab=i;drHub.row=0;drHub.focus=0;drHub.top=0;play('move')});
+ });
+ // the list
+ const rows=drHubRows();DR.gfx.darkbox(g,16,92,392,436,DRM.t);
+ if(drHub.row>=rows.length)drHub.row=rows.length-1;
+ const VIS=9;if(drHub.row<drHub.top)drHub.top=drHub.row;if(drHub.row>=drHub.top+VIS)drHub.top=drHub.row-VIS+1;
+ rows.forEach((r,i)=>{
+  if(i<drHub.top||i>=drHub.top+VIS)return;
+  const y=110+(i-drHub.top)*35,sel=drHub.focus===1&&i===drHub.row;
+  DR.gfx.text(g,'fnt_mainbig',r.label,56,y,sel?DRY:'#ffffff');
+  if(r.value!==undefined){
+   const vx=372;DR.gfx.text(g,'fnt_mainbig',r.value,vx,y,r.on?'#00ff00':(sel?DRY:'#c0c0c0'),{align:'right'});
+   if(sel&&(r.left||r.right)){const vw=DR.gfx.textWidth('fnt_mainbig',r.value);g.fillStyle=DRY;const ax=vx-vw-14,b=Math.sin(DRM.t/5)*2;g.beginPath();g.moveTo(ax-b,y+16);g.lineTo(ax+8-b,y+8);g.lineTo(ax+8-b,y+24);g.fill()}
+  }
+  if(sel)DR.gfx.draw(g,'spr_heart',0,30,y+8);
+  drHit(20,y-2,368,34,()=>{if(drHub.focus===1&&drHub.row===i){r.ok&&r.ok();drSaveCustom();play('select')}else{drHub.focus=1;drHub.row=i;play('move')}});
+ });
+ // party preview + description
+ const party=[drCustom.s1||'kris',drCustom.s2==='none'?null:drCustom.s2,drCustom.s3==='none'?null:drCustom.s3];
+ const view=drHub.tab>=1&&drHub.tab<=4&&drHub.tab!==3?[DR_HEROES[drHub.hero]]:party.filter(Boolean);
+ const cw=view.length===3?72:view.length===2?110:112;
+ view.forEach((id,i)=>drHeroCard(g,id,view.length===1?456:400+i*(cw+4),92,true,cw));
+ DR.gfx.darkbox(g,400,276,624,436,DRM.t);
+ drWrap('fnt_main',drHubDesc(),200).slice(0,8).forEach((ln,i)=>DR.gfx.text(g,'fnt_main',ln,414,292+i*16));
+ drHint(g,drHub.focus===0?'LEFT/RIGHT: Tab   Z/DOWN: Enter   X: Back':'UP/DOWN: Choose   LEFT/RIGHT: Change   Z: Toggle   X: Tabs');
+ g.restore();
+}
+// The SHOP: buy items and gear with the D$ you've won
+const DR_SHOP_TABS=['ITEMS','WEAPONS','ARMOR'];
+function drShopRows(){
+ const own=drOwned(),t=drShop.tab;
+ if(t===0)return Object.keys(DR.items).map(Number).map(id=>({key:id,kind:'items',name:DR.items[id].name,price:DR.items[id].price,owned:!!own.items[id],desc:DR.items[id].desc.replace(/#/g,' ')}));
+ return Object.keys(DR.gear).filter(k=>DR.gear[k].type===(t===1?'weapon':'armor')).map(k=>{const x=DR.gear[k];
+  return {key:k,kind:'gear',name:x.name,price:x.price,owned:!!own.gear[k],desc:x.desc+(x.who?' ('+x.who.toUpperCase()+' only)':'')+' '+['at','df','mag','hp'].filter(s=>x[s]).map(s=>(x[s]>0?'+':'')+x[s]+' '+s.toUpperCase()).join(', ')}});
+}
+function drShopBuy(r){
+ if(!r)return;
+ if(r.owned){drShop.msg='* You already have that one.';play('move');return}
+ if(drWallet()<r.price){drShop.msg='* Not enough D$! Go win some fights.';play('move');return}
+ drWalletAdd(-r.price);const o=drOwned();o[r.kind][r.key]=1;drSaveOwned(o);
+ drShop.msg='* Bought '+r.name+'! It\'s in the CUSTOM hub now.';try{play('select')}catch(_){}
+}
+function drawDrShop(now){
+ const g=drMenuBegin(now);
+ if(!DR.ready){g.restore();return}
+ drTitle(g,'SHOP',`D$ ${drWallet()}`);
+ DR_SHOP_TABS.forEach((name,i)=>{
+  const x=16+i*126,on=i===drShop.tab;
+  drTab(g,x,48,120,32,on);
+  DR.gfx.text(g,'fnt_main',name,x+60,57,on?'#000000':'#ffffff',{align:'center'});
+  drHit(x,46,120,38,()=>{drShop.tab=i;drShop.row=0;drShop.top=0;play('move')});
+ });
+ const rows=drShopRows();DR.gfx.darkbox(g,16,92,392,436,DRM.t);
+ if(drShop.row>=rows.length)drShop.row=rows.length-1;
+ const VIS=9;if(drShop.row<drShop.top)drShop.top=drShop.row;if(drShop.row>=drShop.top+VIS)drShop.top=drShop.row-VIS+1;
+ rows.forEach((r,i)=>{
+  if(i<drShop.top||i>=drShop.top+VIS)return;
+  const y=110+(i-drShop.top)*35,sel=i===drShop.row;
+  DR.gfx.text(g,'fnt_mainbig',r.name,56,y,r.owned?DRG:(sel?DRY:'#ffffff'));
+  DR.gfx.text(g,'fnt_mainbig',r.owned?'OWNED':r.price+' D$',372,y,r.owned?'#00ff00':(drWallet()>=r.price?'#ffffff':'#ff4040'),{align:'right'});
+  if(sel)DR.gfx.draw(g,'spr_heart',0,30,y+8);
+  drHit(20,y-2,368,34,()=>{if(drShop.row===i)drShopBuy(r);else{drShop.row=i;play('move')}});
+ });
+ if(rows.length>VIS){if(drShop.top>0)DR.gfx.text(g,'fnt_main','more above',370,94,DRG,{align:'right'});if(drShop.top+VIS<rows.length)DR.gfx.text(g,'fnt_main','more below',370,420,DRG,{align:'right'})}
+ const r=rows[drShop.row];
+ DR.gfx.darkbox(g,400,92,624,276,DRM.t);
+ if(r){DR.gfx.text(g,'fnt_mainbig',r.name.toUpperCase(),512,108,DRY,{align:'center'});drWrap('fnt_main','* '+r.desc,196).slice(0,6).forEach((ln,i)=>DR.gfx.text(g,'fnt_main',ln,414,148+i*16))}
+ DR.gfx.darkbox(g,400,284,624,436,DRM.t);
+ drWrap('fnt_main',drShop.msg||'* Hey hey! Spend your D$ here.\n* Bought stuff unlocks for good in the CUSTOM hub.',196).slice(0,7).forEach((ln,i)=>DR.gfx.text(g,'fnt_main',ln,414,300+i*16));
+ drHint(g,'LEFT/RIGHT: Tab   UP/DOWN: Choose   Z: Buy   X: Back');
+ g.restore();
+}
+function drHubKey(k,low,repeat){
+ const up=k==='ArrowUp'||low==='w',down=k==='ArrowDown'||low==='s',left=k==='ArrowLeft'||low==='a',right=k==='ArrowRight'||low==='d',ok=low==='z'||k==='Enter',back=low==='x'||k==='Shift'||k==='Escape';
+ if(screen==='drshop'){
+  if(repeat&&!(up||down))return;
+  const rows=drShopRows();
+  if(back){screen='drroster';play('select');return}
+  if(left||right){drShop.tab=(drShop.tab+(right?1:2))%3;drShop.row=0;drShop.top=0;drShop.msg='';play('move')}
+  if(up){drShop.row=(drShop.row+rows.length-1)%rows.length;play('move')}
+  if(down){drShop.row=(drShop.row+1)%rows.length;play('move')}
+  if(ok)drShopBuy(rows[drShop.row]);
+  return;
+ }
+ drCustomReady();
+ if(drHub.focus===0){
+  if(repeat)return;
+  if(back){drSaveCustom();screen='drroster';play('select');return}
+  if(left||right){drHub.tab=(drHub.tab+(right?1:DR_HUB_TABS.length-1))%DR_HUB_TABS.length;drHub.row=0;drHub.top=0;play('move')}
+  if(ok||down){drHub.focus=1;drHub.row=0;play('select')}
+  return;
+ }
+ const rows=drHubRows(),r=rows[drHub.row];
+ if(back){drHub.focus=0;drSaveCustom();play('move');return}
+ if(up){if(drHub.row===0){drHub.focus=0}else drHub.row--;play('move');return}
+ if(down){drHub.row=Math.min(rows.length-1,drHub.row+1);play('move');return}
+ if(left&&r&&r.left){r.left();drSaveCustom();play('move')}
+ if(right&&r&&r.right){r.right();drSaveCustom();play('move')}
+ if(ok&&!repeat&&r&&r.ok){r.ok();drSaveCustom();play('select')}
 }
 function drRosterKey(k,low){
  const up=k==='ArrowUp'||low==='w',down=k==='ArrowDown'||low==='s',left=k==='ArrowLeft'||low==='a',right=k==='ArrowRight'||low==='d',ok=low==='z'||k==='Enter',back=low==='x'||k==='Shift'||k==='Escape';
