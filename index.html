@@ -27207,7 +27207,7 @@ const DR=(()=>{
   },
   // obj_joker (monstertype 20, the secret boss): JEVIL. His body (obj_joker_body) is drawn here;
   // the turn order, ACTs and attacks follow obj_joker Step_0 / Other_15.
-  jevil:{name:'Jevil',music:'jevil',hp:3500,at:10,df:5,gold:0,x:470,y:130,mx:20,my:18,turn:240,boss:1,mercymax:999,noSupport:1,
+  jevil:{name:'Jevil',music:'jevil',hp:3500,at:10,df:5,gold:0,x:448,y:107,mx:42,my:41,turn:240,boss:1,mercymax:999,
    idle:'spr_joker_main',idleSpeed:999,hurt:'spr_joker_main',spared:'spr_joker_teleport',still:'spr_joker_teleport',
    intro:'* LET THE GAMES BEGIN!',attack:'jevil',tiredAt:()=>false,
    init(m){Object.assign(m,{jt:0,ja:0,turns:0,chaos:0,pf:1,hyp:0,tired:0,dl:0,cond:0,fs:0,fss:1,maxdist:0,bsiner:0,size:2,ctimer:0,s:null,lastHp:m.hp,dsiner:0,shx:[0,0,0,0,0,0,0],shy:[0,0,0,0,0,0,0],shf:[1,1,1,1,1,1,1],bg:{rot:0,rs:0,bgx:0,a:0}})},
@@ -30382,11 +30382,11 @@ const DR=(()=>{
   const b=m.bg;if(b.a<1)b.a+=.02;if(b.rs<1)b.rs+=.1;b.bgx=(b.bgx+1)%640;b.rot+=2.5*b.rs;
  }
  function drawJevil(g,m,flash){
-  const fly=Math.sin(m.fs/8)*3*(m.fss*2-1),ox=m.x+20,oy=m.y+18;let flyx=m.dl>=1?Math.cos(m.fs/8)*3*(m.fss*2-1):0;
+  const fly=Math.sin(m.fs/8)*3*(m.fss*2-1),ox=m.x+42,oy=m.y+41;let flyx=m.dl>=1?Math.cos(m.fs/8)*3*(m.fss*2-1):0;
   if(m.jdown){draw(g,'spr_joker_teleport',1,ox,oy,2,2);return}
   const fl={flash};
   if(m.cond===0||m.cond===1){
-   if(m.dl<=2){g.fillStyle='#000';g.fillRect(m.x+42-20-fly+flyx,m.y+80-fly/2,50+fly*2,5+fly)}
+   if(m.dl<=2){g.fillStyle='#000';g.fillRect(m.x+64-20-fly+flyx,m.y+103-fly/2,50+fly*2,5+fly)}
   }
   if(m.cond===0){
    if(m.dl===0)draw(g,'spr_joker_main',0,ox+flyx,oy+fly,2,2,0,1,fl);
