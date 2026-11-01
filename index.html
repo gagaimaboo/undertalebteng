@@ -26595,16 +26595,20 @@ const DR1_ASSETS={"spr":{"spr_blockguy_part":[26,14,0,0,["67fcb502-060f-45ab-b91
 const DR=(()=>{
  const A=DR_ASSETS,A1=DR1_ASSETS,STEP_MS=1000/30;
  const imgs={},masks={};let ready=false,loading=null,S=null;
- const sndKeys={janything:'snd_joker_anything',jchaos:'snd_joker_chaos',jlaugh0:'snd_joker_laugh0',jha0:'snd_joker_ha0',jha1:'snd_joker_ha1',joh:'snd_joker_oh',jbyebye:'snd_joker_byebye',jmeta:'snd_joker_metamorphosis',jneochaos:'snd_joker_neochaos',bomb:'snd_bomb',spearappear:'snd_spearappear',scytheburst:'snd_scytheburst',hypnosis:'snd_hypnosis',pirouette:'snd_pirouette',badexplosion:'snd_badexplosion',carhonk:'snd_carhonk',toilet:'snd_toilet',weirdeffect:'snd_weirdeffect',awkward:'snd_awkward',shadowpendant:'snd_shadowpendant',birdtweet:'snd_birdtweet',applause:'snd_applause',rumble:'snd_rumble',menumove:'snd_menumove',select:'snd_select',laz:'snd_laz_c',crit:'snd_criticalswing',damage:'snd_damage',impact:'snd_impact',hurt:'snd_hurt1',graze:'snd_graze',mercyadd:'snd_mercyadd',spare:'snd_spare',power:'snd_power',rbswing:'snd_rudebuster_swing',rbhit:'snd_rudebuster_hit',pacify:'snd_pacify',text:'snd_text',boost:'snd_boost',icespell:'snd_icespell',snowgrave:'snd_snowgrave',petrify:'snd_petrify',deathnoise:'snd_deathnoise',ghostappear:'snd_ghostappear',spellpacify:'snd_spell_pacify',defeatrun:'snd_defeatrun',bell:'snd_bell',dadlaugh:'snd_dadlaugh',ralsing1:'snd_ralseising1',ralsing2:'snd_ralseising2',dadblast:'snd_dadblast',chainext:'snd_chain_extend',locker:'snd_locker',screenshake:'snd_screenshake',chainwave:'snd_chain_wave',spearrise:'snd_spearrise',bump:'snd_bump',magicsprinkle:'snd_magicsprinkle',jump:'snd_jump',ultraswing:'snd_ultraswing',swing:'snd_swing',item:'snd_item',cardrive:'snd_cardrive',whistle2:'snd_whistlebreath',txtral:'snd_txtral',txtsus:'snd_txtsus',txtnoe:'snd_txtnoe',txtlan:'snd_txtlan',drive:'snd_drive',honk:'snd_lancerhonk',whistle:'snd_lancerwhistle',splat:'snd_splat',sussurprise:'snd_sussurprise'};
+ const sndKeys={firespell:'snd_firespell',janything:'snd_joker_anything',jchaos:'snd_joker_chaos',jlaugh0:'snd_joker_laugh0',jha0:'snd_joker_ha0',jha1:'snd_joker_ha1',joh:'snd_joker_oh',jbyebye:'snd_joker_byebye',jmeta:'snd_joker_metamorphosis',jneochaos:'snd_joker_neochaos',bomb:'snd_bomb',spearappear:'snd_spearappear',scytheburst:'snd_scytheburst',hypnosis:'snd_hypnosis',pirouette:'snd_pirouette',badexplosion:'snd_badexplosion',carhonk:'snd_carhonk',toilet:'snd_toilet',weirdeffect:'snd_weirdeffect',awkward:'snd_awkward',shadowpendant:'snd_shadowpendant',birdtweet:'snd_birdtweet',applause:'snd_applause',rumble:'snd_rumble',menumove:'snd_menumove',select:'snd_select',laz:'snd_laz_c',crit:'snd_criticalswing',damage:'snd_damage',impact:'snd_impact',hurt:'snd_hurt1',graze:'snd_graze',mercyadd:'snd_mercyadd',spare:'snd_spare',power:'snd_power',rbswing:'snd_rudebuster_swing',rbhit:'snd_rudebuster_hit',pacify:'snd_pacify',text:'snd_text',boost:'snd_boost',icespell:'snd_icespell',snowgrave:'snd_snowgrave',petrify:'snd_petrify',deathnoise:'snd_deathnoise',ghostappear:'snd_ghostappear',spellpacify:'snd_spell_pacify',defeatrun:'snd_defeatrun',bell:'snd_bell',dadlaugh:'snd_dadlaugh',ralsing1:'snd_ralseising1',ralsing2:'snd_ralseising2',dadblast:'snd_dadblast',chainext:'snd_chain_extend',locker:'snd_locker',screenshake:'snd_screenshake',chainwave:'snd_chain_wave',spearrise:'snd_spearrise',bump:'snd_bump',magicsprinkle:'snd_magicsprinkle',jump:'snd_jump',ultraswing:'snd_ultraswing',swing:'snd_swing',item:'snd_item',cardrive:'snd_cardrive',whistle2:'snd_whistlebreath',txtral:'snd_txtral',txtsus:'snd_txtsus',txtnoe:'snd_txtnoe',txtlan:'snd_txtlan',drive:'snd_drive',honk:'snd_lancerhonk',whistle:'snd_lancerwhistle',splat:'snd_splat',sussurprise:'snd_sussurprise'};
  const sndFiles={snd_mercyadd:'snd_mercyadd.ogg',snd_pacify:'snd_pacify.ogg',snd_text:'snd_text.wav',snd_icespell:'snd_icespell.ogg',snd_snowgrave:'snd_snowgrave.ogg',snd_ghostappear:'snd_ghostappear.ogg',snd_spell_pacify:'snd_spell_pacify.ogg'};
  const SND_CH1=new Set(['snd_dadlaugh','snd_dadblast','snd_ralseising1','snd_ralseising2','snd_whistlebreath','snd_joker_anything','snd_joker_chaos','snd_joker_laugh0','snd_joker_ha0','snd_joker_ha1','snd_joker_oh','snd_joker_byebye','snd_joker_metamorphosis','snd_joker_neochaos','snd_bomb','snd_spearappear','snd_scytheburst','snd_hypnosis','snd_pirouette','snd_badexplosion','snd_carhonk','snd_toilet','snd_weirdeffect','snd_awkward','snd_shadowpendant','snd_birdtweet','snd_applause','snd_rumble']);
- const sndUrl=n=>(SND_CH1.has(n)?DR_RAW1:DR_RAW)+`sounds/${n}/${sndFiles[n]||n}`;
+ const sndUrl=n=>n==='snd_firespell'?DR_RAW5+'snd_firespell.wav':(SND_CH1.has(n)?DR_RAW1:DR_RAW)+`sounds/${n}/${sndFiles[n]||n}`;
  let music=null,battleMusic=null,kingMusic=null,susieMusic=null,kroundMusic=null,lancerMusic=null,jevilMusic=null;
  // Chaos King (Toby Fox), pinned to the commit that added it.
  const DR_KING_MUSIC='https://cdn.jsdelivr.net/gh/gagaimaboo/undertalebteng@fee4004f3b5f09357da0761a9de78d5636ffae7c/assets/dr/chaos_king.mp3';
  const DR_SUSIE_MUSIC='https://cdn.jsdelivr.net/gh/gagaimaboo/undertalebteng@37820509b7c663f9ed651fb1a17651a4353adc66/assets/dr/vs_susie.mp3';
  const DR_LANCER_MUSIC='https://cdn.jsdelivr.net/gh/gagaimaboo/undertalebteng@b84309f05ed59fbba8ee7761e155fa5eba5ee111/assets/dr/vs_lancer.mp3';
  const DR_JEVIL_MUSIC='https://cdn.jsdelivr.net/gh/gagaimaboo/undertalebteng@da32953c0b8afd7459c996dd1e8926f562ffed19/assets/dr/world_revolving.mp3';
+ // Chapter 5 sprites and sound for Ralsei's FireShock (exported from the user's own copy into
+ // assets/dr/ch5), pinned to the commit that added them. Frames are <name>_<i>.png.
+ const DR_RAW5='https://cdn.jsdelivr.net/gh/gagaimaboo/undertalebteng@070cb32f453834e16836546c76e8b6edb53ab6cf/assets/dr/ch5/';
+ const A5={spr:{spr_firespell_flame:[46,46,23,23,[0]],spr_firespell_smallflame:[22,22,11,11,[0]],spr_spell_fireball:[34,20,0,0,[0,1,2]],spr_ralsei_spell_fireball_right:[48,42,17,-2,[0,1,2,3,4,5]]}};
  const DR_KROUND_MUSIC='https://cdn.jsdelivr.net/gh/gagaimaboo/undertalebteng@37820509b7c663f9ed651fb1a17651a4353adc66/assets/dr/checker_dance.mp3';
 
  // ------------------------------------------------------------ assets ------
@@ -26621,6 +26625,7 @@ const DR=(()=>{
    imgs[n]=[];
    ids.forEach((g,i)=>jobs.push(loadImage(DR_RAW1+`sprites/${n}/${g}.png`).then(im=>{imgs[n][i]=im}).catch(()=>{})));
   }
+  for(const [n,[,,,,ids]] of Object.entries(A5.spr)){imgs[n]=[];ids.forEach(i=>jobs.push(loadImage(DR_RAW5+`${n}_${i}.png`).then(im=>{imgs[n][i]=im}).catch(()=>{})))}
   for(const f of Object.keys(A1.font))jobs.push(loadImage(DR_RAW1+`fonts/${f}/${f}.png`).then(im=>{imgs['font_'+f]=im}).catch(()=>{}));
   for(const [k,n] of Object.entries(sndKeys))jobs.push(loadAudioAsset(sndUrl(n),k==='text'?.4:.66,false).then(a=>{sounds['dr_'+k]=a}).catch(()=>{}));
   jobs.push(loadAudioAsset('https://cdn.jsdelivr.net/gh/BenSFGamer/Deltarune-web@main/battle.ogg',.5,true).then(a=>{music=battleMusic=a}).catch(()=>{}));
@@ -26653,7 +26658,7 @@ const DR=(()=>{
   }
  }
  const frame=(n,i)=>{const f=imgs[n];if(!f||!f.length)return null;const k=((Math.floor(i)%f.length)+f.length)%f.length;return f[k]||f[0]};
- const meta=n=>A.spr[n]||A1.spr[n]||[0,0,0,0,[]];
+ const meta=n=>A.spr[n]||A1.spr[n]||A5.spr[n]||[0,0,0,0,[]];
  // draw_sprite_ext: x/y is the sprite origin; flash = white silhouette alpha (d3d_set_fog white).
  function draw(g,n,i,x,y,xs=1,ys=1,ang=0,alpha=1,o={}){
   const im=frame(n,i);if(!im||alpha<=0)return;
@@ -26738,7 +26743,10 @@ const DR=(()=>{
   11:{name:'FrostBite',desc:'Double#ICE#strike',target:2,cost:125},
   // K. Round's weird route: Rude Buster through an axe Noelle froze. 5% TP to start, then
   // dearer the more of K. Round's HP is gone.
-  12:{name:'FrostBuster',desc:'Frozen#Rude#Damage',target:2,get cost(){return frostCost()}}
+  12:{name:'FrostBuster',desc:'Frozen#Rude#Damage',target:2,get cost(){return frostCost()}},
+  // fanmade: the fire spell Ralsei throws at a shuriken in Chapter 5 (obj_firespell, unnamed and
+  // uncosted there; its damage code is IceShock's), priced like IceShock
+  13:{name:'FireShock',desc:'Damage#w/ FIRE',target:2,cost:40}
  };
  // (outside the K. Round route it's 5% plus 10% a cast)
  function frostCost(){const k=S&&S.mons&&S.mons.find(m=>m.id==='kround');if(S&&S.kw&&k)return Math.min(250,13+Math.round((k.maxhp-Math.max(0,k.hp))*.15));return Math.min(250,13+25*((S&&S.fbx&&S.fbx.uses)||0))}
@@ -26775,7 +26783,7 @@ const DR=(()=>{
    actframes:7,actreturnframes:10,attackframes:6,itemframes:6,defendframes:5,spellframes:10,attackspeed:.5,mywidth:68,myheight:74,head:'spr_headkris',bname:'spr_bnamekris',slash:'spr_attack_cut1',slashSpeed:.334,slashMax:3,pitch:1},
   susie:{char:2,name:'Susie',hp:110,at:18,df:2,mag:1,spells:[4],idle:'spr_susieb_idle',attackready:'spr_susieb_attackready',attack:'spr_susieb_attack',act:'spr_susieb_act',actready:'spr_susieb_actready',item:'spr_susieb_item',itemready:'spr_susieb_itemready',spellready:'spr_susieb_spellready',spell:'spr_susieb_spell',defend:'spr_susieb_defend',hurtspr:'spr_susieb_hurt',defeat:'spr_susieb_defeat',victory:'spr_susieb_victory',
    actframes:7,actreturnframes:10,attackframes:5,itemframes:5,defendframes:5,spellframes:8,attackspeed:.5,mywidth:70,myheight:82,head:'spr_headsusie',bname:'spr_bnamesusie',slash:'spr_attack_mash2',slashSpeed:.5,slashMax:4,pitch:.9},
-  ralsei:{char:3,name:'Ralsei',hp:70,at:10,df:2,mag:7,spells:[3,2],idle:'spr_ralsei_idle',attackready:'spr_ralsei_attackready',attack:'spr_ralsei_attack',act:'spr_ralsei_act',actready:'spr_ralsei_actready',item:'spr_ralsei_item',itemready:'spr_ralsei_itemready',spellready:'spr_ralsei_spellready',spell:'spr_ralsei_spell',defend:'spr_ralsei_defend',hurtspr:'spr_ralsei_hurt_fixed',defeat:'spr_ralsei_defeat',victory:'spr_ralsei_victory',
+  ralsei:{char:3,name:'Ralsei',hp:70,at:10,df:2,mag:7,spells:[3,2,13],idle:'spr_ralsei_idle',attackready:'spr_ralsei_attackready',attack:'spr_ralsei_attack',act:'spr_ralsei_act',actready:'spr_ralsei_actready',item:'spr_ralsei_item',itemready:'spr_ralsei_itemready',spellready:'spr_ralsei_spellready',spell:'spr_ralsei_spell',defend:'spr_ralsei_defend',hurtspr:'spr_ralsei_hurt_fixed',defeat:'spr_ralsei_defeat',victory:'spr_ralsei_victory',
    actframes:8,actreturnframes:12,attackframes:6,itemframes:6,defendframes:7,spellframes:10,attackspeed:.5,mywidth:52,myheight:86,head:'spr_headralsei',bname:'spr_bnameralsei',slash:'spr_attack_slap1',slashSpeed:.5,slashMax:4,pitch:1.15},
   // obj_heronoelle (obj_heroparent Create): Chapter 2 stats when she joins.
   noelle:{char:4,name:'Noelle',hp:90,at:3,df:1,mag:11,spells:[2,8,9,10],idle:'spr_noelleb_idle',attackready:'spr_noelleb_attackready',attack:'spr_noelleb_attack',act:'spr_noelleb_act',actready:'spr_noelleb_actready',item:'spr_noelleb_item',itemready:'spr_noelleb_itemready',spellready:'spr_noelleb_spellready',spell:'spr_noelleb_spell',defend:'spr_noelleb_defend',hurtspr:'spr_noelleb_hurt',defeat:'spr_noelleb_defeat',victory:'spr_noelleb_victory',
@@ -27207,7 +27215,7 @@ const DR=(()=>{
   },
   // obj_joker (monstertype 20, the secret boss): JEVIL. His body (obj_joker_body) is drawn here;
   // the turn order, ACTs and attacks follow obj_joker Step_0 / Other_15.
-  jevil:{name:'Jevil',music:'jevil',hp:3500,at:10,df:5,gold:0,x:470,y:130,mx:20,my:18,turn:240,boss:1,mercymax:999,noSupport:1,
+  jevil:{name:'Jevil',music:'jevil',hp:3500,at:10,df:5,gold:0,x:448,y:107,mx:42,my:41,turn:240,boss:1,mercymax:999,
    idle:'spr_joker_main',idleSpeed:999,hurt:'spr_joker_main',spared:'spr_joker_teleport',still:'spr_joker_teleport',
    intro:'* LET THE GAMES BEGIN!',attack:'jevil',tiredAt:()=>false,
    init(m){Object.assign(m,{jt:0,ja:0,turns:0,chaos:0,pf:1,hyp:0,tired:0,dl:0,cond:0,fs:0,fss:1,maxdist:0,bsiner:0,size:2,ctimer:0,s:null,lastHp:m.hp,dsiner:0,shx:[0,0,0,0,0,0,0],shy:[0,0,0,0,0,0,0],shf:[1,1,1,1,1,1,1],bg:{rot:0,rs:0,bgx:0,a:0}})},
@@ -28058,6 +28066,7 @@ const DR=(()=>{
   if(spell===12){const n=fbState().uses;return ['* '+h.name+' used FROST BUSTER'+(n>=4?'!!!':n>=2?'!!':'!')+'/%']}
   if(spell===8)return ['* '+h.name+' cast SLEEPMIST!/%'];
   if(spell===9)return ['* '+h.name+' cast ICESHOCK!/%'];
+  if(spell===13)return ['* '+h.name+' cast FIRESHOCK!/%'];
   if(spell===10)return ['* '+h.name+' cast SNOWGRAVE!/%'];
   if(spell===5)return ['* '+h.name+' used RED BUSTER!/%'];
   if(spell===6)return ['* '+h.name+' cast DUAL HEAL!/%'];
@@ -28111,6 +28120,14 @@ const DR=(()=>{
    kw.uses++;snd('icespell',1.2);
    S.fx.push({kind:'rudebuster',h,m,star,caster,t:0,damage:dmg,frost:1,lv,flakes:[],ring:0});
    h.hideFor=28;S.spelldelay=75+Math.min(30,lv*6);return;
+  }
+  if(spell===13){
+   // FireShock: the Chapter 5 fireball throw, then obj_firespell where it lands (IceShock's damage)
+   if(!S.mons[star]||!S.mons[star].alive){star=S.mons.findIndex(m=>m.alive);if(star<0){S.spelldelay=30;return}}
+   const m=S.mons[star],minmag=Math.max(1,Math.min(999,h.mag-10));
+   h.pose={spr:'spr_ralsei_spell_fireball_right',sp:1/3,t0:S.t,hold:1};
+   S.fx.push({kind:'fireshock',h,m,star,x:monsterx(m),y:monstery(m),damage:Math.ceil(minmag*30+90+rnd(10)),ball:null,go:0,timer:0,hex:[],flakes:[]});
+   S.spelldelay=85;return;
   }
   if(S.weird&&weirdSpell(spell,caster,star))return;
   if(spell===11){
@@ -29728,6 +29745,26 @@ const DR=(()=>{
     if(e.z>=9&&(e.zs||[]).every(z=>z.a<=0))e.dead=1;
    }
    else if(e.kind==='pacifyfail'){if(e.t>40)e.dead=1}
+   else if(e.kind==='fireshock'){
+    // the throw: the fireball leaves his hand on frame 3 and flies to the target
+    if(e.t===9)e.ball={x:e.h.x+50,y:e.h.y+56,f:0};
+    if(e.t===21&&e.h.pose&&e.h.pose.spr==='spr_ralsei_spell_fireball_right')e.h.pose=null;
+    const b=e.ball;
+    if(b){b.f+=.34;const dx=e.x-b.x,dy=e.y-b.y,d=Math.hypot(dx,dy);if(d<=18){e.ball=null;e.go=1}else{b.x+=dx/d*18;b.y+=dy/d*18}}
+    if(e.go){
+     // obj_firespell Draw_0 (Chapter 5): three flames, each bursting into six, rings, damage at 15
+     const t=++e.timer;
+     if(t===1)snd('firespell');
+     if(t===1)e.hex.push({x:e.x-25,y:e.y-20});
+     if(t===4)e.hex.push({x:e.x+25,y:e.y-20});
+     if(t===7)e.hex.push({x:e.x,y:e.y+20});
+     if(t===10)for(const q of e.hex)for(let j=0;j<6;j++)e.flakes.push({x:q.x,y:q.y,xs:2,dir:60*j,sp:8,fric:.2,ang:0,rot:4,timer:0,a:1});
+     if(t===11)e.hex=[];
+     if(t===15){S.hittarget[e.star]=0;if(e.m.alive){damageEnemy(e.star,e.damage,2,'');if(e.m.alive)oflash(e.m)}}
+     flakeStep(e.flakes);
+     if(t>=60)e.dead=1;
+    }
+   }
    else if(e.kind==='icespell'){
     // obj_icespell (its Draw event is its clock) + obj_icespell_hexagon.
     const t=++e.timer;
@@ -30052,7 +30089,7 @@ const DR=(()=>{
   if(h.hideFor>0||h.sgHidden||h.absent)return;
   const dark=h.darken/30;
   // Ponman's Lullaby: Ralsei sings (scr_dark_marker spr_ralseib_sing, image_speed .2)
-  if(h.pose){draw(g,h.pose.spr,h.pose.sp?S.t*h.pose.sp:0,h.x,h.y,2,2,0,1,{dark});return}
+  if(h.pose){const p=h.pose,pf=p.sp?(S.t-(p.t0||0))*p.sp:0;draw(g,p.spr,p.hold?Math.min(pf,frameCount(p.spr)-1):pf,h.x,h.y,2,2,0,1,{dark});return}
   if(h.singing){h.singT=(h.singT||0)+.2;draw(g,'spr_ralseib_sing',h.singT,h.x,h.y,2,2,0,1,{dark});return}
   if(h.hurt&&h.hp>0){
    const hi=Math.min(2,h.hurttimer/2);
@@ -30199,6 +30236,16 @@ const DR=(()=>{
     if(e.tt===0)draw(g,n,0,m.x,m.y,2,2);
     if(e.g<=5||(e.g>=9&&e.g<=13))draw(g,'spr_defeatsweat',0,m.x-6,m.y-6);
     if(e.tt>=1)for(let i=0;i<=80;i++)draw(g,n,0,m.x+4*i,m.y,2,2,0,.4-e.tt/8+i/200);
+   }
+   else if(e.kind==='fireshock'){
+    if(e.ball)draw(g,'spr_spell_fireball',e.ball.f,e.ball.x-34,e.ball.y-20,2,2);
+    for(const q of e.hex)draw(g,'spr_firespell_flame',0,q.x,q.y,1.5,1.5);
+    for(const f of e.flakes)draw(g,'spr_firespell_smallflame',0,f.x,f.y,f.xs,f.xs,0,f.a);
+    if(e.timer>=10&&e.timer<=30){
+     g.save();g.globalAlpha=Math.max(0,Math.min(1,2.2-e.timer/10));g.strokeStyle='#ffffff';g.lineWidth=1;
+     for(let i=0;i<3;i++){g.beginPath();g.arc(e.x,e.y,Math.max(.5,Math.abs(60+i-e.timer*6)),0,Math.PI*2);g.stroke()}
+     g.restore();
+    }
    }
    else if(e.kind==='icespell'){
     for(const q of e.hex)draw(g,'spr_icespell_snowflake',0,q.x,q.y,1.5,1.5);
@@ -30382,11 +30429,11 @@ const DR=(()=>{
   const b=m.bg;if(b.a<1)b.a+=.02;if(b.rs<1)b.rs+=.1;b.bgx=(b.bgx+1)%640;b.rot+=2.5*b.rs;
  }
  function drawJevil(g,m,flash){
-  const fly=Math.sin(m.fs/8)*3*(m.fss*2-1),ox=m.x+20,oy=m.y+18;let flyx=m.dl>=1?Math.cos(m.fs/8)*3*(m.fss*2-1):0;
+  const fly=Math.sin(m.fs/8)*3*(m.fss*2-1),ox=m.x+42,oy=m.y+41;let flyx=m.dl>=1?Math.cos(m.fs/8)*3*(m.fss*2-1):0;
   if(m.jdown){draw(g,'spr_joker_teleport',1,ox,oy,2,2);return}
   const fl={flash};
   if(m.cond===0||m.cond===1){
-   if(m.dl<=2){g.fillStyle='#000';g.fillRect(m.x+42-20-fly+flyx,m.y+80-fly/2,50+fly*2,5+fly)}
+   if(m.dl<=2){g.fillStyle='#000';g.fillRect(m.x+64-20-fly+flyx,m.y+103-fly/2,50+fly*2,5+fly)}
   }
   if(m.cond===0){
    if(m.dl===0)draw(g,'spr_joker_main',0,ox+flyx,oy+fly,2,2,0,1,fl);
@@ -31108,7 +31155,7 @@ function drSaveCustom(){drLS('utbg.drCustom',JSON.stringify(drCustom))}
 function drCustomCfg(){drCustomReady();return JSON.parse(JSON.stringify(drCustom))}
 const drHub={tab:0,focus:0,row:0,hero:0,top:0},drShop={tab:0,row:0,top:0,msg:''};
 const DR_HUB_TABS=['PARTY','STATS','SPELLS','ITEMS','GEAR','MODES'];
-const DR_SPELL_LIST=[2,3,4,8,9,10,11,12];
+const DR_SPELL_LIST=[2,3,4,8,9,10,11,12,13];
 const STAT_KEYS=[['hp','HP',10,1,999],['at','ATTACK',1,0,99],['df','DEFENSE',1,0,99],['mag','MAGIC',1,0,99]];
 // one row = {label, value?, left?(), right?(), ok?(), on?}
 function drHubRows(){
