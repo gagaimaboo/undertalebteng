@@ -935,21 +935,16 @@ let sfxPlaySerial=0;
 const key={};
 let audioUnlocked=false;
 let screen='loading';
-let mainSelected=0; // BATTLE / ENEMIES / KILLS / SPARES / SETTINGS / CREATOR / SHOP / ONLINE / MODS / DELTARUNE
+let mainSelected=0; // index into TITLE_MENU
 // Front-end polish state. Kept separate from battle state so menu animation can never
 // interfere with authored attack timing, damage, SOUL physics, or encounter scripts.
 const uiReducedMotion=!!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 let uiLastScreen='';
 let uiScreenEnteredAt=performance.now();
-let uiTitleCursorX=NaN;
-let uiTitleLastSelected=-1;
-let uiTitleSelectedAt=performance.now();
-let uiPointerMenuIndex=-1;
 let bossSelected=0;
 let enemySelectFocus=0; // 0 grid, 1 support, 2 vanilla, 3 Papyrus route, 4 customize, 5 start, 6 back
 // V68: the roster outgrew one screen. Keep the right-side dossier fixed while the
 // monster grid scrolls independently and auto-follows keyboard/controller selection.
-let enemyRosterScroll=0,enemyRosterScrollTarget=0;
 let supportSelectIndex=0,supportSelectFocus=0;
 let customEditorSelected=0;
 let customEditorTyping=false;
@@ -1033,8 +1028,8 @@ let tutorialStartedFromSettings=false;
 const TUTORIAL_STEPS=[
  {view:'title',text:"heya. sans. apparently this thing has enough buttons now that alphys says it needs an orientation."},
  {view:'title',text:"me and alphys gotta waste all these clone amalgamates on something useful. so we figured you'd be a pretty good one to choose for testing them."},
- {view:'title',highlight:'battle',text:"the BATTLE tab starts whatever fight you've got loaded. simple. pick monster, press battle, try not to become the tutorial."},
- {view:'enemies',highlight:'enemyGrid',text:"ENEMIES is the real control room. pick the main enemy here. doggo, papyrus, toriel, ghosts, vegetables... very professional roster."},
+ {view:'title',highlight:'battle',text:"BATTLE is where the fights are. pick UNDERTALE or DELTARUNE, pick a monster, try not to become the tutorial."},
+ {view:'enemies',highlight:'enemyGrid',text:"this is the real control room. everybody's sorted into BOSSES, MINI BOSSES, ENEMIES and EXTRAS. left and right to browse, up to jump between groups. very professional roster."},
  {view:'enemies',highlight:'enemyGrid',text:"snowdin's got ICE CAP now too. ignore the hat twice if you want the peaceful route. apparently not looking at somebody is a combat technique."},
  {view:'enemies',highlight:'support',text:"SUPPORT lets you throw extra monsters into the same fight. up to five. alphys called that 'stress testing.' i call it 'bad odds.'"},
  {view:'enemies',highlight:'sandbox',text:"VANILLA keeps the original rules. turn it OFF and the CUSTOM HUB opens instead."},
@@ -1049,7 +1044,7 @@ const TUTORIAL_STEPS=[
  {view:'title',highlight:'creator',text:"ACTS builds that monster's pacifist route. you can require several ACT conditions before MERCY turns yellow."},
  {view:'title',highlight:'creator',text:"DIALOGUE lets each monster react differently to each player role. put a | between lines when you want a new speech bubble."},
  {view:'enemies',highlight:'sandbox',text:"PARTY in the CUSTOM HUB: lead as chara or kris and bring susie and noelle along, deltarune style. TP, spells, the works."},
- {view:'title',highlight:'history',text:"KILLS and SPARES keep track of what you've done. useful if you're the kind of person who likes receipts for violence."},
+ {view:'title',highlight:'history',text:"RECORDS keeps your KILLS and SPARES. useful if you're the kind of person who likes receipts for violence."},
  {view:'settings',highlight:'tutorial',text:"SETTINGS has the frame rate and this TUTORIAL button, in case you close this and immediately forget every word i said. statistically, good feature."},
  {view:'title',highlight:'online',text:"ONLINE lets up to five of you take on the same fight. host a room, share the code, take turns in the menus and dodge together. nobody gets left behind. well. unless they die."},
  {view:'battleMock',highlight:'battleButtons',text:"inside a fight: FIGHT, ACT and MERCY use the normal two-column UNDERTALE layout. extra choices page only when there are more than four. ITEM keeps its inventory list."},
@@ -2457,7 +2452,7 @@ function play(name,rate=1){
    });
  }catch(_){}
 }
-const MENU_MUSIC_SCREENS=new Set(['title','enemies','drroster','drsupport','drcustom','drshop','kills','spares','settings','creator','shop','customhub','customize','supportselect','lvselect','tutorialPrompt','tutorial']);
+const MENU_MUSIC_SCREENS=new Set(['title','gamepick','enemies','drroster','drsupport','drcustom','drshop','kills','spares','settings','creator','shop','customhub','customize','supportselect','lvselect','tutorialPrompt','tutorial']);
 let menuMusicAutoplayTried=false;
 function menuMusicScreen(){return MENU_MUSIC_SCREENS.has(screen)}
 function battleMusicTracks(){
@@ -5399,11 +5394,6 @@ function uiTrackScreen(now=performance.now()){
  if(uiLastScreen!==screen){
    uiLastScreen=screen;
    uiScreenEnteredAt=now;
-   if(screen==='title'){
-     uiTitleCursorX=titleTabRect(mainSelected).x+titleTabRect(mainSelected).w/2;
-     uiTitleLastSelected=mainSelected;
-     uiTitleSelectedAt=now;
-   }
  }
 }
 function uiScreenProgress(now=performance.now(),duration=320){
@@ -5419,25 +5409,6 @@ function menuTotalOutcome(type){
  return Object.values(battleStats?.[type]||{}).reduce((a,v)=>a+(Number(v)||0),0);
 }
 
-const ENEMY_GRID_COLS=1,ENEMY_GRID_CARD_W=150,ENEMY_GRID_CARD_H=174,ENEMY_GRID_GX=13,ENEMY_GRID_GY=16;
-function clampEnemyRosterScroll(v){return clamp(Number(v)||0,0,enemyRosterMaxScroll())}
-function ensureEnemySelectionVisible(instant=false){
- const vp=enemyRosterViewportRect(),r=enemyCardBaseRect(bossSelected),pad=18;
- let target=enemyRosterScrollTarget;
- const top=r.y-target,bottom=top+r.h;
- if(top<vp.y+pad)target=r.y-(vp.y+pad);
- else if(bottom>vp.y+vp.h-pad)target=(r.y+r.h)-(vp.y+vp.h-pad);
- enemyRosterScrollTarget=clampEnemyRosterScroll(target);
- if(instant||uiReducedMotion)enemyRosterScroll=enemyRosterScrollTarget;
-}
-function scrollEnemyRosterBy(delta){
- enemyRosterScrollTarget=clampEnemyRosterScroll(enemyRosterScrollTarget+delta);
-}
-function enemyVanillaRect(){return{x:930,y:613,w:400,h:58}}
-function enemyPapyrusRouteRect(){return{x:930,y:681,w:400,h:58}}
-function enemyCustomizeRect(){return{x:930,y:749,w:400,h:58}}
-function enemyStartRect(){return{x:930,y:817,w:400,h:58}}
-function enemyBackRect(){return{x:930,y:885,w:400,h:58}}
 function creatorLoadDataImage(data,key){
  creatorRuntimeImages[key]=null;
  if(!data)return;
@@ -6245,7 +6216,7 @@ function confirmCreatorScreenRow(){
  }
  if(creatorScreenRow===rows.length){useCreatedCharacter();return}
  if(creatorScreenRow===rows.length+1){resetCreatedCharacter();return}
- cancelCreatorNumberTyping();cancelCreatorTextTyping();screen='title';mainSelected=5;
+ cancelCreatorNumberTyping();cancelCreatorTextTyping();backToTitle('creator');
 }
 
 function customEditorRows(){
@@ -6465,7 +6436,7 @@ function finishTutorial(){
  if(music.sans){music.sans.pause();music.sans.currentTime=0}
  tutorialShown='';tutorialChar=0;tutorialTimer=0;
  if(tutorialReturnScreen==='settings'){
-   screen='settings';settingsSelected=4;mainSelected=4;
+   screen='settings';settingsSelected=4;mainSelected=titleIndex('settings');
  }else{
    screen='title';mainSelected=0;
  }
@@ -6502,7 +6473,9 @@ const UI6_FONT_META={"maintext":[[79,81,3,16,3,0],[73,81,4,13,6,1],[92,81,5,8,6,
    yellow for the highlighted choice. Every menu screen draws through this kit
    and owns its own mouse regions; keyboard handling stays in keyDown.
    ========================================================================== */
-const UI6_C={white:'#ffffff',yellow:'#ffff00',gray:'#808080',dim:'#4a4a4a',red:'#ff0000',orange:'#ff7f00',green:'#00c000',blue:'#14a9ff'};
+const UI6_C={white:'#ffffff',yellow:'#ffff00',gray:'#808080',dim:'#4a4a4a',red:'#ff0000',orange:'#ff7f00',green:'#00c000',blue:'#14a9ff',
+ // the CHOOSE A FIGHT look: pink is the highlighted choice, plum/lavender the rest
+ pink:'#ff2a7a',plum:'#3d2163',lav:'#9a76d6',lavDim:'#5f4893'};
 const ui6Img={};
 // Through the shared loader, so the atlases get the raw GitHub fallback and the mobile asset cache.
 function ui6Load(key,path){
@@ -6622,7 +6595,7 @@ let ui6Hits=[],ui6Wheels=[],ui6Recording=true;
 function ui6Hit(r,click,hover){if(ui6Recording)ui6Hits.push({r,click,hover})}
 function ui6WheelArea(r,fn){if(ui6Recording)ui6Wheels.push({r,fn})}
 function ui6In(r,x,y){return x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h}
-const UI6_SCREENS=new Set(['title','enemies','supportselect','drroster','drsupport','drcustom','drshop','customhub','creator','customize','kills','spares','shop','bossrush','bossrushBreak','bossrushCodex','bossrushResults','settings','mods','lvselect','tutorialPrompt','tutorial']);
+const UI6_SCREENS=new Set(['title','gamepick','enemies','supportselect','drroster','drsupport','drcustom','drshop','customhub','creator','customize','kills','spares','shop','bossrush','bossrushBreak','bossrushCodex','bossrushResults','settings','mods','lvselect','tutorialPrompt','tutorial']);
 function ui6CanvasPoint(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height}}
 function ui6FindHit(x,y){for(let i=ui6Hits.length-1;i>=0;i--)if(ui6In(ui6Hits[i].r,x,y))return ui6Hits[i];return null}
 window.addEventListener('pointermove',e=>{
@@ -6649,7 +6622,7 @@ window.addEventListener('wheel',e=>{
 // ---------- page furniture ----------
 function ui6Clear(){CanvasRenderingContext2D.prototype.fillRect.call(ctx,0,0,W,H)}
 function ui6Header(title,right=''){
- ui6T(title,64,34,{f:'text',s:4});
+ ui6BigText(title,64,34,{s:4});
  if(right)ui6T(right,W-64,50,{f:'small',s:3,c:UI6_C.gray,a:'right'});
 }
 function ui6Footer(text,color=UI6_C.gray){if(!ui6Recording)return;ui6T(text,W/2,H-46,{f:'small',s:3,c:color,a:'center'})}
@@ -6719,7 +6692,7 @@ function ui6Bar(x,y,w,h,t,fg=UI6_C.yellow,bg='#c00000'){
 }
 // A full-width UNDERTALE dialogue box with an optional face sprite.
 function ui6Dialogue(r,text,o={}){
- ui6Box(r);
+ if(o.frame)ui6Frame(r,o.frame);else ui6Box(r);
  let tx=r.x+36;
  if(o.face){const fw=o.faceW||Math.min(220,r.h-40);ui6Sprite(o.face,r.x+30+fw/2,r.y+r.h/2,fw,r.h-48,{alpha:o.faceAlpha});tx=r.x+60+fw}
  const f=o.f||'main',s=o.s||1,lh=o.lh||UI6F[f].lh*s+4;
@@ -6730,10 +6703,206 @@ function ui6Dialogue(r,text,o={}){
 // Every menu screen goes through this instead of the old backdrop skin.
 function withMenuSkin(fn){
  ui6Hits=[];ui6Wheels=[];ui6Recording=true;
- ctx.save();ctx.fillStyle='#000';ui6Clear();ctx.restore();
+ ui6Backdrop(performance.now());
  return fn();
 }
 
+// ---------- framed cards, icon buttons and big titles ----------
+// Menus sit on a dark violet backdrop with a slowly drifting lattice instead of flat black.
+let ui6BackdropCanvas=null,ui6LatticePattern=null;
+function ui6Backdrop(now){
+ if(!ui6BackdropCanvas){
+   const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+   const lg=g.createLinearGradient(0,0,0,H);lg.addColorStop(0,'#05030b');lg.addColorStop(.6,'#0c0819');lg.addColorStop(1,'#170d2d');
+   g.fillStyle=lg;g.fillRect(0,0,W,H);
+   const rg=g.createRadialGradient(W/2,H*.45,H*.25,W/2,H*.45,H*.9);rg.addColorStop(0,'rgba(0,0,0,0)');rg.addColorStop(1,'rgba(0,0,0,.65)');
+   g.fillStyle=rg;g.fillRect(0,0,W,H);ui6BackdropCanvas=c;
+   const t=document.createElement('canvas');t.width=t.height=96;const q=t.getContext('2d');
+   q.fillStyle='rgba(150,110,230,.04)';q.fillRect(0,0,96,2);q.fillRect(0,0,2,96);
+   q.fillStyle='rgba(170,130,240,.06)';q.fillRect(46,42,4,12);q.fillRect(42,46,12,4);
+   ui6LatticePattern=ctx.createPattern(t,'repeat');
+ }
+ ctx.drawImage(ui6BackdropCanvas,0,0);
+ const off=uiReducedMotion?0:(now/80)%96;
+ ctx.save();ctx.translate(off,off/2);ctx.fillStyle=ui6LatticePattern;ctx.fillRect(-96,-96,W+96,H+96);ctx.restore();
+}
+// '#rrggbb' scaled toward black (t=0 black, 1 the colour).
+function ui6Shade(hex,t){
+ const n=parseInt(String(hex).slice(1,7),16);
+ return `rgb(${Math.round((n>>16&255)*t)},${Math.round((n>>8&255)*t)},${Math.round((n&255)*t)})`;
+}
+// A pixel bitmap (rows of '#' and '.') centred on (cx,cy), s screen pixels per bitmap pixel.
+function ui6Bitmap(rows,cx,cy,s,color){
+ const fr=CanvasRenderingContext2D.prototype.fillRect,x0=Math.round(cx-rows[0].length*s/2),y0=Math.round(cy-rows.length*s/2);
+ ctx.fillStyle=color;
+ rows.forEach((row,r)=>{for(let c=0;c<row.length;c++){if(row[c]!=='#')continue;let e=c;while(row[e+1]==='#')e++;fr.call(ctx,x0+c*s,y0+r*s,(e-c+1)*s,s);c=e}});
+}
+const UI6_SPARKLE=['...#...','...#...','..###..','#######','..###..','...#...','...#...'];
+const UI6_CHEVRON=['##.......##','###.....###','.###...###.','..###.###..','...#####...','....###....','.....#.....'];
+// 16x16 menu icons
+const UI6_ICONS={
+ sword:['..............##','.............###','............###.','...........###..','..........###...','.........###....','..#.....###.....','..##...###......','...##.###.......','....####........','....###.........','...##.##........','..##...##.......','.##.............','##..............','#...............'],
+ souls:['................','.##.##..........','#######.........','#######.........','.#####..##.##...','..###..#######..','...#...#######..','........#####...','.........###....','..........#.....','................','................','................','................','................','................'],
+ bag:['.....##..##.....','......####......','.......##.......','......####......','.....######.....','...##########...','..############..','.##############.','.#####....#####.','.####.####.####.','.#####....#####.','.##############.','.##############.','..############..','...##########...','................'],
+ pencil:['............##..','...........####.','..........####..','.........####...','........####....','.......####.....','......####......','.....####.......','....####........','...####.........','..####..........','..###...........','.##.............','.#..............','................','................'],
+ trophy:['..############..','##.##########.##','#..##########..#','#..##########..#','.#.##########.#.','..############..','...##########...','.....######.....','.......##.......','.......##.......','......####......','....########....','....########....','................','................','................'],
+ bolt:['.........####...','........####....','.......####.....','......####......','.....####.......','....#########...','...#########....','.......####.....','......####......','.....###........','....###.........','...##...........','..#.............','................','................','................'],
+ gear:(()=>{const out=[];for(let y=0;y<16;y++){let row='';for(let x=0;x<16;x++){const dx=x-7.5,dy=y-7.5,r=Math.hypot(dx,dy),a=Math.atan2(dy,dx);row+=(r>2.3&&(r<5.3||(r<7.6&&Math.cos(a*8)>.35)))?'#':'.'}out.push(row)}return out})()
+};
+function ui6Icon(name,cx,cy,s,color){const rows=UI6_ICONS[name];if(rows)ui6Bitmap(rows,cx,cy,s,color)}
+// A framed card: dark inside (tinted toward its colour), a solid border and a pixel sparkle on each corner.
+// o: {color (border), base ('#rrggbb' the inside is tinted toward; default color), b, tint, fill, corners, cs}
+function ui6Frame(r,o={}){
+ const x=Math.round(r.x),y=Math.round(r.y),w=Math.round(r.w),h=Math.round(r.h),b=o.b??5,color=o.color||UI6_C.white;
+ const fr=CanvasRenderingContext2D.prototype.fillRect;
+ ctx.fillStyle=color;fr.call(ctx,x,y,w,h);
+ if(o.fill)ctx.fillStyle=o.fill;
+ else{const g=ctx.createLinearGradient(0,y,0,y+h);g.addColorStop(0,ui6Shade(o.base||color,o.tint??.2));g.addColorStop(1,'#050308');ctx.fillStyle=g}
+ fr.call(ctx,x+b,y+b,w-2*b,h-2*b);
+ if(o.corners!==false)for(const [cx,cy] of [[x+b/2,y+b/2],[x+w-b/2,y+b/2],[x+b/2,y+h-b/2],[x+w-b/2,y+h-b/2]])ui6Bitmap(UI6_SPARKLE,cx,cy,o.cs||3,color);
+}
+// Big headline text: a bitmap-font line with a vertical gradient and a chunky dark outline, cached.
+// o: {f,s,top,bottom,shadow,a}
+const ui6BigCache=new Map();
+function ui6BigText(t,x,y,o={}){
+ const f=o.f||'text',s=o.s||6,top=o.top||'#ffffff',bottom=o.bottom||'#c4b2ec',shadow=o.shadow||'#1d0c33';
+ const key=[t,f,s,top,bottom,shadow].join('|');let c=ui6BigCache.get(key);
+ if(!c){
+   const at=ui6Atlas(f,'#ffffff');if(!at){ui6T(t,x,y,{f,s,c:top,a:o.a});return}
+   const u=Math.max(2,Math.round(s/2)),pad=u*3,w=Math.ceil(ui6W(t,f,s)),h=Math.ceil(UI6F[f].lh*s);
+   const layer=fill=>{
+     const cv=document.createElement('canvas');cv.width=w+pad*2;cv.height=h+pad*2;const g=cv.getContext('2d');g.imageSmoothingEnabled=false;
+     let cx=pad;for(const ch of t){const gl=ui6Glyph(f,ch);if(!gl)continue;if(gl[2]>0&&gl[3]>0)g.drawImage(at,gl[0],gl[1],gl[2],gl[3],cx+gl[5]*s,pad,gl[2]*s,gl[3]*s);cx+=gl[4]*s}
+     g.globalCompositeOperation='source-in';g.fillStyle=fill(g);g.fillRect(0,0,cv.width,cv.height);return cv;
+   };
+   const ink=layer(g=>{const lg=g.createLinearGradient(0,pad,0,pad+UI6F[f].cap*s);lg.addColorStop(0,top);lg.addColorStop(1,bottom);return lg});
+   const dark=layer(()=>shadow);
+   const cv=document.createElement('canvas');cv.width=ink.width;cv.height=ink.height+u*2;const g=cv.getContext('2d');
+   for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=3;dy++)g.drawImage(dark,dx*u,dy*u);
+   g.drawImage(ink,0,0);
+   c={cv,pad,w};ui6BigCache.set(key,c);
+ }
+ const left=o.a==='center'?x-c.w/2:o.a==='right'?x-c.w:x;
+ ctx.drawImage(c.cv,Math.round(left-c.pad),Math.round(y-c.pad));
+ return c.w;
+}
+// "CHOOSE A FIGHT": white words, then the pink one.
+function ui6ChooseTitle(cx,y,s=5,big=s){
+ const a=ui6W('CHOOSE A ','text',s),b=ui6W('FIGHT','text',big),left=cx-(a+b)/2;
+ ui6BigText('CHOOSE A',left,y+(big-s)*UI6F.text.cap,{s});
+ ui6BigText('FIGHT',left+a,y,{s:big,top:'#ff6aa6',bottom:'#d4105e',shadow:'#33061d'});
+}
+// A big menu button: icon, label and a one-line hint. Pink with a sparkle when highlighted.
+function ui6MenuButton(r,label,hint,icon,active,now=performance.now()){
+ const ink=active?UI6_C.pink:UI6_C.lav;
+ ui6Frame(r,{color:active?UI6_C.pink:UI6_C.plum,tint:active?.28:.12});
+ if(active){
+   ctx.save();ctx.beginPath();ctx.rect(r.x+5,r.y+5,r.w-10,r.h-10);ctx.clip();ctx.fillStyle='rgba(255,42,122,.10)';
+   for(let gx=r.x+5;gx<r.x+r.w;gx+=26)CanvasRenderingContext2D.prototype.fillRect.call(ctx,Math.round(gx),r.y,2,r.h);
+   for(let gy=r.y+5;gy<r.y+r.h;gy+=26)CanvasRenderingContext2D.prototype.fillRect.call(ctx,r.x,Math.round(gy),r.w,2);
+   ctx.restore();
+   const tw=uiReducedMotion?0:Math.round((Math.sin(now/220)+1)*1.5);
+   ui6Bitmap(UI6_SPARKLE,r.x+r.w-58,r.y+r.h/2,4+tw,UI6_C.pink);
+ }
+ ui6Icon(icon,r.x+62,r.y+r.h/2,4,ink);
+ ui6T(label,r.x+122,r.y+12,{s:4,c:ink});
+ if(hint)ui6T(hint,r.x+124,r.y+r.h-26,{f:'small',s:2,c:active?'#ffa3c8':UI6_C.lavDim});
+}
+// A row button (FIGHT, SUPPORT...). o: {active,primary,disabled,s}
+function ui6ActionButton(r,label,o={}){
+ const s=o.s||3,border=o.disabled?'#2a2238':(o.active?UI6_C.pink:(o.primary?'#8a1747':UI6_C.plum));
+ const ink=o.disabled?'#4d4560':(o.primary?(o.active?UI6_C.white:UI6_C.pink):(o.active?UI6_C.pink:UI6_C.lav));
+ ui6Frame(r,{color:border,tint:o.disabled?.1:(o.active?.32:(o.primary?.24:.12)),cs:2});
+ ui6T(label,r.x+r.w/2,r.y+Math.round((r.h-UI6F.text.cap*s)/2),{s,c:ink,a:'center'});
+ if(o.active)ui6Soul(r.x+r.w/2,r.y,1.5);
+}
+// A category tab. o: {active,focus}
+function ui6Pill(r,label,count,color,o={}){
+ ui6Frame(r,{color:o.active?color:ui6Shade(color,.4),base:color,tint:o.active?.45:.12,cs:2,b:4});
+ const lw=ui6W(label,'text',3),cw=ui6W(String(count),'small',2),left=r.x+(r.w-lw-cw-14)/2;
+ ui6T(label,left,r.y+Math.round((r.h-39)/2),{s:3,c:o.active?UI6_C.white:ui6Shade(color,.85)});
+ ui6T(String(count),left+lw+14,r.y+Math.round((r.h-39)/2)+20,{f:'small',s:2,c:o.active?color:ui6Shade(color,.6)});
+ if(o.focus)ui6Soul(r.x+22,r.y+r.h/2,1.5);
+}
+
+
+// ---------- the CHOOSE A FIGHT page: group tabs, a card carousel, the info panel, a row of buttons ----------
+// defs: [{id,label,color,ids}] over a roster of keys -> [{...def, list: indices into keys}]; unlisted keys go to the last group.
+function ui6Groups(defs,keys){
+ const used=new Set(),out=defs.map(d=>({...d,list:[]}));
+ for(const g of out)for(const id of g.ids){const i=keys.indexOf(id);if(i>=0&&!used.has(i)){g.list.push(i);used.add(i)}}
+ keys.forEach((k,i)=>{if(!used.has(i))out[out.length-1].list.push(i)});
+ return out;
+}
+// LEFT / RIGHT walk the whole roster: past a group's last card comes the next group's first.
+function ui6GroupStep(groups,sel,dir){const flat=groups.flatMap(g=>g.list),i=flat.indexOf(sel);return flat[(i+dir+flat.length)%flat.length]}
+// The selection after jumping to group ci: what was picked there last time, else its first.
+function ui6GroupPick(groups,sel,ci,memory){
+ const cur=groups.find(g=>g.list.includes(sel)),g=groups[(ci+groups.length)%groups.length];
+ if(cur)memory[cur.id]=sel;
+ return g.list.includes(memory[g.id])?memory[g.id]:g.list[0];
+}
+function ui6GroupTabs(groups,ci,focus,onPick){
+ const tg=18,tw=Math.min(280,(W-160-tg*(groups.length-1))/groups.length),tx=(W-(tw*groups.length+tg*(groups.length-1)))/2;
+ groups.forEach((c,i)=>{
+   const r={x:tx+i*(tw+tg),y:112,w:tw,h:60};
+   ui6Pill(r,c.label,c.list.length,c.color,{active:i===ci,focus:focus&&i===ci});
+   ui6Hit(r,()=>onPick(i));
+ });
+}
+// d = cards away from the centre (fractional while the carousel slides)
+function ui6CardRect(d){
+ const a=Math.min(Math.abs(d),2.6),w=320-a*60,h=420-a*78,off=a<=1?a*290:290+(a-1)*230;
+ return{x:W/2+Math.sign(d)*off-w/2,y:414-h/2,w,h};
+}
+function ui6Card(r,label,im,color,on,focus,now){
+ ui6Frame(r,{color:on?color:ui6Shade(color,.7),base:color,b:on?6:4,tint:on?.42:.26,cs:on?3:2});
+ const labelS=on&&ui6W(label,'text',3)<=r.w-24?3:2,labelH=UI6F.text.cap*labelS;
+ ui6Sprite(im,r.x+r.w/2,r.y+(r.h-labelH-60)/2+14,r.w-40,r.h-labelH-84,{smoothScale:true});
+ ui6T(ui6Fit(label,r.w-24,'text',labelS),r.x+r.w/2,r.y+r.h-labelH-(on?62:30),{s:labelS,a:'center'});
+ if(on&&focus){const bob=uiReducedMotion?0:Math.round(Math.sin(now/180)*3);ui6Bitmap(UI6_CHEVRON,r.x+r.w/2,r.y+r.h-30+bob,3,UI6_C.white)}
+}
+// n cards, sel the selected one. st {pos,group} keeps the slide between frames; switching groups snaps.
+// o: {label(k),image(k),focus,onPick(k),onConfirm()}
+function ui6Carousel(st,group,n,sel,color,o,now=performance.now()){
+ if(st.group!==group||uiReducedMotion){st.group=group;st.pos=sel}
+ else{st.pos+=(sel-st.pos)*.3;if(Math.abs(sel-st.pos)<.01)st.pos=sel}
+ const cards=[];for(let k=0;k<n;k++){const d=k-st.pos;if(Math.abs(d)<2.6)cards.push({k,d})}
+ cards.sort((p,q)=>Math.abs(q.d)-Math.abs(p.d));
+ for(const v of cards){
+   const r=ui6CardRect(v.d),on=v.k===sel,a=Math.abs(v.d);
+   ctx.save();if(a>2)ctx.globalAlpha=Math.max(0,(2.6-a)/.6);
+   ui6Card(r,o.label(v.k),o.image(v.k),color,on,o.focus,now);
+   if(!on){ctx.globalAlpha*=Math.min(.6,a*.32);ui6Fill(r,'#000')}
+   ctx.restore();
+   if(on)ui6Soul(r.x+r.w/2,r.y,2);
+   if(a<2.2)ui6Hit(r,()=>{if(on)o.onConfirm();else o.onPick(v.k)});
+ }
+ ui6T(`${sel+1} / ${n}`,W-80,604,{f:'small',s:3,c:ui6Shade(color,.85),a:'right'});
+}
+function ui6InfoPanel(color,name,sub,stats,text){
+ const r={x:64,y:650,w:W-128,h:180};
+ ui6Frame(r,{color:ui6Shade(color,.55),base:color,tint:.16});
+ const ns=ui6W(name,'text',4)<=430?4:3;
+ ui6T(ui6Fit(name,430,'text',ns),r.x+34,r.y+24+(4-ns)*13,{s:ns});
+ ui6T(ui6Fit(sub,430,'small',3),r.x+36,r.y+88,{f:'small',s:3,c:color});
+ ui6T(ui6Fit(stats,430,'text',2),r.x+36,r.y+128,{s:2});
+ ui6Fill({x:r.x+500,y:r.y+22,w:4,h:r.h-44},ui6Shade(color,.35));
+ ui6Wrap(text,r.w-560,'main',1).slice(0,4).forEach((ln,k)=>ui6T(ln,r.x+530,r.y+24+k*36,{f:'main',s:1}));
+}
+// acts: [{f,label,primary,disabled}], one row, shrunk to fit. Returns the rects by f.
+function ui6ActionRow(acts,focus,onActivate,onHover){
+ const gap=14,pad=f=>f.primary?110:50,fit=s=>acts.map(a=>ui6W(a.label,'text',s)+pad(a));
+ let s=3,widths=fit(s);
+ if(widths.reduce((p,v)=>p+v,0)+gap*(acts.length-1)>W-128){s=2;widths=fit(s)}
+ let x=W/2-(widths.reduce((p,v)=>p+v,0)+gap*(acts.length-1))/2;const rects={};
+ acts.forEach((a,k)=>{
+   const r={x,y:858,w:widths[k],h:82};x+=widths[k]+gap;rects[a.f]=r;
+   ui6ActionButton(r,a.label,{s,active:focus===a.f,primary:a.primary,disabled:a.disabled});
+   ui6Hit(r,()=>onActivate(a.f),()=>onHover(a.f));
+ });
+ return rects;
+}
 
 // Rects the tutorial points at, filled in while screens draw.
 const ui6Marks={};
@@ -6760,73 +6929,123 @@ function ui6TitleLogo(y,scale=4){
 }
 
 // ---------- Title ----------
-const UI6_TITLE_LABELS=['BATTLE','ENEMIES','KILLS','SPARES','SETTINGS','CREATOR','SHOP','ONLINE','MODS','DELTARUNE'];
-function ui6TitleChoicePos(i){return{cx:W/2+((i%5)-2)*262,y:430+Math.floor(i/5)*76}}
-function titleTabRect(i){
- const p=ui6TitleChoicePos(i),w=ui6W(UI6_TITLE_LABELS[i],'text',3);
- return{x:p.cx-w/2-52,y:p.y-12,w:w+68,h:63};
-}
+// The main menu: the logo and your save on the left, one big button per place on the right.
+const TITLE_MENU=[
+ {id:'battle',label:'BATTLE',hint:'UNDERTALE AND DELTARUNE FIGHTS',icon:'sword',text:b=>`* ${b.label} is loaded and waiting.\n* Pick UNDERTALE or DELTARUNE, then who to fight.`},
+ {id:'online',label:'ONLINE',hint:'FIGHT WITH UP TO 4 FRIENDS',icon:'souls',text:()=>'* Fight the selected battle with up to 4 friends.\n* Host a room or join one with its code.'},
+ {id:'shop',label:'SHOP',hint:'ITEMS, WEAPONS AND ARMOR',icon:'bag',text:()=>'* Spend the GOLD from vanilla fights on items, weapons and armor.'},
+ {id:'creator',label:'CREATOR',hint:'BUILD YOUR OWN MONSTERS',icon:'pencil',text:()=>'* Build your own monsters.\n* Stats, sprites, attacks, ACTs and dialogue.'},
+ {id:'records',label:'RECORDS',hint:'YOUR KILLS AND SPARES',icon:'trophy',text:()=>'* Every monster you have defeated or spared, and how many times.'},
+ {id:'mods',label:'MODS',hint:'CHEATS AND CHAOS RULES',icon:'bolt',text:()=>'* Cheats and chaos rules.\n* Modded fights earn no EXP or GOLD and are not recorded.'},
+ {id:'settings',label:'SETTINGS',hint:'FRAME RATE AND THE TUTORIAL',icon:'gear',text:()=>'* Frame rate and the tutorial.'}
+];
+function titleIndex(id){return Math.max(0,TITLE_MENU.findIndex(m=>m.id===id))}
+function backToTitle(id){screen='title';mainSelected=titleIndex(id)}
+// below the corner the ONLINE overlay button sits in
+function titleButtonRect(i){return{x:760,y:150+i*114,w:624,h:100}}
 function titleActivate(i){
  mainSelected=i;play('select');
- if(i===0)openLevelSelect('title');
- else if(i===1){screen='enemies';enemySelectFocus=0;ensureEnemySelectionVisible(true)}
- else if(i===2)screen='kills';
- else if(i===3)screen='spares';
- else if(i===4){screen='settings';settingsSelected=0}
- else if(i===5)openCharacterCreator();
- else if(i===6)openShop();
- else if(i===7){if(typeof NBO!=='undefined')NBO.openPanel()}
- else if(i===8){screen='mods';modSelected=0}
- else if(i===9)drStart();
-}
-function ui6TitleText(i,b){
- return [
-  `* ${b.label} is waiting for you.\n* Choose your LV, then fight.`,
-  '* Choose who to fight.\n* Supports, rules and the CUSTOM HUB live here too.',
-  '* Every monster you have defeated, and how many times.',
-  '* Every monster you have spared, and how many times.',
-  '* Frame rate and the tutorial.',
-  '* Build your own monsters.\n* Stats, sprites, attacks, ACTs and dialogue.',
-  '* Spend the GOLD from vanilla fights on items, weapons and armor.',
-  '* Fight the selected battle with up to 4 friends.\n* Host a room or join one with its code.',
-  '* Cheats and chaos rules.\n* Modded fights earn no EXP or GOLD and are not recorded.',
-  '* Kris, Susie and Ralsei (or Noelle) vs chapter 1\'s enemies and the King,\n  built from DELTARUNE\'s own battle code.'
- ][i]||'';
+ const id=TITLE_MENU[i]?.id;
+ if(id==='battle')openGamePick();
+ else if(id==='online'){if(typeof NBO!=='undefined')NBO.openPanel()}
+ else if(id==='shop')openShop();
+ else if(id==='creator')openCharacterCreator();
+ else if(id==='records')screen='kills';
+ else if(id==='mods'){screen='mods';modSelected=0}
+ else if(id==='settings'){screen='settings';settingsSelected=0}
 }
 function drawTitle(now=performance.now()){
  const base=BOSS_OPTIONS[bossSelected]||BOSS_OPTIONS[0],b=effectiveBossById(base.id)||base;
- ui6TitleLogo(64,4);
- ui6T(ui6Fit('A N D   D E L T A R U N E   B A T T L E   E N G I N E',W-120,'text',2),W/2,190,{f:'text',s:2,c:UI6_C.gray,a:'center'});
- // The save line, laid out like UNDERTALE's Continue screen.
- const role=vanillaMode?'classic':sandboxRole();
- const lx=W/2-460,rx=W/2+460;
- ui6T(roleDisplayName(role),lx,262,{s:3});
- ui6T(`LV ${progressionLevel()}`,W/2,262,{s:3,a:'center'});
- ui6T(`${progression.gold}G`,rx,262,{s:3,a:'right'});
- ui6T(`${b.area} - ${b.label}`,lx,316,{s:3});
- const modsOn=activeModCount();
- const rules=modsOn?`${modsOn} MOD${modsOn===1?'':'S'} ON`:(vanillaMode?'VANILLA':'CUSTOM');
- ui6T(`SUPPORT ${supportLabel()}    ${menuTotalOutcome('kills')} KILLS    ${menuTotalOutcome('spares')} SPARES    ${rules}`,lx,368,{f:'small',s:3,c:modsOn?UI6_C.red:UI6_C.gray});
- for(let i=0;i<UI6_TITLE_LABELS.length;i++){
-   const p=ui6TitleChoicePos(i);
-   ui6Choice(UI6_TITLE_LABELS[i],p.cx,p.y,i===mainSelected,{a:'center'});
-   ui6Hit(titleTabRect(i),()=>titleActivate(i),()=>{if(mainSelected!==i){mainSelected=i;play('move')}});
+ const L={x:64,w:640},lcx=L.x+L.w/2,lg=ui6Img.logo;
+ if(lg){ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(lg,24,109,270,27,lcx-270,84,540,54);ctx.restore()}
+ else ui6T('UNDERTALE',lcx,84,{f:'main',s:2,a:'center'});
+ ui6T('A N D   D E L T A R U N E',lcx,162,{s:2,c:UI6_C.lav,a:'center'});
+ ui6BigText('BATTLE',lcx,206,{s:8,a:'center',top:'#ff6aa6',bottom:'#d4105e',shadow:'#33061d'});
+ ui6BigText('ENGINE',lcx,318,{s:8,a:'center',top:'#ff6aa6',bottom:'#d4105e',shadow:'#33061d'});
+ // the save, like UNDERTALE's Continue screen
+ const card={x:L.x,y:470,w:L.w,h:160},role=vanillaMode?'classic':sandboxRole();
+ ui6Frame(card,{color:UI6_C.plum,tint:.14});
+ ui6T(roleDisplayName(role),card.x+34,card.y+26,{s:3});
+ ui6T(`LV ${progressionLevel()}`,card.x+290,card.y+26,{s:3,a:'center'});
+ ui6T(`${progression.gold}G`,card.x+460,card.y+26,{s:3,c:UI6_C.yellow,a:'right'});
+ ui6T(ui6Fit(`VS ${b.label}`,420,'text',2),card.x+34,card.y+80,{s:2});
+ const modsOn=activeModCount(),rules=modsOn?`${modsOn} MOD${modsOn===1?'':'S'} ON`:(vanillaMode?'VANILLA':'CUSTOM');
+ ui6T(ui6Fit(`SUPPORT ${supportLabel()}   ${menuTotalOutcome('kills')} KILLS   ${menuTotalOutcome('spares')} SPARES   ${rules}`,440,'small',2),card.x+34,card.y+120,{f:'small',s:2,c:modsOn?UI6_C.red:UI6_C.lav});
+ ui6Sprite(bossImage(base,now),card.x+card.w-88,card.y+card.h-18,130,124,{bottom:true});
+ const item=TITLE_MENU[mainSelected]||TITLE_MENU[0];
+ ui6Dialogue({x:L.x,y:660,w:L.w,h:240},ui6Typed('title'+mainSelected,item.text(b)),{f:'main',s:1,lh:38,maxLines:5,frame:{color:UI6_C.plum,tint:.08}});
+ TITLE_MENU.forEach((m,i)=>{
+   const r=titleButtonRect(i);ui6Marks['title_'+m.id]=r;
+   ui6MenuButton(r,m.label,m.hint,m.icon,i===mainSelected,now);
+   ui6Hit(r,()=>titleActivate(i),()=>{if(mainSelected!==i){mainSelected=i;play('move')}});
+ });
+ ui6Footer('UP / DOWN  MOVE      Z  SELECT      F11  FULLSCREEN');
+}
+
+// ---------- Choose a fight: UNDERTALE or DELTARUNE ----------
+let gamePickSelected=0;
+// DELTARUNE's sprites start loading here, for its card and a quicker DELTARUNE page.
+function openGamePick(){screen='gamepick';try{DR.load()}catch(_){}}
+function gamePickActivate(i){gamePickSelected=i;play('select');if(i===0){screen='enemies';enemySelectFocus=0}else drStart()}
+function gamePickCardRect(i){const on=i===gamePickSelected,w=on?470:410,h=on?590:520;return{x:W/2+(i?260:-260)-w/2,y:590-h/2,w,h}}
+function drawGamePick(now=performance.now()){
+ ui6BigText('CHOOSE A',W/2,34,{s:5,a:'center'});
+ ui6BigText('FIGHT',W/2,104,{s:9,a:'center',top:'#ff6aa6',bottom:'#d4105e',shadow:'#33061d'});
+ for(const i of [1-gamePickSelected,gamePickSelected]){
+   const r=gamePickCardRect(i),on=i===gamePickSelected,cx=r.x+r.w/2;
+   if(i===0){
+     ui6Frame(r,{color:on?UI6_C.white:'#8c8c8c',fill:(()=>{const g=ctx.createLinearGradient(0,r.y,0,r.y+r.h);g.addColorStop(0,'#4d3615');g.addColorStop(1,'#0e0904');return g})()});
+     const lg=ui6Img.logo;
+     if(lg){const s=(r.w-60)/270;ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(lg,24,109,270,27,Math.round(cx-135*s),r.y+64,Math.round(270*s),Math.round(27*s));ctx.restore()}
+     else ui6T('UNDERTALE',cx,r.y+64,{f:'main',s:2,a:'center'});
+     const ut=BOSS_OPTIONS[bossSelected]||BOSS_OPTIONS[0];
+     ui6Sprite(bossImage(ut,now),cx,r.y+r.h*.56,r.w-120,r.h*.42,{smoothScale:true});
+     ui6T(`${BOSS_OPTIONS.length} MONSTERS`,cx,r.y+r.h-104,{s:3,a:'center'});
+     ui6T('BOSSES, MINI BOSSES, ENEMIES, EXTRAS',cx,r.y+r.h-50,{f:'small',s:2,c:'#d9b98a',a:'center'});
+   }else{
+     ui6Frame(r,{color:on?'#9ff3ff':'#5d8c93',fill:(()=>{const g=ctx.createLinearGradient(0,r.y,0,r.y+r.h);g.addColorStop(0,'#114e57');g.addColorStop(1,'#03131a');return g})()});
+     ui6BigText('DELTARUNE',cx,r.y+58,{s:on?5:4,a:'center',top:'#ffffff',bottom:'#9ff3ff',shadow:'#02242b'});
+     if(DR.ready){
+       const t=Math.floor(now/(1000/30)),party=['spr_krisb_idle','spr_susieb_idle','spr_ralsei_idle'].map(n=>DR.gfx.frame(n,t/5)).filter(Boolean);
+       const total=party.reduce((p,im)=>p+im.naturalWidth,0),ps=Math.floor(Math.min(3,(r.w-50)/total)*2)/2;
+       let px=cx-total*ps/2;
+       ctx.save();ctx.imageSmoothingEnabled=false;
+       for(const im of party){ctx.drawImage(im,Math.round(px),Math.round(r.y+r.h-146-im.naturalHeight*ps),Math.round(im.naturalWidth*ps),Math.round(im.naturalHeight*ps));px+=im.naturalWidth*ps}
+       ctx.restore();
+     }else ui6T('LOADING...',cx,r.y+r.h/2,{f:'small',s:3,c:'#9ff3ff',a:'center'});
+     ui6T(`${DR.enemyIds.length} ENEMIES`,cx,r.y+r.h-104,{s:3,a:'center'});
+     ui6T('KRIS, SUSIE AND RALSEI OR NOELLE',cx,r.y+r.h-50,{f:'small',s:2,c:'#9ff3ff',a:'center'});
+   }
+   if(on)ui6Soul(cx,r.y,3);
+   else{ctx.save();ctx.globalAlpha=.45;ui6Fill(r,'#000');ctx.restore()}
+   ui6Hit(r,()=>{if(on)gamePickActivate(i);else{gamePickSelected=i;play('move')}});
  }
- const box={x:150,y:600,w:W-300,h:300};
- const face=mainSelected<=1?bossImage(base,now):null;
- ui6Dialogue(box,ui6Typed('title'+mainSelected,ui6TitleText(mainSelected,b)),{face,faceW:220,f:'main',s:2,lh:62,maxLines:4});
- ui6Footer('Z / ENTER  SELECT      ARROWS  MOVE      F11  FULLSCREEN');
+ const text=gamePickSelected===0?'* Every UNDERTALE monster in this engine, sorted into groups.':'* Kris, Susie and Ralsei (or Noelle) vs DELTARUNE\'s enemies,\n  built from DELTARUNE\'s own battle code.';
+ ui6Wrap(text,W-200,'main',1).forEach((ln,k)=>ui6T(ln,W/2,914+k*36,{f:'main',s:1,c:UI6_C.lav,a:'center'}));
+ ui6Footer('LEFT / RIGHT  CHOOSE      Z  CONFIRM      X  BACK');
 }
 
 // ---------- Enemy select ----------
-const ENEMY_LIST_LH=52;
-function enemyRosterViewportRect(){return{x:64,y:130,w:560,h:812}}
-function enemyCardBaseRect(i){const vp=enemyRosterViewportRect();return{x:vp.x+6,y:vp.y+24+i*ENEMY_LIST_LH,w:vp.w-12,h:ENEMY_LIST_LH}}
-function enemyCardRect(i){const r=enemyCardBaseRect(i);return{...r,y:r.y-enemyRosterScroll}}
-function enemyRosterMaxScroll(){return Math.max(0,BOSS_OPTIONS.length*ENEMY_LIST_LH+48-enemyRosterViewportRect().h)}
-const UI6_ENEMY_CHOICES=[[1,0,0],[2,0,1],[3,0,2],[4,1,0],[5,1,1],[6,1,2]];
-function ui6EnemyChoicePos(col,row){return{x:730+col*340,y:780+row*64}}
-function enemySupportRect(){return ui6Marks.enemySupport||{x:700,y:770,w:300,h:60}}
+// The roster in groups, each a carousel of cards. Anything not listed lands in EXTRAS.
+const ENEMY_CATEGORIES=[
+ {id:'bosses',label:'BOSSES',color:'#ff3355',ids:['toriel','papyrus','undyne','undyneex','muffet','mettaton','mettatonex','mettatonneo','asgore','sans']},
+ {id:'minibosses',label:'MINI BOSSES',color:'#c04dff',ids:['napstablook','maddummy','doggo','lesserdog','greaterdog','dogi','glyde','royalguards']},
+ {id:'enemies',label:'ENEMIES',color:'#2fd36b',ids:['dummy','froggit','whimsun','moldsmal','loox','vegetoid','migosp','parsnik','moldessa','snowdrake','icecap','gyftrot','aaron','woshua','moldbygg','shyren','temmie','vulkin','tsunderplane','pyrope','finalfroggit','whimsalot','astigmatism','madjick','knightknight']},
+ {id:'extras',label:'EXTRAS',color:'#2aa8ff',ids:[]}
+];
+// Rebuilt when the roster changes (Sans joins it).
+let enemyCategoryCache=null,enemyCategoryCacheLen=-1;
+function enemyCategoryLists(){
+ if(!enemyCategoryCache||enemyCategoryCacheLen!==BOSS_OPTIONS.length){enemyCategoryCache=ui6Groups(ENEMY_CATEGORIES,BOSS_OPTIONS.map(b=>b.id));enemyCategoryCacheLen=BOSS_OPTIONS.length}
+ return enemyCategoryCache;
+}
+function enemyCategoryIndex(){return Math.max(0,enemyCategoryLists().findIndex(c=>c.list.includes(bossSelected)))}
+function enemyStep(dir){bossSelected=ui6GroupStep(enemyCategoryLists(),bossSelected,dir)}
+const enemyCategoryMemory={};
+function enemyPickCategory(ci){bossSelected=ui6GroupPick(enemyCategoryLists(),bossSelected,ci,enemyCategoryMemory)}
+const enemyCarousel={pos:0,group:''};
+// focus: 7 the group tabs, 0 the cards, then the buttons in ENEMY_ACTIONS order
+const ENEMY_ACTIONS=[5,1,2,3,4,6];
 function enemyActivate(f){
  enemySelectFocus=f;play('select');
  const id=BOSS_OPTIONS[bossSelected]?.id;
@@ -6835,63 +7054,44 @@ function enemyActivate(f){
  else if(f===3){if(bossHasRoute(id))toggleBossRoute(id);else play('hurt')}
  else if(f===4){if(vanillaMode)play('hurt');else openCustomHub(0)}
  else if(f===5)openLevelSelect('enemies');
- else if(f===6){screen='title';mainSelected=1}
+ else if(f===6){screen='gamepick';gamePickSelected=0}
 }
 function ui6EnemyText(f,b,base){
- if(f===0){
+ if(f===0||f===7){
    const rp=rewardPreview(b.id),sandbox=!vanillaMode;
    const kill=sandbox?'0 EXP, 0G':`${rp.killExp} EXP, ${rp.killGold}G`,spare=sandbox?'0G':`${rp.spareGold}G`;
    const enc=String((vanillaMode?b.encounter:base.encounter)||'').replace(/^\*\s*/,'').split('\n')[0];
-   return `* ${b.label} - AT ${b.atk} DF ${b.def}\n* HP ${b.hp}.  ${b.area}.\n* ${enc}\n* KILL ${kill}.  SPARE ${spare}.${sandbox?'\n* (CUSTOM rules give no rewards.)':''}`;
+   return `* ${enc}\n* KILL ${kill}.  SPARE ${spare}.\n* Supports: ${partySummary(3)}.${sandbox?'\n* (CUSTOM rules give no rewards.)':''}`;
  }
  if(f===1)return `* Support party: ${partySummary(4)}.\n* Add monsters to fight alongside ${b.label}.`;
  if(f===2)return vanillaMode?'* VANILLA rules: the real game\'s stats.\n* Switch to CUSTOM to edit stats, roles and loadout.':'* CUSTOM rules: your own stats and loadout.\n* Fights on CUSTOM rules give no EXP or GOLD.';
  if(f===3){
-   if(base.id==='papyrus')return `* Papyrus route: ${papyrusRouteLabel()}.\n* LEFT / RIGHT to change.`;
-   if(base.id==='jayzee')return `* Jayzee route: ${bossRouteLabel('jayzee')}.\n* LEFT / RIGHT to change.`;
+   if(base.id==='papyrus')return `* Papyrus route: ${papyrusRouteLabel()}.\n* Z to change.`;
+   if(base.id==='jayzee')return `* Jayzee route: ${bossRouteLabel('jayzee')}.\n* Z to change.`;
    return '* Only Papyrus and Jayzee have route options.';
  }
  if(f===4)return vanillaMode?'* The CUSTOM HUB is locked while VANILLA rules are on.':'* Open the CUSTOM HUB.\n* Player, party, encounter and loadout.';
  if(f===5)return `* Fight ${b.label}.\n* You will choose your LV first.`;
- return '* Back to the title.';
+ return '* Back to UNDERTALE or DELTARUNE.';
 }
 function drawEnemySelect(now=performance.now()){
- ui6Header('ENEMIES',`${String(bossSelected+1).padStart(2,'0')} / ${BOSS_OPTIONS.length}`);
- enemyRosterScrollTarget=clampEnemyRosterScroll(enemyRosterScrollTarget);
- enemyRosterScroll=uiReducedMotion?enemyRosterScrollTarget:(enemyRosterScroll+(enemyRosterScrollTarget-enemyRosterScroll)*.3);
- if(Math.abs(enemyRosterScroll-enemyRosterScrollTarget)<.5)enemyRosterScroll=enemyRosterScrollTarget;
- const vp=enemyRosterViewportRect();ui6Box(vp);ui6Marks.enemyGrid=vp;
- ctx.save();ctx.beginPath();ctx.rect(vp.x+6,vp.y+6,vp.w-12,vp.h-12);ctx.clip();
- for(let i=0;i<BOSS_OPTIONS.length;i++){
-   const r=enemyCardRect(i);if(r.y+r.h<vp.y||r.y>vp.y+vp.h)continue;
-   const chosen=i===bossSelected,active=chosen&&enemySelectFocus===0;
-   const ty=r.y+Math.round((r.h-39)/2);
-   ui6T(BOSS_OPTIONS[i].label,r.x+64,ty,{s:3,c:active?UI6_C.yellow:(chosen?UI6_C.yellow:UI6_C.white)});
-   if(active)ui6Soul(r.x+34,r.y+r.h/2,2);
-   else if(chosen)ui6T('*',r.x+26,ty,{s:3,c:UI6_C.yellow});
-   if(r.y>=vp.y&&r.y+r.h<=vp.y+vp.h)ui6Hit(r,()=>{if(bossSelected===i&&enemySelectFocus===0){enemySelectFocus=5;play('select')}else{bossSelected=i;enemySelectFocus=0;ensureEnemySelectionVisible();play('move')}});
- }
- ctx.restore();
- const maxS=enemyRosterMaxScroll();
- if(enemyRosterScroll>1)ui6Arrow(vp.x+vp.w/2,vp.y+10,false);
- if(enemyRosterScroll<maxS-1)ui6Arrow(vp.x+vp.w/2,vp.y+vp.h-22,true);
- ui6WheelArea(vp,dy=>scrollEnemyRosterBy(dy*.9));
-
+ const cats=enemyCategoryLists(),ci=enemyCategoryIndex(),cat=cats[ci];
+ ui6ChooseTitle(W/2,22,5);
+ ui6GroupTabs(cats,ci,enemySelectFocus===7,i=>{if(i!==ci){enemyPickCategory(i);play('move')}enemySelectFocus=0});
+ ui6Carousel(enemyCarousel,cat.id,cat.list.length,cat.list.indexOf(bossSelected),cat.color,{
+   label:k=>BOSS_OPTIONS[cat.list[k]].label,image:k=>bossImage(BOSS_OPTIONS[cat.list[k]],now),focus:enemySelectFocus===0,
+   onPick:k=>{bossSelected=cat.list[k];enemySelectFocus=0;play('move')},onConfirm:()=>{play('select');openLevelSelect('enemies')}
+ },now);
+ ui6Marks.enemyGrid={x:80,y:196,w:W-160,h:440};
  const base=BOSS_OPTIONS[bossSelected]||BOSS_OPTIONS[0];
  let b=effectiveBossById(base.id)||base;
  if(base.id==='papyrus'&&vanillaMode&&papyrusGenocideMode())b={...b,atk:3,def:-20000};
- ui6Sprite(bossImage(base,now),1022,452,640,300,{bottom:true});
- ui6Dialogue({x:660,y:478,w:724,h:262},ui6EnemyText(enemySelectFocus,b,base),{f:'main',s:1,lh:38,maxLines:6});
- for(const [f,col,row] of UI6_ENEMY_CHOICES){
-   const p=ui6EnemyChoicePos(col,row);
-   const label=f===1?'SUPPORT':f===2?(vanillaMode?'VANILLA':'CUSTOM'):f===3?'ROUTE':f===4?'CUSTOM HUB':f===5?'FIGHT':'BACK';
-   const disabled=(f===3&&!bossHasRoute(base.id))||(f===4&&vanillaMode);
-   const r=ui6Choice(label,p.x,p.y,enemySelectFocus===f,{disabled});
-   if(f===1)ui6Marks.enemySupport=r;
-   ui6Hit(r,()=>enemyActivate(f),()=>{enemySelectFocus=f});
- }
- ui6Marks.enemySandbox={x:680,y:760,w:704,h:200};
- ui6Footer(enemySelectFocus===0?'UP / DOWN  CHOOSE      Z  PICK      X  BACK':'ARROWS  MOVE      Z  CONFIRM      LEFT / RIGHT  CHANGE      X  BACK');
+ ui6InfoPanel(cat.color,b.label,b.area,`HP ${b.hp}   AT ${b.atk}   DF ${b.def}`,ui6EnemyText(enemySelectFocus,b,base));
+ const label=f=>f===1?'SUPPORT':f===2?(vanillaMode?'VANILLA':'CUSTOM'):f===3?'ROUTE':f===4?'CUSTOM HUB':f===5?'FIGHT':'BACK';
+ const rects=ui6ActionRow(ENEMY_ACTIONS.map(f=>({f,label:label(f),primary:f===5,disabled:(f===3&&!bossHasRoute(base.id))||(f===4&&vanillaMode)})),enemySelectFocus,enemyActivate,f=>{enemySelectFocus=f});
+ ui6Marks.enemySupport=rects[1];
+ ui6Marks.enemySandbox={x:rects[2].x,y:rects[2].y,w:rects[4].x+rects[4].w-rects[2].x,h:rects[2].h};
+ ui6Footer(enemySelectFocus===7?'LEFT / RIGHT  GROUP      DOWN  MONSTERS      X  BACK':enemySelectFocus===0?'LEFT / RIGHT  BROWSE      UP  GROUPS      DOWN  OPTIONS      Z  FIGHT      X  BACK':'LEFT / RIGHT  MOVE      UP  MONSTERS      Z  CONFIRM      X  BACK');
 }
 
 // ---------- Support select ----------
@@ -7075,7 +7275,10 @@ function drawHistoryScreen(type,now=performance.now()){
  const isKill=type==='kills',accent=isKill?UI6_C.red:UI6_C.yellow;
  const entries=battleStatsRoster(),counts=entries.map(e=>outcomeCount(type,e.id));
  const total=counts.reduce((a,v)=>a+v,0),unique=counts.filter(v=>v>0).length,completion=entries.length?Math.round(unique/entries.length*100):0;
- ui6Header(isKill?'KILLS':'SPARES',`${unique} / ${entries.length} RECORDED`);
+ ui6Header('RECORDS',`${unique} / ${entries.length} RECORDED`);
+ const tabs=[['kills','KILLS',UI6_C.red],['spares','SPARES',UI6_C.yellow]].map(([id,label,color],i)=>{
+   const r={x:W/2-150+i*200,y:26,w:180,h:58};ui6Pill(r,label,menuTotalOutcome(id),color,{active:id===type});return{r,id};
+ });
  ui6T(`TOTAL ${total}`,64,116,{s:3});
  ui6T(`FOUND ${completion}%`,360,116,{s:3});
  if(isKill){
@@ -7097,10 +7300,11 @@ function drawHistoryScreen(type,now=performance.now()){
    if(count)ui6T(`x${count}`,cx+cw/2-12,y+6,{f:'small',s:3,c:accent,a:'right'});
  }
  const secret=isKill&&(genocideArchiveFromCounts(entries,counts)>=100||sansUnlocked());
- ui6Hit({x:0,y:0,w:W,h:H},()=>{mainSelected=isKill?2:3;screen='title';play('select')});
+ ui6Hit({x:0,y:0,w:W,h:H},()=>{backToTitle('records');play('select')});
+ for(const t of tabs)ui6Hit(t.r,()=>{if(screen!==t.id){screen=t.id;play('move')}});
  if(secret)ui6Hit(ui6Marks.genoMeter,()=>{play('select');startSecretSans5000()});
  ui6T(secret?'* Something is waiting behind the archive.':(isKill?'* Every ending leaves a mark.':'* Mercy has a memory too.'),64,962,{f:'main',s:1,c:secret?UI6_C.red:UI6_C.gray});
- ui6Footer(secret?'Z  ???      X  BACK':'Z / X  BACK',secret?UI6_C.red:UI6_C.gray);
+ ui6Footer(secret?'LEFT / RIGHT  KILLS / SPARES      Z  ???      X  BACK':'LEFT / RIGHT  KILLS / SPARES      Z / X  BACK',secret?UI6_C.red:UI6_C.gray);
 }
 
 // ---------- Shop ----------
@@ -7140,7 +7344,7 @@ function drawShop(now=performance.now()){
  view.push({label:'EXIT'});
  ui6RowList('shop',list,view,shopSelected,{lh:58,padX:70,onClick:i=>{
    shopSelected=i;
-   if(i===entries.length){screen='title';mainSelected=6;play('select');return}
+   if(i===entries.length){backToTitle('shop');play('select');return}
    if(shopCategory==='items')buyShopItem(entries[i].id);else if(shopCategory==='weapons')buyOrEquipShopWeapon(entries[i].id);else buyOrEquipShopArmor(entries[i].id);
  },onHover:i=>{shopSelected=i}});
  const lines=ui6Wrap(ui6ShopInfo(entries[shopSelected]),side.w-60,'main',1);
@@ -7162,10 +7366,10 @@ function settingsRowRect(i){return ui6Marks['set'+i]||{x:0,y:0,w:0,h:0}}
 function settingsActivate(i,dir=1){
  if(i===0)startTutorial(true);
  else if(i===1)cycleFpsSetting(dir);
- else{screen='title';mainSelected=4}
+ else backToTitle('settings');
 }
 function drawSettings(now=performance.now()){
- ui6T('SETTINGS',W/2,40,{s:5,a:'center'});
+ ui6BigText('SETTINGS',W/2,40,{s:5,a:'center'});
  const on=v=>v?'ON':'OFF';
  const rows=[
    {label:'SANS TUTORIAL',value:'',d:'* Replay the tour of every menu and the battle controls.'},
@@ -7193,7 +7397,7 @@ function drawMods(now=performance.now()){
  ui6Box(box);
  ui6RowList('mods',box,rows,modSelected,{lh:52,onClick:i=>{
    modSelected=i;play('select');
-   if(i<MOD_DEFS.length)toggleMod(MOD_DEFS[i].id);else if(i===MOD_DEFS.length)resetMods();else{screen='title';mainSelected=8}
+   if(i<MOD_DEFS.length)toggleMod(MOD_DEFS[i].id);else if(i===MOD_DEFS.length)resetMods();else backToTitle('mods')
  },onHover:i=>{modSelected=i}});
  for(let i=0;i<rows.length;i++)ui6Marks['mod'+i]={x:box.x+8,y:box.y+24+i*52,w:box.w-16,h:52};
  const m=MOD_DEFS[modSelected];
@@ -7257,15 +7461,15 @@ function drawTutorialBattleMock(){
  ui6Marks.battleButtons={x:56,y:630,w:1336,h:116};ui6Marks.soul=arena;
 }
 function tutorialHighlightRect(keyName){
- if(keyName==='battle')return titleTabRect(0);
- if(keyName==='enemyGrid')return enemyRosterViewportRect();
+ if(keyName==='battle')return ui6Marks.title_battle;
+ if(keyName==='enemyGrid')return ui6Marks.enemyGrid;
  if(keyName==='support')return ui6Marks.enemySupport;
  if(keyName==='sandbox')return ui6Marks.enemySandbox;
- if(keyName==='history'){const a=titleTabRect(2),b=titleTabRect(3);return{x:a.x,y:a.y,w:b.x+b.w-a.x,h:a.h}}
- if(keyName==='creator')return titleTabRect(5);
+ if(keyName==='history')return ui6Marks.title_records;
+ if(keyName==='creator')return ui6Marks.title_creator;
  if(keyName==='tutorial')return settingsRowRect(0);
- if(keyName==='online')return titleTabRect(7);
- if(keyName==='mods')return titleTabRect(8);
+ if(keyName==='online')return ui6Marks.title_online;
+ if(keyName==='mods')return ui6Marks.title_mods;
  if(keyName==='battleButtons')return ui6Marks.battleButtons;
  if(keyName==='soul')return ui6Marks.soul;
  return null;
@@ -7282,12 +7486,13 @@ function drawTutorial(){
  ctx.save();ctx.globalAlpha=.55;ctx.fillStyle='#000';ui6Clear();ctx.restore();
  const hr=tutorialHighlightRect(step.highlight);
  if(hr){ctx.save();ctx.strokeStyle=UI6_C.yellow;ctx.lineWidth=6;ctx.setLineDash([18,12]);ctx.lineDashOffset=-(performance.now()/40)%30;ctx.strokeRect(Math.round(hr.x-10),Math.round(hr.y-10),Math.round(hr.w+20),Math.round(hr.h+20));ctx.restore()}
- const tray={x:40,y:H-290,w:W-80,h:250};
+ // sans talks from the bottom, or from the top when the bottom is what he points at
+ const tray={x:40,y:hr&&hr.y+hr.h>H-300?40:H-290,w:W-80,h:250};
  ctx.fillStyle='#000';ui6Fill(tray,'#000');
  ui6Dialogue(tray,tutorialShown,{face:images.sans,faceW:150,f:'sans',s:2,lh:40,maxLines:5});
  ui6T(`${tutorialIndex+1} / ${TUTORIAL_STEPS.length}`,tray.x+tray.w-30,tray.y+18,{f:'small',s:2,c:UI6_C.gray,a:'right'});
  ui6Hit(tray,()=>{play('select');advanceTutorial()});
- ui6T(tutorialChar<step.text.length?'Z  FINISH LINE':'Z  NEXT      X  LEAVE TUTORIAL',W/2,24,{f:'small',s:3,c:UI6_C.gray,a:'center'});
+ ui6T(tutorialChar<step.text.length?'Z  FINISH LINE':'Z  NEXT      X  LEAVE TUTORIAL',tray.x+tray.w-30,tray.y+tray.h-36,{f:'small',s:2,c:UI6_C.gray,a:'right'});
 }
 
 let nbDrawnS=null,nbDrawnT=-1;
@@ -7306,6 +7511,7 @@ function render(now){
  if(screen==='tutorialPrompt'){withMenuSkin(()=>drawTutorialPrompt(now));drawUiScreenCurtain(now);return}
  if(screen==='tutorial'){withMenuSkin(()=>drawTutorial());drawUiScreenCurtain(now);return}
  if(screen==='title'){withMenuSkin(()=>drawTitle(now));drawUiScreenCurtain(now);return}
+ if(screen==='gamepick'){withMenuSkin(()=>drawGamePick(now));drawUiScreenCurtain(now);return}
  if(screen==='enemies'){withMenuSkin(()=>drawEnemySelect(now));drawUiScreenCurtain(now);return}
  if(screen==='supportselect'){withMenuSkin(()=>drawSupportSelect(now));drawUiScreenCurtain(now);return}
  if(screen==='drroster'){withMenuSkin(()=>drawDrRoster(now));drawUiScreenCurtain(now);return}
@@ -7570,17 +7776,24 @@ function keyDown(e){
  }
 
  if(screen==='title'){
-   if(!e.repeat&&(k==='ArrowLeft'||low==='a')){mainSelected=(mainSelected+9)%10;play('move');return}
-   if(!e.repeat&&(k==='ArrowRight'||low==='d')){mainSelected=(mainSelected+1)%10;play('move');return}
-   if(!e.repeat&&(k==='ArrowUp'||low==='w'||k==='ArrowDown'||low==='s')){mainSelected=(mainSelected+5)%10;play('move');return}
+   const n=TITLE_MENU.length;
+   if(!e.repeat&&(k==='ArrowUp'||low==='w')){mainSelected=(mainSelected+n-1)%n;play('move');return}
+   if(!e.repeat&&(k==='ArrowDown'||low==='s')){mainSelected=(mainSelected+1)%n;play('move');return}
    if(!e.repeat&&(low==='z'||k==='Enter')){titleActivate(mainSelected);return}
+   return;
+ }
+
+ if(screen==='gamepick'){
+   if(!e.repeat&&(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(k)||['a','d','w','s'].includes(low))){gamePickSelected=1-gamePickSelected;play('move');return}
+   if(!e.repeat&&(low==='z'||k==='Enter')){gamePickActivate(gamePickSelected);return}
+   if(!e.repeat&&(low==='x'||k==='Shift'||k==='Escape')){backToTitle('battle');play('select');return}
    return;
  }
 
 
  if(screen==='shop'){
    const entries=shopVisibleEntries(),count=entries.length+1;
-   if(!e.repeat&&(low==='x'||k==='Shift'||k==='Escape')){screen='title';mainSelected=6;play('select');return}
+   if(!e.repeat&&(low==='x'||k==='Shift'||k==='Escape')){backToTitle('shop');play('select');return}
    if(!e.repeat&&(k==='Tab'||low==='e')){e.preventDefault();cycleShopCategory(1);return}
    if(!e.repeat&&low==='q'){e.preventDefault();cycleShopCategory(-1);return}
    if(!e.repeat&&k==='PageDown'){e.preventDefault();switchShopPage(1);return}
@@ -7589,7 +7802,7 @@ function keyDown(e){
    if(!e.repeat&&(k==='ArrowDown'||low==='s')){shopSelected=(shopSelected+1)%count;play('move');return}
    if(!e.repeat&&(k==='ArrowLeft'||low==='a')){cycleShopCategory(-1);return}
    if(!e.repeat&&(k==='ArrowRight'||low==='d')){cycleShopCategory(1);return}
-   if(!e.repeat&&(low==='z'||k==='Enter')){if(shopSelected===entries.length){screen='title';mainSelected=6;play('select')}else if(shopCategory==='items')buyShopItem(entries[shopSelected].id);else if(shopCategory==='weapons')buyOrEquipShopWeapon(entries[shopSelected].id);else buyOrEquipShopArmor(entries[shopSelected].id);return}
+   if(!e.repeat&&(low==='z'||k==='Enter')){if(shopSelected===entries.length){backToTitle('shop');play('select')}else if(shopCategory==='items')buyShopItem(entries[shopSelected].id);else if(shopCategory==='weapons')buyOrEquipShopWeapon(entries[shopSelected].id);else buyOrEquipShopArmor(entries[shopSelected].id);return}
    return;
  }
 
@@ -7605,7 +7818,7 @@ function keyDown(e){
    }
 
    if(!e.repeat&&(low==='x'||k==='Shift'||k==='Escape')){
-     screen='title';mainSelected=5;play('select');return;
+     backToTitle('creator');play('select');return;
    }
    if(!e.repeat&&(low==='q'||k==='PageUp')){
      creatorScreenTab=(creatorScreenTab-1+CREATOR_SCREEN_TABS.length)%CREATOR_SCREEN_TABS.length;creatorScreenRow=0;play('move');return;
@@ -7636,86 +7849,24 @@ function keyDown(e){
  }
 
  if(screen==='enemies'){
-   if(!e.repeat&&(low==='x'||k==='Shift'||k==='Escape')){
-     screen='title';mainSelected=1;play('select');return;
-   }
-
-   if(enemySelectFocus===0){
-     if(!e.repeat&&(k==='PageUp')){scrollEnemyRosterBy(-enemyRosterViewportRect().h*.82);play('move');return}
-     if(!e.repeat&&(k==='PageDown')){scrollEnemyRosterBy(enemyRosterViewportRect().h*.82);play('move');return}
-     if(!e.repeat&&(k==='ArrowLeft'||low==='a')){bossSelected=(bossSelected-1+BOSS_OPTIONS.length)%BOSS_OPTIONS.length;ensureEnemySelectionVisible();play('move');return}
-     if(!e.repeat&&(k==='ArrowRight'||low==='d')){bossSelected=(bossSelected+1)%BOSS_OPTIONS.length;ensureEnemySelectionVisible();play('move');return}
-     if(!e.repeat&&(k==='ArrowUp'||low==='w')){
-       if(bossSelected>=ENEMY_GRID_COLS){bossSelected-=ENEMY_GRID_COLS;ensureEnemySelectionVisible();play('move')}
-       else{scrollEnemyRosterBy(-enemyRosterViewportRect().h*.82);play('move')}
-       return;
-     }
-     if(!e.repeat&&(k==='ArrowDown'||low==='s')){
-       const next=bossSelected+ENEMY_GRID_COLS;
-       if(next<BOSS_OPTIONS.length){bossSelected=next;ensureEnemySelectionVisible();play('move')}
-       else{enemySelectFocus=1;play('move')}
-       return;
-     }
-     if(!e.repeat&&(low==='z'||k==='Enter')){enemySelectFocus=5;play('select');return}
+   if(e.repeat)return;
+   if(low==='x'||k==='Shift'||k==='Escape'){screen='gamepick';gamePickSelected=0;play('select');return}
+   const left=k==='ArrowLeft'||low==='a',right=k==='ArrowRight'||low==='d',up=k==='ArrowUp'||low==='w',down=k==='ArrowDown'||low==='s',ok=low==='z'||k==='Enter';
+   if(k==='PageUp'||low==='q'||k==='PageDown'||low==='e'){enemyPickCategory(enemyCategoryIndex()+(k==='PageUp'||low==='q'?-1:1));play('move');return}
+   if(enemySelectFocus===7){
+     if(left||right){enemyPickCategory(enemyCategoryIndex()+(left?-1:1));play('move')}
+     else if(down||ok){enemySelectFocus=0;play('move')}
+   }else if(enemySelectFocus===0){
+     if(left||right){enemyStep(left?-1:1);play('move')}
+     else if(up){enemySelectFocus=7;play('move')}
+     else if(down){enemySelectFocus=5;play('move')}
+     else if(ok){play('select');openLevelSelect('enemies')}
    }else{
-     if(!e.repeat&&(k==='ArrowUp'||low==='w')){
-       enemySelectFocus=Math.max(0,enemySelectFocus-1);if(enemySelectFocus===0)ensureEnemySelectionVisible();play('move');return;
-     }
-     if(!e.repeat&&(k==='ArrowDown'||low==='s')){
-       enemySelectFocus=Math.min(6,enemySelectFocus+1);play('move');return;
-     }
-
-     if(enemySelectFocus===2&&!e.repeat&&(k==='ArrowLeft'||k==='ArrowRight'||low==='a'||low==='d')){
-       toggleVanillaFromEnemy();play('move');return;
-     }
-     if(enemySelectFocus===3&&!e.repeat&&(k==='ArrowLeft'||k==='ArrowRight'||low==='a'||low==='d')){
-       const id=BOSS_OPTIONS[bossSelected]?.id;
-       if(bossHasRoute(id)){toggleBossRoute(id);play('move')}
-       else play('hurt');
-       return;
-     }
-
-     if(!e.repeat&&(low==='z'||k==='Enter')){
-       play('select');
-
-       if(enemySelectFocus===1){
-         supportSelectIndex=Math.max(0,SUPPORT_OPTIONS.findIndex(v=>v.id===supportEnemyId));
-         supportSelectFocus=0;
-         supportReturnScreen='enemies';
-         screen='supportselect';
-         return;
-       }
-
-       if(enemySelectFocus===2){
-         toggleVanillaFromEnemy();
-         return;
-       }
-
-       if(enemySelectFocus===3){
-         const id=BOSS_OPTIONS[bossSelected]?.id;
-         if(bossHasRoute(id))toggleBossRoute(id);
-         else play('hurt');
-         return;
-       }
-
-       if(enemySelectFocus===4){
-         if(vanillaMode)play('hurt');
-         else openCustomHub(0);
-         return;
-       }
-
-       if(enemySelectFocus===5){
-         openLevelSelect('enemies');
-         return;
-       }
-
-       if(enemySelectFocus===6){
-         screen='title';mainSelected=1;
-         return;
-       }
-     }
+     const i=Math.max(0,ENEMY_ACTIONS.indexOf(enemySelectFocus)),n=ENEMY_ACTIONS.length;
+     if(left||right){enemySelectFocus=ENEMY_ACTIONS[(i+(left?n-1:1))%n];play('move')}
+     else if(up){enemySelectFocus=0;play('move')}
+     else if(ok)enemyActivate(enemySelectFocus);
    }
-
    return;
  }
 
@@ -7826,9 +7977,9 @@ function keyDown(e){
    if(screen==='kills'&&!e.repeat&&(low==='z'||k==='Enter')&&genocideArchiveUnlocked()){
      play('select');startSecretSans5000();return;
    }
+   if(!e.repeat&&(k==='ArrowLeft'||k==='ArrowRight'||low==='a'||low==='d')){screen=screen==='kills'?'spares':'kills';play('move');return}
    if(!e.repeat&&(low==='x'||k==='Shift'||k==='Escape'||low==='z'||k==='Enter')){
-     mainSelected=screen==='kills'?2:3;
-     screen='title';
+     backToTitle('records');
      play('select');
      return;
    }
@@ -7837,11 +7988,11 @@ function keyDown(e){
 
  if(screen==='mods'){
    const n=MOD_DEFS.length,total=n+2;
-   if(!e.repeat&&(low==='x'||k==='Shift'||k==='Escape')){screen='title';mainSelected=8;play('select');return}
+   if(!e.repeat&&(low==='x'||k==='Shift'||k==='Escape')){backToTitle('mods');play('select');return}
    if(!e.repeat&&(k==='ArrowUp'||low==='w')){modSelected=(modSelected-1+total)%total;play('move');return}
    if(!e.repeat&&(k==='ArrowDown'||low==='s')){modSelected=(modSelected+1)%total;play('move');return}
    if(!e.repeat&&(k==='ArrowLeft'||low==='a'||k==='ArrowRight'||low==='d')){if(modSelected<n){toggleMod(MOD_DEFS[modSelected].id);play('move')}return}
-   if(!e.repeat&&(low==='z'||k==='Enter')){play('select');if(modSelected<n)toggleMod(MOD_DEFS[modSelected].id);else if(modSelected===n)resetMods();else{screen='title';mainSelected=8}return}
+   if(!e.repeat&&(low==='z'||k==='Enter')){play('select');if(modSelected<n)toggleMod(MOD_DEFS[modSelected].id);else if(modSelected===n)resetMods();else backToTitle('mods');return}
    return;
  }
 
@@ -7853,7 +8004,7 @@ function keyDown(e){
      return;
    }
    if(!e.repeat&&(low==='z'||k==='Enter')){play('select');settingsActivate(settingsSelected);return}
-   if(!e.repeat&&(low==='x'||k==='Shift'||k==='Escape')){screen='title';mainSelected=4;play('select');return}
+   if(!e.repeat&&(low==='x'||k==='Shift'||k==='Escape')){backToTitle('settings');play('select');return}
    return;
  }
 
@@ -7872,12 +8023,7 @@ window.addEventListener('blur',()=>{
 canvas.addEventListener('pointermove',e=>{
  const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;
  let clickable=false;
- if(screen==='title'){
-   let hover=-1;
-   for(let i=0;i<10;i++){const q=titleTabRect(i);if(x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h){hover=i;break}}
-   if(hover>=0){clickable=true;if(mainSelected!==hover){mainSelected=hover;uiTitleSelectedAt=performance.now()}}
-   uiPointerMenuIndex=hover;
- }else if(screen==='shop'){
+ if(screen==='shop'){
    const entries=shopVisibleEntries();
    for(let i=0;i<3;i++){const t=shopTabRect(i);if(x>=t.x&&x<=t.x+t.w&&y>=t.y&&y<=t.y+t.h){clickable=true;break}}
    if(shopPageCount()>1){for(const q of [shopPagePrevRect(),shopPageNextRect()])if(x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h){clickable=true;break}}
@@ -7890,21 +8036,11 @@ canvas.addEventListener('pointermove',e=>{
    for(let i=0;i<3;i++){const q=settingsRowRect(i);if(x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h){clickable=true;if(settingsSelected!==i)settingsSelected=i;break}}
  }else if(screen==='kills'&&genocideArchiveUnlocked()){
    const q=genocideArchiveMeterRect();if(x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h)clickable=true;
- }else if(screen==='enemies'){
-   {const vp=enemyRosterViewportRect();if(x>=vp.x&&x<=vp.x+vp.w&&y>=vp.y&&y<=vp.y+vp.h)for(let i=0;i<BOSS_OPTIONS.length;i++){const q=enemyCardRect(i);if(x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h){clickable=true;break}}}
-   for(const q of [enemySupportRect(),enemyVanillaRect(),enemyPapyrusRouteRect(),enemyCustomizeRect(),enemyStartRect(),enemyBackRect()]){if(x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h){clickable=true;break}}
  }
  canvas.style.cursor=clickable?'pointer':'default';
 });
-canvas.addEventListener('pointerleave',()=>{uiPointerMenuIndex=-1;canvas.style.cursor='default'});
+canvas.addEventListener('pointerleave',()=>{canvas.style.cursor='default'});
 
-canvas.addEventListener('wheel',e=>{
- if(screen!=='enemies')return;
- const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height,vp=enemyRosterViewportRect();
- if(x<vp.x||x>vp.x+vp.w||y<vp.y||y>vp.y+vp.h)return;
- e.preventDefault();
- scrollEnemyRosterBy(e.deltaY*.9);
-},{passive:false});
 
 canvas.addEventListener('pointerdown',e=>{
  const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;
@@ -7932,27 +8068,6 @@ canvas.addEventListener('pointerdown',e=>{
    if(x>=br.x&&x<=br.x+br.w&&y>=br.y&&y<=br.y+br.h){play('select');cancelLevelSelect();return}
    return;
  }
- if(screen==='title'){
-   for(let i=0;i<10;i++){
-     const q=titleTabRect(i);
-     if(x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h){
-       mainSelected=i;play('select');
-       if(i===0)openLevelSelect('title');
-       else if(i===1){screen='enemies';enemySelectFocus=0;ensureEnemySelectionVisible(true)}
-       else if(i===2)screen='kills';
-       else if(i===3)screen='spares';
-       else if(i===4){screen='settings';settingsSelected=0}
-       else if(i===5)openCharacterCreator();
-       else if(i===6)openShop();
-       else if(i===7){if(typeof NBO!=='undefined')NBO.openPanel()}
-       else if(i===9)drStart();
-       else{screen='mods';modSelected=0}
-       return;
-     }
-   }
-   return;
- }
-
  if(screen==='shop'){
    for(let i=0;i<3;i++){
      const t=shopTabRect(i);if(x>=t.x&&x<=t.x+t.w&&y>=t.y&&y<=t.y+t.h){switchShopCategory(SHOP_CATEGORY_ORDER[i]);return}
@@ -7965,7 +8080,7 @@ canvas.addEventListener('pointerdown',e=>{
    for(let i=0;i<entries.length;i++){
      const q=shopItemRect(i);if(x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h){shopSelected=i;if(shopCategory==='items')buyShopItem(entries[i].id);else if(shopCategory==='weapons')buyOrEquipShopWeapon(entries[i].id);else buyOrEquipShopArmor(entries[i].id);return}
    }
-   const q=shopBackRect();if(x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h){shopSelected=entries.length;screen='title';mainSelected=6;play('select');return}
+   const q=shopBackRect();if(x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h){shopSelected=entries.length;backToTitle('shop');play('select');return}
    return;
  }
 
@@ -7995,73 +8110,6 @@ canvas.addEventListener('pointerdown',e=>{
    if(x>=back.x&&x<=back.x+back.w&&y>=back.y&&y<=back.y+back.h){creatorScreenRow=rows.length+2;play('select');confirmCreatorScreenRow();return}
    if(x>=reset.x&&x<=reset.x+reset.w&&y>=reset.y&&y<=reset.y+reset.h){creatorScreenRow=rows.length+1;play('select');confirmCreatorScreenRow();return}
    if(x>=use.x&&x<=use.x+use.w&&y>=use.y&&y<=use.y+use.h){creatorScreenRow=rows.length;play('select');confirmCreatorScreenRow();return}
-   return;
- }
-
- if(screen==='kills'||screen==='spares'){
-   if(screen==='kills'&&genocideArchiveUnlocked()){
-     const q=genocideArchiveMeterRect();
-     if(x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h){play('select');startSecretSans5000();return}
-   }
-   mainSelected=screen==='kills'?2:3;screen='title';play('select');return
- }
- if(screen==='enemies'){
-   const rosterVp=enemyRosterViewportRect();
-   if(x>=rosterVp.x&&x<=rosterVp.x+rosterVp.w&&y>=rosterVp.y&&y<=rosterVp.y+rosterVp.h){
-     for(let i=0;i<BOSS_OPTIONS.length;i++){
-       const q=enemyCardRect(i);
-       if(x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h){
-         bossSelected=i;enemySelectFocus=0;ensureEnemySelectionVisible();play('select');return;
-       }
-     }
-   }
-
-   const sr=enemySupportRect();
-   if(x>=sr.x&&x<=sr.x+sr.w&&y>=sr.y&&y<=sr.y+sr.h){
-     enemySelectFocus=1;
-     supportSelectIndex=Math.max(0,SUPPORT_OPTIONS.findIndex(v=>v.id===supportEnemyId));
-     supportSelectFocus=0;
-     supportReturnScreen='enemies';
-     screen='supportselect';
-     play('select');
-     return;
-   }
-
-   const vr=enemyVanillaRect();
-   if(x>=vr.x&&x<=vr.x+vr.w&&y>=vr.y&&y<=vr.y+vr.h){
-     enemySelectFocus=2;
-     toggleVanillaFromEnemy();
-     play('select');
-     return;
-   }
-
-   const rr=enemyPapyrusRouteRect();
-   if(x>=rr.x&&x<=rr.x+rr.w&&y>=rr.y&&y<=rr.y+rr.h){
-     enemySelectFocus=3;
-     const id=BOSS_OPTIONS[bossSelected]?.id;
-     if(bossHasRoute(id)){toggleBossRoute(id);play('select')}
-     else play('hurt');
-     return;
-   }
-
-   const cr=enemyCustomizeRect();
-   if(x>=cr.x&&x<=cr.x+cr.w&&y>=cr.y&&y<=cr.y+cr.h){
-     enemySelectFocus=4;
-     if(!vanillaMode){openCustomHub(0);play('select')}
-     else play('hurt');
-     return;
-   }
-
-   const st=enemyStartRect();
-   if(x>=st.x&&x<=st.x+st.w&&y>=st.y&&y<=st.y+st.h){
-     enemySelectFocus=5;play('select');openLevelSelect('enemies');return;
-   }
-
-   const bk=enemyBackRect();
-   if(x>=bk.x&&x<=bk.x+bk.w&&y>=bk.y&&y<=bk.y+bk.h){
-     screen='title';mainSelected=1;play('select');return;
-   }
-
    return;
  }
 
@@ -8165,7 +8213,7 @@ canvas.addEventListener('pointerdown',e=>{
    const n=MOD_DEFS.length;
    for(let i=0;i<n;i++){const q=modCardRect(i);if(x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h){modSelected=i;toggleMod(MOD_DEFS[i].id);play('select');return}}
    const rr=modResetRect();if(x>=rr.x&&x<=rr.x+rr.w&&y>=rr.y&&y<=rr.y+rr.h){modSelected=n;resetMods();play('select');return}
-   const br=modBackRect();if(x>=br.x&&x<=br.x+br.w&&y>=br.y&&y<=br.y+br.h){modSelected=n+1;screen='title';mainSelected=8;play('select');return}
+   const br=modBackRect();if(x>=br.x&&x<=br.x+br.w&&y>=br.y&&y<=br.y+br.h){modSelected=n+1;backToTitle('mods');play('select');return}
    return;
  }
  if(screen==='settings'){
@@ -31016,7 +31064,16 @@ function drCheckText(id){
  const e=DR.enemies[id];let t='';try{t=String(e.act('Check',{},0)[0]||'')}catch(_){}
  return t.replace(/\\c./g,'').replace(/\^\d/g,'').replace(/\/%?/g,'').split('&').map(l=>l.trim()).filter(Boolean).join('\n');
 }
-const DR_CHOICES=[[1,0,0],[2,0,1],[3,0,2],[8,0,3],[4,1,0],[5,1,1],[6,1,2],[7,1,3]];
+// The roster page is the same CHOOSE A FIGHT page as UNDERTALE's, on DELTARUNE's battle grid.
+const DR_GROUPS=[
+ {id:'bosses',label:'BOSSES',color:'#ff3355',ids:['kround','lancersolo','susie','king','jevil']},
+ {id:'enemies',label:'ENEMIES',color:'#36d6f0',ids:[]}
+];
+let drGroupCache=null;
+function drGroups(){return drGroupCache||(drGroupCache=ui6Groups(DR_GROUPS,DR.enemyIds))}
+const drCarousel={pos:0,group:''},drGroupMemory={};
+// focus: 9 the group tabs, 0 the cards, then the buttons in DR_ACTIONS order
+const DR_ACTIONS=[4,1,2,3,6,7,8,5];
 function drChoiceLabel(f){return f===1?'SUPPORT':f===2?(drParty?'NOELLE':'RALSEI'):f===3?(drSusieAuto?'WILD':'TAME'):f===4?'FIGHT':f===6?(drWeird?'WEIRD ON':'WEIRD'):f===7?(drCustom.on?'CUSTOM ON':'CUSTOM'):f===8?'SHOP':'BACK'}
 function drActivate(f){
  if(f===1){drSupSel=0;drSupFocus=0;screen='drsupport';play('select')}
@@ -31026,7 +31083,7 @@ function drActivate(f){
  else if(f===7){drHub.tab=0;drHub.focus=0;drHub.row=0;screen='drcustom';play('select')}
  else if(f===8){drShop.tab=0;drShop.row=0;drShop.msg='';screen='drshop';play('select')}
  else if(f===4)drFight();
- else{drSavePrefs();screen='title';mainSelected=9;play('select')}
+ else{drSavePrefs();screen='gamepick';gamePickSelected=1;play('select')}
 }
 // DELTARUNE-styled pages: the battle grid behind, scr_darkbox frames, fnt_mainbig/fnt_main,
 // the red SOUL as the cursor. Drawn at 640x480 and scaled like the battles.
@@ -31065,7 +31122,7 @@ function drOption(g,label,x,y,on,click,hover){
 }
 function drHint(g,str){DR.gfx.text(g,'fnt_main',str,320,456,DRG,{align:'center'})}
 // both lists show 9 rows and scroll to keep the selection on screen
-const DR_ROWS=9;let drTop=0,drSupTop=0;
+const DR_ROWS=9;let drSupTop=0;
 function drScrollTop(top,sel,n){if(sel<top)top=sel;if(sel>=top+DR_ROWS)top=sel-DR_ROWS+1;return Math.max(0,Math.min(top,Math.max(0,n-DR_ROWS)))}
 function drScrollMarks(g,top,n,onUp,onDown){
  // little bobbing arrows (the bitmap fonts have no arrow glyphs)
@@ -31076,25 +31133,30 @@ function drScrollMarks(g,top,n,onUp,onDown){
 function drawDrRoster(now=performance.now()){
  const ids=DR.enemyIds,g=drMenuBegin(now);
  if(!DR.ready){DR.gfx.text(g,'fnt_mainbig','',0,0);g.fillStyle='#fff';g.font='20px monospace';g.fillText('Loading DELTARUNE assets...',190,240);g.restore();return}
- drTitle(g,'ENEMIES',`D$ ${drWallet()}   ${drSel+1}/${ids.length}`);
- DR.gfx.darkbox(g,16,48,300,424,DRM.t);
- drTop=drScrollTop(drTop,drSel,ids.length);
- ids.forEach((id,i)=>{
-  if(i<drTop||i>=drTop+DR_ROWS)return;
-  const y=72+(i-drTop)*36,chosen=i===drSel,on=chosen&&drFocus===0;
-  DR.gfx.text(g,'fnt_mainbig',DR.enemies[id].rname||DR.enemies[id].name,56,y,chosen?DRY:'#ffffff');
-  if(on)DR.gfx.draw(g,'spr_heart',0,32,y+8);
-  drHit(24,y-2,268,34,()=>{if(drSel===i&&drFocus===0){drFocus=4;play('select')}else{drSel=i;drFocus=0;play('move')}});
- });
- drScrollMarks(g,drTop,ids.length,()=>{drTop=Math.max(0,drTop-1);drSel=Math.min(drSel,drTop+DR_ROWS-1);play('move')},()=>{drTop++;drSel=Math.max(drSel,drTop);play('move')});
- const id=ids[drSel],e=DR.enemies[id];
- drPreview(g,id,now,467,184);
- DR.gfx.text(g,'fnt_mainbig',(e.rname||e.name).toUpperCase(),467,186,DRY,{align:'center'});
- const sup=drSup.length?drSup.map(s=>DR.enemies[s].name).join(', '):'none';
- drInfo(g,`${drCheckText(id)}\n* HP ${e.hp}. ${e.gold} D$.\n* Supports: ${sup}.`,216,320);
- for(const [f,col,row] of DR_CHOICES)drOption(g,drChoiceLabel(f),col?486:334,328+row*30,drFocus===f,()=>{drFocus=f;drActivate(f)},()=>{drFocus=f});
- drHint(g,drFocus===0?'UP/DOWN: Choose   Z: Pick   X: Back':drFocus===2?'Z: Switch the third member (Ralsei / Noelle)':drFocus===7?'Z: Open the CUSTOM hub (party, stats, spells, items, modes)':drFocus===8?'Z: Open the SHOP (spend your D$)':(drFocus===3?'Z: Toggle   (WILD: Susie attacks on her own, Warning works)':drFocus===6?'Z: Toggle   (Susie & Lancer with Noelle: a weirder way out)':'Arrows: Move   Z: Confirm   X: Back'));
  g.restore();
+ const groups=drGroups(),gi=Math.max(0,groups.findIndex(q=>q.list.includes(drSel))),grp=groups[gi];
+ const name=i=>{const e=DR.enemies[ids[i]];return (e.rname||e.name).toUpperCase()};
+ ui6ChooseTitle(W/2,22,5);
+ ui6T(`D$ ${drWallet()}`,64,40,{s:3,c:UI6_C.yellow});
+ ui6GroupTabs(groups,gi,drFocus===9,i=>{if(i!==gi){drSel=ui6GroupPick(groups,drSel,i,drGroupMemory);play('move')}drFocus=0});
+ ui6Carousel(drCarousel,grp.id,grp.list.length,grp.list.indexOf(drSel),grp.color,{
+   label:k=>name(grp.list[k]),image:k=>drEnemyImage(ids[grp.list[k]],now),focus:drFocus===0,
+   onPick:k=>{drSel=grp.list[k];drFocus=0;play('move')},onConfirm:drFight
+ },now);
+ const id=ids[drSel],e=DR.enemies[id],sup=drSup.length?drSup.map(s=>DR.enemies[s].name).join(', '):'none';
+ const text={
+   1:`* Supports: ${sup}.\n* Add enemies to fight alongside ${e.rname||e.name}. Any mix, repeats too.`,
+   2:'* Switch the third member: Ralsei or Noelle.',
+   3:'* TAME or WILD.\n* WILD: Susie attacks on her own, Warning works.',
+   4:`* Fight ${e.rname||e.name}.`,
+   5:'* Back to UNDERTALE or DELTARUNE.',
+   6:'* WEIRD: Susie & Lancer with Noelle, a weirder way out.',
+   7:'* Open the CUSTOM hub: party, stats, spells, items and modes.',
+   8:'* Open the SHOP and spend your D$.'
+ }[drFocus]||`${drCheckText(id)}\n* Supports: ${sup}.`;
+ ui6InfoPanel(grp.color,name(drSel),`KRIS, SUSIE AND ${drParty?'NOELLE':'RALSEI'}`,`HP ${e.hp}   ${e.gold} D$`,text);
+ ui6ActionRow(DR_ACTIONS.map(f=>({f,label:drChoiceLabel(f),primary:f===4})),drFocus,f=>{drFocus=f;drActivate(f)},f=>{drFocus=f});
+ ui6Footer(drFocus===9?'LEFT / RIGHT  GROUP      DOWN  ENEMIES      X  BACK':drFocus===0?'LEFT / RIGHT  BROWSE      UP  GROUPS      DOWN  OPTIONS      Z  FIGHT      X  BACK':'LEFT / RIGHT  MOVE      UP  ENEMIES      Z  CONFIRM      X  BACK');
 }
 function drSupEntries(){return ['clear',...DR.enemyIds.filter(id=>!DR.enemies[id].noSupport)]}
 function drSupAdd(i){
@@ -31331,18 +31393,25 @@ function drHubKey(k,low,repeat){
 function drRosterKey(k,low){
  const up=k==='ArrowUp'||low==='w',down=k==='ArrowDown'||low==='s',left=k==='ArrowLeft'||low==='a',right=k==='ArrowRight'||low==='d',ok=low==='z'||k==='Enter',back=low==='x'||k==='Shift'||k==='Escape';
  if(screen==='drroster'){
-  const n=DR.enemyIds.length;
-  if(drFocus===0){
-   if(up){drSel=(drSel+n-1)%n;play('move')}
-   if(down){drSel=(drSel+1)%n;play('move')}
-   if(right){drFocus=1;play('move')}
-   if(ok){drFocus=4;play('select')}
-   if(back){drSavePrefs();screen='title';mainSelected=9;play('select')}
+  if(!DR.ready)return;
+  const groups=drGroups(),gi=Math.max(0,groups.findIndex(q=>q.list.includes(drSel)));
+  if(drFocus===9){
+   if(left||right){drSel=ui6GroupPick(groups,drSel,gi+(left?-1:1),drGroupMemory);play('move')}
+   if(down||ok){drFocus=0;play('move')}
+   if(back){drSavePrefs();screen='gamepick';gamePickSelected=1;play('select')}
    return;
   }
-  const cur=DR_CHOICES.find(c=>c[0]===drFocus),col=cur[1],row=cur[2],at=(c,r)=>DR_CHOICES.find(v=>v[1]===c&&v[2]===r);
-  if(up||down){const rows=DR_CHOICES.filter(v=>v[1]===col).length;drFocus=at(col,(row+(down?1:rows-1))%rows)[0];play('move')}
-  if(left||right){const o=at(1-col,row)||at(1-col,0);if(left&&col===0){drFocus=0}else if(o)drFocus=o[0];play('move')}
+  if(drFocus===0){
+   if(left||right){drSel=ui6GroupStep(groups,drSel,left?-1:1);play('move')}
+   if(up){drFocus=9;play('move')}
+   if(down){drFocus=4;play('move')}
+   if(ok)drFight();
+   if(back){drSavePrefs();screen='gamepick';gamePickSelected=1;play('select')}
+   return;
+  }
+  const i=Math.max(0,DR_ACTIONS.indexOf(drFocus)),n=DR_ACTIONS.length;
+  if(left||right){drFocus=DR_ACTIONS[(i+(left?n-1:1))%n];play('move')}
+  if(up){drFocus=0;play('move')}
   if(ok)drActivate(drFocus);
   if(back){drFocus=0;play('move')}
   return;
@@ -31988,7 +32057,7 @@ const NBO=(()=>{
 #nboRoster div{padding:2px 0}.nboMe{color:#7cff86}.nboHost{color:#ff0}
 #nboStatus{color:#8ff;white-space:pre-wrap;min-height:20px;margin:6px 0}#nboFeed{border:1px solid #555;min-height:48px;padding:6px;color:#bbb;white-space:pre-wrap}
 .nboNote{color:#999;font-size:12px}
-@media(max-width:760px){#nboPanel{left:1.5%;top:1.5%;width:97%;max-height:97%;font-size:12px}#nboPanel input,#nboPanel button{font-size:12px}}`;
+@media(max-width:760px){#nboOpen{top:4px;right:4px;padding:4px 6px;font-size:10px}#nboPanel{left:1.5%;top:1.5%;width:97%;max-height:97%;font-size:12px}#nboPanel input,#nboPanel button{font-size:12px}}`;
  document.head.appendChild(css);
  const wrap=document.getElementById('wrap')||document.body;
  const openBtn=document.createElement('button');openBtn.id='nboOpen';openBtn.type='button';openBtn.textContent='ONLINE';wrap.appendChild(openBtn);
