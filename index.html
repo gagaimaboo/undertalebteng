@@ -4052,8 +4052,9 @@ function normalizeEnemyAssetTransparency(){
  const convert=v=>{
    if(!v)return v;
    if(Array.isArray(v)){for(let i=0;i<v.length;i++)v[i]=convert(v[i]);return v}
-   if(typeof HTMLImageElement!=='undefined'&&v instanceof HTMLImageElement)return transparentCharacterSprite(v)||v;
-   if(typeof HTMLCanvasElement!=='undefined'&&v instanceof HTMLCanvasElement)return transparentCharacterSprite(v)||v;
+   if(v._ttDone)return v;
+   if(typeof HTMLImageElement!=='undefined'&&v instanceof HTMLImageElement){const r=transparentCharacterSprite(v)||v;try{r._ttDone=true}catch(_){}return r}
+   if(typeof HTMLCanvasElement!=='undefined'&&v instanceof HTMLCanvasElement){const r=transparentCharacterSprite(v)||v;try{r._ttDone=true}catch(_){}return r}
    if(v&&typeof v==='object'&&Object.getPrototypeOf(v)===Object.prototype){
      for(const k of Object.keys(v))v[k]=convert(v[k]);
    }
@@ -5447,6 +5448,7 @@ function mmmPortrait(){
  return mmmPortraitCanvas=c;
 }
 function bossImage(b,now=performance.now()){
+ previewAssets(b.id);
  if(b.id==='custom')return creatorEnemyImage(false,now);
  if(b.id==='jerry')return jerryImage(now,false);
  if(b.id==='flowey')return images.floweyPlayer||images.floweyPissed||images.floweyEvil||images.dummy||null;
@@ -8222,15 +8224,81 @@ canvas.addEventListener('pointerdown',e=>{
  }
 });
 
+// ASSET LOADING
+// boot() only waits for what the menus draw (MENU_ASSET_RX below). The rest of the
+// sprites, the battle sounds and the soundtrack wait for the first fight:
+// ensureFightAssets() loads them behind the LOADING screen, once per session.
+// While you browse the roster, a card asks for its own enemy's sprites early
+// (previewAssets), so the menus fill in without loading everybody.
+const ASSET_TASKS=[];
+const MENU_ASSET_RX=/^(uploaded weapon sprite sheet|battle reference|Sans tutorial sprite|.* dialogue face .*|Dummy battle sprite|Dummy hurt\/death sprite|SOUL crack sprite|SOUL fallback|UNDERTALE .*|(FIGHT|ACT|ITEM|MERCY) (sel|unsel)|red SOUL|SFX ([A-Za-z]*Text|txt[A-Za-z0-9]*|text|select|move|item|heal|power)|Menu Theme)$/;
+// which boot tasks a roster card needs to draw its enemy (bossImage)
+const PREVIEW_ASSET_RX={
+ froggit:/^Froggit/,finalfroggit:/^Final Froggit/,whimsun:/^Whimsun/,snowdrake:/^Snowdrake/,icecap:/^Ice Cap/,
+ loox:/^Loox/,moldsmal:/^Moldsmal/,moldbygg:/^Moldbygg/,temmie:/^Temmie\/Moldbygg/,migosp:/^Migosp/,aaron:/^Aaron/,
+ shyren:/^Shyren/,undyne:/^Undyne/,tsunderplane:/^Tsunderplane/,vulkin:/^Vulkin/,mettaton:/^Mettaton (quiz body|Quiz arms)/,
+ toriel:/^Toriel/,vegetoid:/^Vegetoid/,napstablook:/^Napstablook frame/,maddummy:/^Mad Dummy (head|torso|leg|base)/,
+ doggo:/^Doggo/,papyrus:/^Papyrus/,flowey:/^Flowey/,
+ lesserdog:/^(lesserDog|dog lesserDog)/,greaterdog:/^(greatDog|tinyPom|dog (greatDog|tinyPom))/,dogi:/^(mandog|womandog)/,
+ woshua:/^wosh/,pyrope:/^pyrope/,madjick:/^wizard/,knightknight:/^knight/,astigmatism:/^astig/,muffet:/^(spider|muffet)/,
+ undyneex:/^ux/,mettatonex:/^mex/,mettatonneo:/^(neo|alphysNeo)/,jayzee:/^jayzee/
+};
+// these draw from the new engine's own table (NB_ASSETS)
+const NB_PREVIEW_IDS=new Set(['asgore','roaringknight','glyde','royalguards','moldessa','parsnik','gyftrot','madmewmew']);
+let fightAssetsReady=false,fightAssetsLoading=null;
+const fightAssetBg=[];
+function runAssetTask(t){return t.p||(t.p=tracked(t.label,t.fn).finally(()=>{t.done=true}))}
+async function runAssetTasks(list,pool){
+ let i=0;
+ await Promise.all(Array.from({length:Math.min(pool,list.length)},async()=>{while(i<list.length)await runAssetTask(list[i++])}));
+}
+let assetPostTimer=0;
+function scheduleAssetPostProcess(){
+ // a fight does its own pass before it starts; never re-run this under a live fight
+ if(fightAssetsReady||fightAssetsLoading)return;
+ clearTimeout(assetPostTimer);
+ assetPostTimer=setTimeout(()=>{if(fightAssetsReady||fightAssetsLoading)return;try{assetPostProcess()}catch(e){console.warn('asset post-process',e)}},150);
+}
+const previewAsked=new Set();
+function previewAssets(id){
+ if(fightAssetsReady||!id||previewAsked.has(id))return;
+ previewAsked.add(id);
+ if(NB_PREVIEW_IDS.has(id)){try{nbLoadAssets()}catch(_){}return}
+ const rx=PREVIEW_ASSET_RX[id];if(!rx)return;
+ runAssetTasks(ASSET_TASKS.filter(t=>rx.test(t.label)),3).then(scheduleAssetPostProcess);
+}
+function ensureFightAssets(){
+ if(fightAssetsReady)return Promise.resolve();
+ if(fightAssetsLoading)return fightAssetsLoading;
+ loadTotal=ASSET_TASKS.length+1;loadDone=ASSET_TASKS.filter(t=>t.done).length;loadLabel='getting the fight ready';
+ fightAssetsLoading=(async()=>{
+  await Promise.all([
+   runAssetTasks(ASSET_TASKS,localMobileAssetContext()?4:10),
+   Promise.resolve().then(()=>nbLoadAssets()).catch(()=>{}).finally(()=>{loadDone++})
+  ]);
+  try{assetPostProcess()}catch(e){console.warn('asset post-process',e)}
+  fightAssetsReady=true;
+  loadLabel=loadFailures.length?'loaded with network fallbacks':'ready';
+  // the rest of the soundtrack streams in from here (music reads are null-safe)
+  {let c=0;for(let w=0;w<2;w++)(async()=>{while(c<fightAssetBg.length){const i=c++;await fightAssetBg[i]()}})()}
+ })();
+ return fightAssetsLoading;
+}
+// The LOADING screen until the fight's assets are in, then start().
+function withFightAssets(start){
+ if(fightAssetsReady){start();return}
+ screen='loading';
+ const go=()=>{if(screen==='loading')start()};
+ ensureFightAssets().then(go,go);
+}
 async function boot(){
- loadDone=0;loadFailures=[];const tasks=[];
+ loadDone=0;loadFailures=[];
  const needImage=async src=>{const im=await loadImage(src);if(!im)throw new Error('image load failed');return im};
- const add=(label,fn)=>tasks.push(()=>tracked(label,fn));
+ const add=(label,fn)=>ASSET_TASKS.push({label,fn,p:null,done:false});
  // Soundtracks are the largest files by far. Only the menu theme and the
  // standard battle theme gate the loading screen; every other track streams in
  // afterwards (all music reads are null-safe and fall back to Enemy Approaching).
- const bgTasks=[];
- const addBg=(label,fn)=>bgTasks.push(async()=>{try{await fn()}catch(e){loadFailures.push(`${label}: ${e?.message||e}`)}});
+ const addBg=(label,fn)=>fightAssetBg.push(async()=>{try{await fn()}catch(e){loadFailures.push(`${label}: ${e?.message||e}`)}});
  add('uploaded weapon sprite sheet',loadWeaponSpriteAtlas);
  add('battle reference',async()=>images.base=await needImage(EMBED.base));
  add('Sans tutorial sprite',async()=>images.sans=await needImage(IMG.sans));
@@ -8452,7 +8520,7 @@ async function boot(){
  add('FIGHT target',async()=>images.target=await needImage(IMG.target));
  IMG.targetChoice.forEach((u,i)=>add(`FIGHT cursor ${i+1}`,async()=>{images.targetChoice=images.targetChoice||[];images.targetChoice[i]=await needImage(u)}));
  IMG.strike.forEach((u,i)=>add(`slash ${i+1}`,async()=>{images.strike=images.strike||[];images.strike[i]=await needImage(u)}));
- const dmgRaw=[];IMG.damageDigits.forEach((u,i)=>add(`damage digit ${i}`,async()=>dmgRaw[i]=await needImage(u)));
+ IMG.damageDigits.forEach((u,i)=>add(`damage digit ${i}`,async()=>{images.damageDigitsRaw=images.damageDigitsRaw||[];images.damageDigitsRaw[i]=await needImage(u)}));
  add('damage MISS',async()=>images.dmgMiss=await needImage(IMG.dmgMiss));
  IMG.bullet.forEach((u,i)=>add(`Dummy bullet ${i+1}`,async()=>{images.bullet=images.bullet||[];images.bullet[i]=await needImage(u)}));
  IMG.shards.forEach((u,i)=>add(`SOUL shard ${i+1}`,async()=>{images.shards=images.shards||[];images.shards[i]=await needImage(u)}));
@@ -8498,23 +8566,21 @@ async function boot(){
  addBg('Flashback (Excerpt)',async()=>music.flashback=await ensureMusicTrack('flashback'));
  addBg('game over music',async()=>music.gameover=await ensureMusicTrack('gameover'));
  addBg('Mettaton Quiz Show',async()=>music.mettatonQuiz=await ensureMusicTrack('mettatonQuiz'));
- loadTotal=tasks.length;
- // iOS Safari/WebViews are much happier with a small request pool than ~500
- // simultaneous image/audio loads, so they keep 4 workers. Desktop/hosted pages
- // talk to the CDN over HTTP/2 and can safely keep 10 requests in flight, which
- // cuts the first (uncached) boot several times over. Every successful remote
- // file is still persisted, so later boots come from the local asset vault.
- let taskCursor=0;
- const workers=Array.from({length:Math.min(localMobileAssetContext()?4:10,tasks.length)},async()=>{
-   while(taskCursor<tasks.length){const i=taskCursor++;await tasks[i]()}
- });
- await Promise.all(workers);
- // Remaining soundtracks load in the background with a small pool.
- {let bgCursor=0;for(let w=0;w<2;w++)(async()=>{while(bgCursor<bgTasks.length){const i=bgCursor++;await bgTasks[i]()}})()}
+ // the menus' own assets; everything else waits for the first fight (ensureFightAssets)
+ const menuTasks=ASSET_TASKS.filter(t=>MENU_ASSET_RX.test(t.label));
+ loadTotal=menuTasks.length;
+ await runAssetTasks(menuTasks,localMobileAssetContext()?4:10);
+ assetPostProcess();
+ loadLabel=loadFailures.length?'loaded with network fallbacks':'ready';screen=tutorialWasPrompted()?'title':'tutorialPrompt';tutorialPromptSelected=0;canvas.focus();
+}
+// Builds the derived sprites (composites, IceShock frozen shells, tinted SOULs) from
+// whatever has loaded so far. Runs after boot, after a roster preview loads, and once
+// more when the fight assets are in.
+function assetPostProcess(){
  normalizeEnemyAssetTransparency();
  // Ice Cap uses the same generated IceShock shell/shadow pipeline as the rest of the roster.
  if(images.icecap?.[0]){images.icecapFrozen=makeFrozenSprite(images.icecap[0])||images.icecap[0];images.icecapIceShadow=makeIceSilhouette(images.icecap[0])||images.icecap[0];}
- images.damageDigits=dmgRaw.map(tintDamageSprite);
+ if(images.damageDigitsRaw)images.damageDigits=images.damageDigitsRaw.map(tintDamageSprite);
  if(images.froggit?.[0]){
    images.froggitComposite=makeFroggitComposite(0,0,0,0)||images.froggit[0];
    const frogCrit=images.froggit?.[1]||images.froggitComposite;
@@ -8614,7 +8680,6 @@ async function boot(){
  images.dummyFrozen=makeFrozenSprite(images.dummy);
  images.dummyIceShadow=makeIceSilhouette(images.dummy,'#010061')
 }
- loadLabel=loadFailures.length?'loaded with network fallbacks':'ready';screen=tutorialWasPrompted()?'title':'tutorialPrompt';tutorialPromptSelected=0;canvas.focus();
 }
 const NB_PAPYRUS_GLYPHS={"32":[110,90,3,18,3,0],"33":[69,110,2,12,3,1],"34":[41,110,4,9,6,1],"35":[44,54,7,12,7,0],"36":[58,74,6,12,8,1],"37":[89,54,7,12,8,1],"38":[71,54,7,12,8,1],"39":[81,110,2,9,3,1],"40":[91,90,4,14,5,1],"41":[97,90,4,14,5,0],"42":[47,110,4,9,5,0],"43":[106,74,6,11,7,1],"44":[31,110,3,14,3,0],"45":[103,90,5,11,5,0],"46":[73,110,2,12,3,1],"47":[24,35,9,14,8,-1],"48":[53,54,7,12,7,0],"49":[36,110,3,13,7,2],"50":[18,74,6,12,7,1],"51":[83,74,5,14,7,1],"52":[62,54,7,12,7,0],"53":[90,74,5,14,7,1],"54":[42,74,6,12,7,1],"55":[98,54,6,14,7,1],"56":[30,90,5,12,7,1],"57":[36,54,6,14,7,0],"58":[77,110,2,12,3,1],"59":[8,110,3,15,4,0],"60":[20,54,7,13,7,0],"61":[115,90,5,10,7,1],"62":[113,54,6,13,7,1],"63":[114,74,5,12,5,0],"64":[87,35,9,12,10,0],"65":[18,2,12,14,12,0],"66":[73,2,11,14,12,1],"67":[99,2,11,14,12,1],"68":[86,2,11,14,12,0],"69":[60,2,11,15,12,0],"70":[46,35,9,14,9,0],"71":[15,19,11,14,12,1],"72":[53,19,10,14,12,1],"73":[57,110,2,14,4,1],"74":[77,35,8,14,8,0],"75":[89,19,10,14,11,1],"76":[35,35,9,14,9,0],"77":[28,19,11,14,12,1],"78":[13,35,9,14,11,1],"79":[32,2,12,14,14,1],"80":[57,35,8,15,8,0],"81":[2,2,14,15,13,1],"82":[67,35,8,14,9,1],"83":[2,19,11,14,12,0],"84":[112,2,11,14,11,0],"85":[41,19,10,14,12,1],"86":[2,35,9,14,9,0],"87":[46,2,12,14,13,0],"88":[101,19,9,14,9,0],"89":[77,19,10,14,10,0],"90":[65,19,10,14,10,0],"91":[26,110,3,14,5,1],"92":[112,19,9,14,7,0],"93":[21,110,3,14,5,1],"94":[13,110,6,7,7,1],"95":[107,35,7,15,7,0],"96":[85,110,2,7,5,1],"97":[2,90,5,12,6,0],"98":[2,74,6,12,8,1],"99":[51,90,5,12,6,1],"100":[34,74,6,12,8,1],"101":[26,74,6,12,7,1],"102":[37,90,5,12,5,0],"103":[98,35,7,15,7,0],"104":[23,90,5,12,7,1],"105":[65,110,2,12,4,1],"106":[29,54,5,18,4,-2],"107":[10,74,6,12,7,1],"108":[61,110,2,12,4,1],"109":[10,54,8,12,10,1],"110":[9,90,5,12,7,1],"111":[66,74,6,12,8,1],"112":[116,35,6,17,8,1],"113":[106,54,5,16,7,1],"114":[2,110,4,12,5,1],"115":[65,90,5,12,6,1],"116":[16,90,5,12,5,0],"117":[72,90,5,12,7,1],"118":[44,90,5,12,5,0],"119":[80,54,7,12,8,0],"120":[50,74,6,12,6,0],"121":[2,54,6,16,7,0],"122":[58,90,5,12,5,0],"123":[85,90,4,14,5,1],"124":[53,110,2,14,8,3],"125":[79,90,4,14,6,1],"126":[97,74,7,10,8,1],"127":[74,74,7,10,8,1]};
 const NB_PLAIN_GLYPHS={32:[2,2,9,16,9,0],33:[96,102,2,14,9,4],34:[77,102,5,6,9,3],35:[13,2,9,14,9,0],36:[75,2,8,15,9,1],37:[32,20,8,14,9,1],38:[92,52,8,14,9,1],39:[122,102,2,6,9,4],40:[9,102,5,15,9,3],41:[16,102,5,15,9,1],42:[43,102,6,10,9,1],43:[63,85,8,11,9,1],44:[63,102,3,15,9,3],45:[23,102,8,8,9,1],46:[84,102,2,14,9,4],47:[38,85,7,13,9,1],48:[82,36,8,14,9,1],49:[57,102,4,14,9,2],50:[92,69,7,14,9,1],51:[74,69,7,14,9,1],52:[82,20,8,14,9,1],53:[11,69,7,14,9,1],54:[83,69,7,14,9,1],55:[29,69,7,14,9,1],56:[38,69,7,14,9,1],57:[20,85,7,14,9,1],58:[112,102,2,12,9,3],59:[68,102,3,14,9,3],60:[73,85,8,11,9,1],61:[109,85,8,10,9,1],62:[83,85,8,11,9,1],63:[52,20,8,14,9,1],64:[12,20,8,14,9,1],65:[102,20,8,14,9,1],66:[72,20,8,14,9,1],67:[52,36,8,14,9,1],68:[72,52,8,14,9,1],69:[42,20,8,14,9,1],70:[62,20,8,14,9,1],71:[2,36,8,14,9,1],72:[62,52,8,14,9,1],73:[92,102,2,14,9,4],74:[101,85,6,14,9,1],75:[32,52,8,14,9,1],76:[11,85,7,14,9,1],77:[42,52,8,14,9,1],78:[42,36,8,14,9,1],79:[112,36,8,14,9,1],80:[2,52,8,14,9,1],81:[55,2,8,15,9,1],82:[92,36,8,14,9,1],83:[2,20,8,14,9,1],84:[92,20,8,14,9,1],85:[12,52,8,14,9,1],86:[22,20,8,14,9,1],87:[22,52,8,14,9,1],88:[22,36,8,14,9,1],89:[95,2,8,14,9,1],90:[56,69,7,14,9,1],91:[2,102,5,15,9,3],92:[24,2,9,14,9,0],93:[119,85,5,15,9,1],94:[104,102,6,4,9,2],95:[85,2,8,15,9,1],96:[116,102,4,4,9,2],97:[102,36,8,14,9,1],98:[52,52,8,14,9,1],99:[32,36,8,14,9,1],100:[82,52,8,14,9,1],101:[12,36,8,14,9,1],102:[110,69,7,14,9,1],103:[102,52,7,15,9,1],104:[2,85,7,14,9,1],105:[88,102,2,14,9,4],106:[51,102,4,15,9,2],107:[101,69,7,14,9,1],108:[100,102,2,14,9,4],109:[72,36,8,14,9,1],110:[2,69,7,14,9,1],111:[115,2,8,14,9,1],112:[35,2,8,15,9,1],113:[65,2,8,15,9,1],114:[93,85,6,14,9,2],115:[20,69,7,14,9,1],116:[65,69,7,14,9,1],117:[47,69,7,14,9,1],118:[62,36,8,14,9,1],119:[112,20,8,14,9,1],120:[105,2,8,14,9,1],121:[45,2,8,15,9,1],122:[29,85,7,14,9,1],123:[47,85,6,15,9,2],124:[73,102,2,15,9,4],125:[55,85,6,15,9,1],126:[33,102,8,8,9,1],127:[111,52,7,14,9,1]};
@@ -26601,7 +26666,8 @@ function drawRankStamp(r,x,y,t,size){
  }
 }
 function nbResultsTitle(reason){return {win:'VICTORY',spare:'SPARED',flee:'ESCAPED',gameover:'GAME OVER'}[reason]||'FIGHT OVER'}
-function nbStartBattle(){
+function nbStartBattle(){withFightAssets(nbStartBattleNow)}
+function nbStartBattleNow(){
  screen='nb';
  NB.start({
   ...nbBattleOpts(),
@@ -31054,8 +31120,8 @@ function drLoadPrefs(){
 function drSavePrefs(){drLS('utbg.drEnemy',DR.enemyIds[drSel]);drLS('utbg.drSupports',JSON.stringify(drSup));drLS('utbg.drParty',drParty?'noelle':'ralsei');drLS('utbg.drSusieAuto',drSusieAuto?'1':'0');drLS('utbg.drWeird',drWeird?'1':'0')}
 function drStart(){drLoadPrefs();DR.load();drFocus=0;screen='drroster'}
 function drFight(){
- drSavePrefs();play('select');screen='dr';
- DR.start({party:DR.parties[drParty],enemy:DR.enemyIds[drSel],supports:drSup.slice(),susieAuto:drSusieAuto,weird:drWeird,custom:drCustom.on?drCustomCfg():null,onExit(){screen='drroster';drFocus=0;try{startMenuMusic()}catch(_){}}});
+ drSavePrefs();play('select');
+ withFightAssets(()=>{screen='dr';DR.start({party:DR.parties[drParty],enemy:DR.enemyIds[drSel],supports:drSup.slice(),susieAuto:drSusieAuto,weird:drWeird,custom:drCustom.on?drCustomCfg():null,onExit(){screen='drroster';drFocus=0;try{startMenuMusic()}catch(_){}}})});
 }
 // The enemy's sprite for the menus (its idle animation once the DELTARUNE assets are in).
 function drEnemyImage(id,now){const e=DR.enemies[id];return e&&DR.ready?DR.gfx.frame(e.idle,Math.floor(now/(1000/30)/e.idleSpeed)):null}
@@ -31747,7 +31813,7 @@ const NBO=(()=>{
   game={id:rid(6),st:'setup',cfg,parts,p:players.map(q=>q.id),bossName:clean(bossLabel(),24),clients:{},F:[],leaves:[],au:null,t0:performance.now(),ok:false,running:false};
   for(const p of lobby)game.clients[p.id]={ok:false,ack:0,lastQ:0,buf:new Map(),gone:false,held:0,pos:null,dmTot:0,dmSeen:0,acSeen:0,acNew:[]};
   // everyone has the battle and its sprites before the first step
-  nbLoadAssets().then(()=>{if(game&&game.st==='setup')game.ok=true;refreshUI()});
+  Promise.all([nbLoadAssets(),ensureFightAssets()]).then(()=>{if(game&&game.st==='setup')game.ok=true;refreshUI()});
   log('starting '+game.bossName+' ('+players.length+' players)');
   pubDirty=true;refreshUI();
  }
@@ -31760,7 +31826,7 @@ const NBO=(()=>{
   for(let i=0;i<text.length;i+=size){const c=text.slice(i,i+size),arr=[];for(let j=0;j<c.length;j+=1000)arr.push(c.slice(j,j+1000));parts.push(arr)}
   game={id:rid(6),st:'setup',dr:1,cfg,parts,p:players.map(q=>q.id),bossName:clean(drLabel(),24),clients:{},F:[],leaves:[],au:null,t0:performance.now(),ok:false,running:false};
   for(const p of lobby)game.clients[p.id]={ok:false,ack:0,lastQ:0,buf:new Map(),gone:false,held:0,pos:null,dmTot:0,dmSeen:0,acSeen:0,acNew:[]};
-  DR.load().then(()=>{if(game&&game.st==='setup')game.ok=true;refreshUI()});
+  Promise.all([DR.load(),ensureFightAssets()]).then(()=>{if(game&&game.st==='setup')game.ok=true;refreshUI()});
   log('starting '+game.bossName+' ('+players.length+' players)');
   pubDirty=true;refreshUI();
  }
@@ -31861,6 +31927,7 @@ const NBO=(()=>{
   gm.loading=true;
   try{
    gm.cfg=JSON.parse(b64d(gm.parts.join('')));
+   await ensureFightAssets();
    if(gm.cfg.dr){gm.dr=1;await DR.load();if(game===gm){gm.ok=true;pubDirty=true;publish(true)}return}
    await nbLoadAssets();
    swapIn(gm.cfg);
