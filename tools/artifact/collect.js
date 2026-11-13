@@ -14,7 +14,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
  await p.goto('file://'+path.resolve(src),{waitUntil:'domcontentloaded'});
  await p.evaluate(()=>{window.__rec=new Set();const o=mobileAssetSource;mobileAssetSource=async u=>{window.__rec.add(u);return o(u)}});
  for(let i=0;i<120;i++){if(await p.evaluate(()=>screen)!=='loading')break;await sleep(500)}
- await p.evaluate(()=>{try{nbLoadAssets()}catch(_){}try{DR.load()}catch(_){}});
+ await p.evaluate(()=>{try{nbLoadAssets()}catch(_){}try{DR.load()}catch(_){}try{ensureFightAssets()}catch(_){}});
  // wait for the loaders to go quiet
  let last=-1;
  for(let i=0;i<60;i++){

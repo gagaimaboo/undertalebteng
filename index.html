@@ -4052,8 +4052,9 @@ function normalizeEnemyAssetTransparency(){
  const convert=v=>{
    if(!v)return v;
    if(Array.isArray(v)){for(let i=0;i<v.length;i++)v[i]=convert(v[i]);return v}
-   if(typeof HTMLImageElement!=='undefined'&&v instanceof HTMLImageElement)return transparentCharacterSprite(v)||v;
-   if(typeof HTMLCanvasElement!=='undefined'&&v instanceof HTMLCanvasElement)return transparentCharacterSprite(v)||v;
+   if(v._ttDone)return v;
+   if(typeof HTMLImageElement!=='undefined'&&v instanceof HTMLImageElement){const r=transparentCharacterSprite(v)||v;try{r._ttDone=true}catch(_){}return r}
+   if(typeof HTMLCanvasElement!=='undefined'&&v instanceof HTMLCanvasElement){const r=transparentCharacterSprite(v)||v;try{r._ttDone=true}catch(_){}return r}
    if(v&&typeof v==='object'&&Object.getPrototypeOf(v)===Object.prototype){
      for(const k of Object.keys(v))v[k]=convert(v[k]);
    }
@@ -5447,6 +5448,7 @@ function mmmPortrait(){
  return mmmPortraitCanvas=c;
 }
 function bossImage(b,now=performance.now()){
+ previewAssets(b.id);
  if(b.id==='custom')return creatorEnemyImage(false,now);
  if(b.id==='jerry')return jerryImage(now,false);
  if(b.id==='flowey')return images.floweyPlayer||images.floweyPissed||images.floweyEvil||images.dummy||null;
@@ -8222,15 +8224,81 @@ canvas.addEventListener('pointerdown',e=>{
  }
 });
 
+// ASSET LOADING
+// boot() only waits for what the menus draw (MENU_ASSET_RX below). The rest of the
+// sprites, the battle sounds and the soundtrack wait for the first fight:
+// ensureFightAssets() loads them behind the LOADING screen, once per session.
+// While you browse the roster, a card asks for its own enemy's sprites early
+// (previewAssets), so the menus fill in without loading everybody.
+const ASSET_TASKS=[];
+const MENU_ASSET_RX=/^(uploaded weapon sprite sheet|battle reference|Sans tutorial sprite|.* dialogue face .*|Dummy battle sprite|Dummy hurt\/death sprite|SOUL crack sprite|SOUL fallback|UNDERTALE .*|(FIGHT|ACT|ITEM|MERCY) (sel|unsel)|red SOUL|SFX ([A-Za-z]*Text|txt[A-Za-z0-9]*|text|select|move|item|heal|power)|Menu Theme)$/;
+// which boot tasks a roster card needs to draw its enemy (bossImage)
+const PREVIEW_ASSET_RX={
+ froggit:/^Froggit/,finalfroggit:/^Final Froggit/,whimsun:/^Whimsun/,snowdrake:/^Snowdrake/,icecap:/^Ice Cap/,
+ loox:/^Loox/,moldsmal:/^Moldsmal/,moldbygg:/^Moldbygg/,temmie:/^Temmie\/Moldbygg/,migosp:/^Migosp/,aaron:/^Aaron/,
+ shyren:/^Shyren/,undyne:/^Undyne/,tsunderplane:/^Tsunderplane/,vulkin:/^Vulkin/,mettaton:/^Mettaton (quiz body|Quiz arms)/,
+ toriel:/^Toriel/,vegetoid:/^Vegetoid/,napstablook:/^Napstablook frame/,maddummy:/^Mad Dummy (head|torso|leg|base)/,
+ doggo:/^Doggo/,papyrus:/^Papyrus/,flowey:/^Flowey/,
+ lesserdog:/^(lesserDog|dog lesserDog)/,greaterdog:/^(greatDog|tinyPom|dog (greatDog|tinyPom))/,dogi:/^(mandog|womandog)/,
+ woshua:/^wosh/,pyrope:/^pyrope/,madjick:/^wizard/,knightknight:/^knight/,astigmatism:/^astig/,muffet:/^(spider|muffet)/,
+ undyneex:/^ux/,mettatonex:/^mex/,mettatonneo:/^(neo|alphysNeo)/,jayzee:/^jayzee/
+};
+// these draw from the new engine's own table (NB_ASSETS)
+const NB_PREVIEW_IDS=new Set(['asgore','roaringknight','glyde','royalguards','moldessa','parsnik','gyftrot','madmewmew']);
+let fightAssetsReady=false,fightAssetsLoading=null;
+const fightAssetBg=[];
+function runAssetTask(t){return t.p||(t.p=tracked(t.label,t.fn).finally(()=>{t.done=true}))}
+async function runAssetTasks(list,pool){
+ let i=0;
+ await Promise.all(Array.from({length:Math.min(pool,list.length)},async()=>{while(i<list.length)await runAssetTask(list[i++])}));
+}
+let assetPostTimer=0;
+function scheduleAssetPostProcess(){
+ // a fight does its own pass before it starts; never re-run this under a live fight
+ if(fightAssetsReady||fightAssetsLoading)return;
+ clearTimeout(assetPostTimer);
+ assetPostTimer=setTimeout(()=>{if(fightAssetsReady||fightAssetsLoading)return;try{assetPostProcess()}catch(e){console.warn('asset post-process',e)}},150);
+}
+const previewAsked=new Set();
+function previewAssets(id){
+ if(fightAssetsReady||!id||previewAsked.has(id))return;
+ previewAsked.add(id);
+ if(NB_PREVIEW_IDS.has(id)){try{nbLoadAssets()}catch(_){}return}
+ const rx=PREVIEW_ASSET_RX[id];if(!rx)return;
+ runAssetTasks(ASSET_TASKS.filter(t=>rx.test(t.label)),3).then(scheduleAssetPostProcess);
+}
+function ensureFightAssets(){
+ if(fightAssetsReady)return Promise.resolve();
+ if(fightAssetsLoading)return fightAssetsLoading;
+ loadTotal=ASSET_TASKS.length+1;loadDone=ASSET_TASKS.filter(t=>t.done).length;loadLabel='getting the fight ready';
+ fightAssetsLoading=(async()=>{
+  await Promise.all([
+   runAssetTasks(ASSET_TASKS,localMobileAssetContext()?4:10),
+   Promise.resolve().then(()=>nbLoadAssets()).catch(()=>{}).finally(()=>{loadDone++})
+  ]);
+  try{assetPostProcess()}catch(e){console.warn('asset post-process',e)}
+  fightAssetsReady=true;
+  loadLabel=loadFailures.length?'loaded with network fallbacks':'ready';
+  // the rest of the soundtrack streams in from here (music reads are null-safe)
+  {let c=0;for(let w=0;w<2;w++)(async()=>{while(c<fightAssetBg.length){const i=c++;await fightAssetBg[i]()}})()}
+ })();
+ return fightAssetsLoading;
+}
+// The LOADING screen until the fight's assets are in, then start().
+function withFightAssets(start){
+ if(fightAssetsReady){start();return}
+ screen='loading';
+ const go=()=>{if(screen==='loading')start()};
+ ensureFightAssets().then(go,go);
+}
 async function boot(){
- loadDone=0;loadFailures=[];const tasks=[];
+ loadDone=0;loadFailures=[];
  const needImage=async src=>{const im=await loadImage(src);if(!im)throw new Error('image load failed');return im};
- const add=(label,fn)=>tasks.push(()=>tracked(label,fn));
+ const add=(label,fn)=>ASSET_TASKS.push({label,fn,p:null,done:false});
  // Soundtracks are the largest files by far. Only the menu theme and the
  // standard battle theme gate the loading screen; every other track streams in
  // afterwards (all music reads are null-safe and fall back to Enemy Approaching).
- const bgTasks=[];
- const addBg=(label,fn)=>bgTasks.push(async()=>{try{await fn()}catch(e){loadFailures.push(`${label}: ${e?.message||e}`)}});
+ const addBg=(label,fn)=>fightAssetBg.push(async()=>{try{await fn()}catch(e){loadFailures.push(`${label}: ${e?.message||e}`)}});
  add('uploaded weapon sprite sheet',loadWeaponSpriteAtlas);
  add('battle reference',async()=>images.base=await needImage(EMBED.base));
  add('Sans tutorial sprite',async()=>images.sans=await needImage(IMG.sans));
@@ -8452,7 +8520,7 @@ async function boot(){
  add('FIGHT target',async()=>images.target=await needImage(IMG.target));
  IMG.targetChoice.forEach((u,i)=>add(`FIGHT cursor ${i+1}`,async()=>{images.targetChoice=images.targetChoice||[];images.targetChoice[i]=await needImage(u)}));
  IMG.strike.forEach((u,i)=>add(`slash ${i+1}`,async()=>{images.strike=images.strike||[];images.strike[i]=await needImage(u)}));
- const dmgRaw=[];IMG.damageDigits.forEach((u,i)=>add(`damage digit ${i}`,async()=>dmgRaw[i]=await needImage(u)));
+ IMG.damageDigits.forEach((u,i)=>add(`damage digit ${i}`,async()=>{images.damageDigitsRaw=images.damageDigitsRaw||[];images.damageDigitsRaw[i]=await needImage(u)}));
  add('damage MISS',async()=>images.dmgMiss=await needImage(IMG.dmgMiss));
  IMG.bullet.forEach((u,i)=>add(`Dummy bullet ${i+1}`,async()=>{images.bullet=images.bullet||[];images.bullet[i]=await needImage(u)}));
  IMG.shards.forEach((u,i)=>add(`SOUL shard ${i+1}`,async()=>{images.shards=images.shards||[];images.shards[i]=await needImage(u)}));
@@ -8498,23 +8566,21 @@ async function boot(){
  addBg('Flashback (Excerpt)',async()=>music.flashback=await ensureMusicTrack('flashback'));
  addBg('game over music',async()=>music.gameover=await ensureMusicTrack('gameover'));
  addBg('Mettaton Quiz Show',async()=>music.mettatonQuiz=await ensureMusicTrack('mettatonQuiz'));
- loadTotal=tasks.length;
- // iOS Safari/WebViews are much happier with a small request pool than ~500
- // simultaneous image/audio loads, so they keep 4 workers. Desktop/hosted pages
- // talk to the CDN over HTTP/2 and can safely keep 10 requests in flight, which
- // cuts the first (uncached) boot several times over. Every successful remote
- // file is still persisted, so later boots come from the local asset vault.
- let taskCursor=0;
- const workers=Array.from({length:Math.min(localMobileAssetContext()?4:10,tasks.length)},async()=>{
-   while(taskCursor<tasks.length){const i=taskCursor++;await tasks[i]()}
- });
- await Promise.all(workers);
- // Remaining soundtracks load in the background with a small pool.
- {let bgCursor=0;for(let w=0;w<2;w++)(async()=>{while(bgCursor<bgTasks.length){const i=bgCursor++;await bgTasks[i]()}})()}
+ // the menus' own assets; everything else waits for the first fight (ensureFightAssets)
+ const menuTasks=ASSET_TASKS.filter(t=>MENU_ASSET_RX.test(t.label));
+ loadTotal=menuTasks.length;
+ await runAssetTasks(menuTasks,localMobileAssetContext()?4:10);
+ assetPostProcess();
+ loadLabel=loadFailures.length?'loaded with network fallbacks':'ready';screen=tutorialWasPrompted()?'title':'tutorialPrompt';tutorialPromptSelected=0;canvas.focus();
+}
+// Builds the derived sprites (composites, IceShock frozen shells, tinted SOULs) from
+// whatever has loaded so far. Runs after boot, after a roster preview loads, and once
+// more when the fight assets are in.
+function assetPostProcess(){
  normalizeEnemyAssetTransparency();
  // Ice Cap uses the same generated IceShock shell/shadow pipeline as the rest of the roster.
  if(images.icecap?.[0]){images.icecapFrozen=makeFrozenSprite(images.icecap[0])||images.icecap[0];images.icecapIceShadow=makeIceSilhouette(images.icecap[0])||images.icecap[0];}
- images.damageDigits=dmgRaw.map(tintDamageSprite);
+ if(images.damageDigitsRaw)images.damageDigits=images.damageDigitsRaw.map(tintDamageSprite);
  if(images.froggit?.[0]){
    images.froggitComposite=makeFroggitComposite(0,0,0,0)||images.froggit[0];
    const frogCrit=images.froggit?.[1]||images.froggitComposite;
@@ -8614,7 +8680,6 @@ async function boot(){
  images.dummyFrozen=makeFrozenSprite(images.dummy);
  images.dummyIceShadow=makeIceSilhouette(images.dummy,'#010061')
 }
- loadLabel=loadFailures.length?'loaded with network fallbacks':'ready';screen=tutorialWasPrompted()?'title':'tutorialPrompt';tutorialPromptSelected=0;canvas.focus();
 }
 const NB_PAPYRUS_GLYPHS={"32":[110,90,3,18,3,0],"33":[69,110,2,12,3,1],"34":[41,110,4,9,6,1],"35":[44,54,7,12,7,0],"36":[58,74,6,12,8,1],"37":[89,54,7,12,8,1],"38":[71,54,7,12,8,1],"39":[81,110,2,9,3,1],"40":[91,90,4,14,5,1],"41":[97,90,4,14,5,0],"42":[47,110,4,9,5,0],"43":[106,74,6,11,7,1],"44":[31,110,3,14,3,0],"45":[103,90,5,11,5,0],"46":[73,110,2,12,3,1],"47":[24,35,9,14,8,-1],"48":[53,54,7,12,7,0],"49":[36,110,3,13,7,2],"50":[18,74,6,12,7,1],"51":[83,74,5,14,7,1],"52":[62,54,7,12,7,0],"53":[90,74,5,14,7,1],"54":[42,74,6,12,7,1],"55":[98,54,6,14,7,1],"56":[30,90,5,12,7,1],"57":[36,54,6,14,7,0],"58":[77,110,2,12,3,1],"59":[8,110,3,15,4,0],"60":[20,54,7,13,7,0],"61":[115,90,5,10,7,1],"62":[113,54,6,13,7,1],"63":[114,74,5,12,5,0],"64":[87,35,9,12,10,0],"65":[18,2,12,14,12,0],"66":[73,2,11,14,12,1],"67":[99,2,11,14,12,1],"68":[86,2,11,14,12,0],"69":[60,2,11,15,12,0],"70":[46,35,9,14,9,0],"71":[15,19,11,14,12,1],"72":[53,19,10,14,12,1],"73":[57,110,2,14,4,1],"74":[77,35,8,14,8,0],"75":[89,19,10,14,11,1],"76":[35,35,9,14,9,0],"77":[28,19,11,14,12,1],"78":[13,35,9,14,11,1],"79":[32,2,12,14,14,1],"80":[57,35,8,15,8,0],"81":[2,2,14,15,13,1],"82":[67,35,8,14,9,1],"83":[2,19,11,14,12,0],"84":[112,2,11,14,11,0],"85":[41,19,10,14,12,1],"86":[2,35,9,14,9,0],"87":[46,2,12,14,13,0],"88":[101,19,9,14,9,0],"89":[77,19,10,14,10,0],"90":[65,19,10,14,10,0],"91":[26,110,3,14,5,1],"92":[112,19,9,14,7,0],"93":[21,110,3,14,5,1],"94":[13,110,6,7,7,1],"95":[107,35,7,15,7,0],"96":[85,110,2,7,5,1],"97":[2,90,5,12,6,0],"98":[2,74,6,12,8,1],"99":[51,90,5,12,6,1],"100":[34,74,6,12,8,1],"101":[26,74,6,12,7,1],"102":[37,90,5,12,5,0],"103":[98,35,7,15,7,0],"104":[23,90,5,12,7,1],"105":[65,110,2,12,4,1],"106":[29,54,5,18,4,-2],"107":[10,74,6,12,7,1],"108":[61,110,2,12,4,1],"109":[10,54,8,12,10,1],"110":[9,90,5,12,7,1],"111":[66,74,6,12,8,1],"112":[116,35,6,17,8,1],"113":[106,54,5,16,7,1],"114":[2,110,4,12,5,1],"115":[65,90,5,12,6,1],"116":[16,90,5,12,5,0],"117":[72,90,5,12,7,1],"118":[44,90,5,12,5,0],"119":[80,54,7,12,8,0],"120":[50,74,6,12,6,0],"121":[2,54,6,16,7,0],"122":[58,90,5,12,5,0],"123":[85,90,4,14,5,1],"124":[53,110,2,14,8,3],"125":[79,90,4,14,6,1],"126":[97,74,7,10,8,1],"127":[74,74,7,10,8,1]};
 const NB_PLAIN_GLYPHS={32:[2,2,9,16,9,0],33:[96,102,2,14,9,4],34:[77,102,5,6,9,3],35:[13,2,9,14,9,0],36:[75,2,8,15,9,1],37:[32,20,8,14,9,1],38:[92,52,8,14,9,1],39:[122,102,2,6,9,4],40:[9,102,5,15,9,3],41:[16,102,5,15,9,1],42:[43,102,6,10,9,1],43:[63,85,8,11,9,1],44:[63,102,3,15,9,3],45:[23,102,8,8,9,1],46:[84,102,2,14,9,4],47:[38,85,7,13,9,1],48:[82,36,8,14,9,1],49:[57,102,4,14,9,2],50:[92,69,7,14,9,1],51:[74,69,7,14,9,1],52:[82,20,8,14,9,1],53:[11,69,7,14,9,1],54:[83,69,7,14,9,1],55:[29,69,7,14,9,1],56:[38,69,7,14,9,1],57:[20,85,7,14,9,1],58:[112,102,2,12,9,3],59:[68,102,3,14,9,3],60:[73,85,8,11,9,1],61:[109,85,8,10,9,1],62:[83,85,8,11,9,1],63:[52,20,8,14,9,1],64:[12,20,8,14,9,1],65:[102,20,8,14,9,1],66:[72,20,8,14,9,1],67:[52,36,8,14,9,1],68:[72,52,8,14,9,1],69:[42,20,8,14,9,1],70:[62,20,8,14,9,1],71:[2,36,8,14,9,1],72:[62,52,8,14,9,1],73:[92,102,2,14,9,4],74:[101,85,6,14,9,1],75:[32,52,8,14,9,1],76:[11,85,7,14,9,1],77:[42,52,8,14,9,1],78:[42,36,8,14,9,1],79:[112,36,8,14,9,1],80:[2,52,8,14,9,1],81:[55,2,8,15,9,1],82:[92,36,8,14,9,1],83:[2,20,8,14,9,1],84:[92,20,8,14,9,1],85:[12,52,8,14,9,1],86:[22,20,8,14,9,1],87:[22,52,8,14,9,1],88:[22,36,8,14,9,1],89:[95,2,8,14,9,1],90:[56,69,7,14,9,1],91:[2,102,5,15,9,3],92:[24,2,9,14,9,0],93:[119,85,5,15,9,1],94:[104,102,6,4,9,2],95:[85,2,8,15,9,1],96:[116,102,4,4,9,2],97:[102,36,8,14,9,1],98:[52,52,8,14,9,1],99:[32,36,8,14,9,1],100:[82,52,8,14,9,1],101:[12,36,8,14,9,1],102:[110,69,7,14,9,1],103:[102,52,7,15,9,1],104:[2,85,7,14,9,1],105:[88,102,2,14,9,4],106:[51,102,4,15,9,2],107:[101,69,7,14,9,1],108:[100,102,2,14,9,4],109:[72,36,8,14,9,1],110:[2,69,7,14,9,1],111:[115,2,8,14,9,1],112:[35,2,8,15,9,1],113:[65,2,8,15,9,1],114:[93,85,6,14,9,2],115:[20,69,7,14,9,1],116:[65,69,7,14,9,1],117:[47,69,7,14,9,1],118:[62,36,8,14,9,1],119:[112,20,8,14,9,1],120:[105,2,8,14,9,1],121:[45,2,8,15,9,1],122:[29,85,7,14,9,1],123:[47,85,6,15,9,2],124:[73,102,2,15,9,4],125:[55,85,6,15,9,1],126:[33,102,8,8,9,1],127:[111,52,7,14,9,1]};
@@ -26601,7 +26666,8 @@ function drawRankStamp(r,x,y,t,size){
  }
 }
 function nbResultsTitle(reason){return {win:'VICTORY',spare:'SPARED',flee:'ESCAPED',gameover:'GAME OVER'}[reason]||'FIGHT OVER'}
-function nbStartBattle(){
+function nbStartBattle(){withFightAssets(nbStartBattleNow)}
+function nbStartBattleNow(){
  screen='nb';
  NB.start({
   ...nbBattleOpts(),
@@ -26643,11 +26709,12 @@ const DR1_ASSETS={"spr":{"spr_blockguy_part":[26,14,0,0,["67fcb502-060f-45ab-b91
 const DR=(()=>{
  const A=DR_ASSETS,A1=DR1_ASSETS,STEP_MS=1000/30;
  const imgs={},masks={};let ready=false,loading=null,S=null;
- const sndKeys={firespell:'snd_firespell',janything:'snd_joker_anything',jchaos:'snd_joker_chaos',jlaugh0:'snd_joker_laugh0',jha0:'snd_joker_ha0',jha1:'snd_joker_ha1',joh:'snd_joker_oh',jbyebye:'snd_joker_byebye',jmeta:'snd_joker_metamorphosis',jneochaos:'snd_joker_neochaos',bomb:'snd_bomb',spearappear:'snd_spearappear',scytheburst:'snd_scytheburst',hypnosis:'snd_hypnosis',pirouette:'snd_pirouette',badexplosion:'snd_badexplosion',carhonk:'snd_carhonk',toilet:'snd_toilet',weirdeffect:'snd_weirdeffect',awkward:'snd_awkward',shadowpendant:'snd_shadowpendant',birdtweet:'snd_birdtweet',applause:'snd_applause',rumble:'snd_rumble',menumove:'snd_menumove',select:'snd_select',laz:'snd_laz_c',crit:'snd_criticalswing',damage:'snd_damage',impact:'snd_impact',hurt:'snd_hurt1',graze:'snd_graze',mercyadd:'snd_mercyadd',spare:'snd_spare',power:'snd_power',rbswing:'snd_rudebuster_swing',rbhit:'snd_rudebuster_hit',pacify:'snd_pacify',text:'snd_text',boost:'snd_boost',icespell:'snd_icespell',snowgrave:'snd_snowgrave',petrify:'snd_petrify',deathnoise:'snd_deathnoise',ghostappear:'snd_ghostappear',spellpacify:'snd_spell_pacify',defeatrun:'snd_defeatrun',bell:'snd_bell',dadlaugh:'snd_dadlaugh',ralsing1:'snd_ralseising1',ralsing2:'snd_ralseising2',dadblast:'snd_dadblast',chainext:'snd_chain_extend',locker:'snd_locker',screenshake:'snd_screenshake',chainwave:'snd_chain_wave',spearrise:'snd_spearrise',bump:'snd_bump',magicsprinkle:'snd_magicsprinkle',jump:'snd_jump',ultraswing:'snd_ultraswing',swing:'snd_swing',item:'snd_item',cardrive:'snd_cardrive',whistle2:'snd_whistlebreath',txtral:'snd_txtral',txtsus:'snd_txtsus',txtnoe:'snd_txtnoe',txtlan:'snd_txtlan',drive:'snd_drive',honk:'snd_lancerhonk',whistle:'snd_lancerwhistle',splat:'snd_splat',sussurprise:'snd_sussurprise'};
- const sndFiles={snd_mercyadd:'snd_mercyadd.ogg',snd_pacify:'snd_pacify.ogg',snd_text:'snd_text.wav',snd_icespell:'snd_icespell.ogg',snd_snowgrave:'snd_snowgrave.ogg',snd_ghostappear:'snd_ghostappear.ogg',snd_spell_pacify:'snd_spell_pacify.ogg'};
+ const sndKeys={rocket:'snd_rocket',closetimpact:'snd_closet_impact',txtspam2:'snd_txtspam2',swallow:'snd_swallow',overpower:'snd_sneo_overpower',heartshot:'snd_heartshot_dr_b',chargecharge:'snd_chargeshot_charge',chargefire:'snd_chargeshot_fire',stardrop:'snd_stardrop',spamlaugh:'snd_spamton_laugh',sneolaugh:'snd_sneo_laugh_long',phone:'snd_phone',firespell:'snd_firespell',janything:'snd_joker_anything',jchaos:'snd_joker_chaos',jlaugh0:'snd_joker_laugh0',jha0:'snd_joker_ha0',jha1:'snd_joker_ha1',joh:'snd_joker_oh',jbyebye:'snd_joker_byebye',jmeta:'snd_joker_metamorphosis',jneochaos:'snd_joker_neochaos',bomb:'snd_bomb',spearappear:'snd_spearappear',scytheburst:'snd_scytheburst',hypnosis:'snd_hypnosis',pirouette:'snd_pirouette',badexplosion:'snd_badexplosion',carhonk:'snd_carhonk',toilet:'snd_toilet',weirdeffect:'snd_weirdeffect',awkward:'snd_awkward',shadowpendant:'snd_shadowpendant',birdtweet:'snd_birdtweet',applause:'snd_applause',rumble:'snd_rumble',menumove:'snd_menumove',select:'snd_select',laz:'snd_laz_c',crit:'snd_criticalswing',damage:'snd_damage',impact:'snd_impact',hurt:'snd_hurt1',graze:'snd_graze',mercyadd:'snd_mercyadd',spare:'snd_spare',power:'snd_power',rbswing:'snd_rudebuster_swing',rbhit:'snd_rudebuster_hit',pacify:'snd_pacify',text:'snd_text',boost:'snd_boost',icespell:'snd_icespell',snowgrave:'snd_snowgrave',petrify:'snd_petrify',deathnoise:'snd_deathnoise',ghostappear:'snd_ghostappear',spellpacify:'snd_spell_pacify',defeatrun:'snd_defeatrun',bell:'snd_bell',dadlaugh:'snd_dadlaugh',ralsing1:'snd_ralseising1',ralsing2:'snd_ralseising2',dadblast:'snd_dadblast',chainext:'snd_chain_extend',locker:'snd_locker',screenshake:'snd_screenshake',chainwave:'snd_chain_wave',spearrise:'snd_spearrise',bump:'snd_bump',magicsprinkle:'snd_magicsprinkle',jump:'snd_jump',ultraswing:'snd_ultraswing',swing:'snd_swing',item:'snd_item',cardrive:'snd_cardrive',whistle2:'snd_whistlebreath',txtral:'snd_txtral',txtsus:'snd_txtsus',txtnoe:'snd_txtnoe',txtlan:'snd_txtlan',drive:'snd_drive',honk:'snd_lancerhonk',whistle:'snd_lancerwhistle',splat:'snd_splat',sussurprise:'snd_sussurprise'};
+ const sndFiles={snd_closet_impact:'snd_closet_impact.ogg',snd_mercyadd:'snd_mercyadd.ogg',snd_pacify:'snd_pacify.ogg',snd_text:'snd_text.wav',snd_icespell:'snd_icespell.ogg',snd_snowgrave:'snd_snowgrave.ogg',snd_ghostappear:'snd_ghostappear.ogg',snd_spell_pacify:'snd_spell_pacify.ogg'};
  const SND_CH1=new Set(['snd_dadlaugh','snd_dadblast','snd_ralseising1','snd_ralseising2','snd_whistlebreath','snd_joker_anything','snd_joker_chaos','snd_joker_laugh0','snd_joker_ha0','snd_joker_ha1','snd_joker_oh','snd_joker_byebye','snd_joker_metamorphosis','snd_joker_neochaos','snd_bomb','snd_spearappear','snd_scytheburst','snd_hypnosis','snd_pirouette','snd_badexplosion','snd_carhonk','snd_toilet','snd_weirdeffect','snd_awkward','snd_shadowpendant','snd_birdtweet','snd_applause','snd_rumble']);
  const sndUrl=n=>n==='snd_firespell'?DR_RAW5+'snd_firespell.wav':(SND_CH1.has(n)?DR_RAW1:DR_RAW)+`sounds/${n}/${sndFiles[n]||n}`;
- let music=null,battleMusic=null,kingMusic=null,susieMusic=null,kroundMusic=null,lancerMusic=null,jevilMusic=null;
+ let music=null,battleMusic=null,kingMusic=null,susieMusic=null,kroundMusic=null,lancerMusic=null,jevilMusic=null,neoMusic=null;
+  const DR_NEO_MUSIC='https://cdn.jsdelivr.net/gh/gagaimaboo/undertalebteng@75ce37cf41c9cfedd252ba19e2ca9bf4e16782ba/assets/dr/big_shot.mp3'; // BIG SHOT
  // Chaos King (Toby Fox), pinned to the commit that added it.
  const DR_KING_MUSIC='https://cdn.jsdelivr.net/gh/gagaimaboo/undertalebteng@fee4004f3b5f09357da0761a9de78d5636ffae7c/assets/dr/chaos_king.mp3';
  const DR_SUSIE_MUSIC='https://cdn.jsdelivr.net/gh/gagaimaboo/undertalebteng@37820509b7c663f9ed651fb1a17651a4353adc66/assets/dr/vs_susie.mp3';
@@ -26657,6 +26724,8 @@ const DR=(()=>{
  // assets/dr/ch5), pinned to the commit that added them. Frames are <name>_<i>.png.
  const DR_RAW5='https://cdn.jsdelivr.net/gh/gagaimaboo/undertalebteng@070cb32f453834e16836546c76e8b6edb53ab6cf/assets/dr/ch5/';
  const A5={spr:{spr_firespell_flame:[46,46,23,23,[0]],spr_firespell_smallflame:[22,22,11,11,[0]],spr_spell_fireball:[34,20,0,0,[0,1,2]],spr_ralsei_spell_fireball_right:[48,42,17,-2,[0,1,2,3,4,5]]}};
+ // Spamton NEO's sprites (Chapter 2 decomp)
+ const A6={spr:{"spr_sneo_wingl":[82,89,20,40,["bc1c79ca-d78c-4147-a562-afbbbca86493"]],"spr_sneo_arml":[82,89,20,37,["7fdd1645-d671-4ddc-bdd0-94505213dd13","03434dd7-59e6-4911-ba70-f917db28a201","786bb25f-e5ca-4569-88c3-fd4250e9435f","7407920e-d53c-4af6-83c3-d1907fae8fb4","fcc3c5fc-4cf3-44b7-9cfd-e21f501f2cc6"]],"spr_sneo_legl":[82,89,23,52,["5964f370-476e-45d5-8733-de4811522f7e"]],"spr_sneo_legr":[82,89,30,51,["b0b19c8d-089b-4ce6-a29a-a5c603d4f137"]],"spr_sneo_body":[82,89,18,40,["24f6988a-2ceb-4709-93e8-b71eb00bf154"]],"spr_sneo_head":[82,89,30,29,["a19b937d-0356-4ccb-9a15-b98c0d32ab3f","28a60411-e094-4207-b8e0-140361355364","c3302304-b88e-48a4-b3f2-6ee2307b5599","7615a2fb-f309-4f23-b7d4-b19ee3d1d968"]],"spr_sneo_armr":[82,89,35,35,["9f37ef8c-e55c-4c32-b53b-3a6c0a8dd2f5"]],"spr_sneo_wingr":[82,89,30,30,["ab42b1fa-a005-40e8-9589-ec2c151f12ea"]],"spr_yellowheart":[20,20,0,0,["1e9bd9cf-10d5-4a04-ac65-82b1a2d24cea","c8d9b0eb-01c5-4c4a-913a-5fda12856e12","b28f7fe5-6f80-45ea-a6f9-bc6aea0457d7"]],"spr_yheart_shot":[25,9,18,4,["583a7020-6c1c-4cbe-a65e-9271e56bd010"]],"spr_yheart_bigshot":[45,28,32,14,["ec2d609d-5847-45ae-97b9-1c7753cbdac1"]],"spr_yheart_charge":[7,7,3,3,["967e5ce8-bfbf-4e95-8107-be09b364dd0a"]],"spr_yheart_shot_hit":[36,24,18,11,["192e89f3-90af-470f-9643-425981825007","337aab1c-6065-49e0-b9b8-364ff92ed9d0","04d1abc8-8921-445a-a965-690bf7679409","9b45e643-243a-49e4-ac0f-dae3aae4844c","a20d9ae7-c8b7-4a21-8cc7-4b4cd1210ea1"]],"spr_yheart_shot_hit3":[36,24,21,11,["6dd10c8b-b555-416d-a7f6-b12e28dd3581","d6d7be8c-a2b2-44cf-a5ab-cba3dbca46e6","1481c4f2-f975-47bf-bdcd-db67b5a2e55f","52703fd0-b4ec-49d3-94b9-2e816edfabf9","88553c5b-f2aa-4f7f-ac1b-22965906443b"]],"spr_yheart_bigshot_trail":[45,28,32,14,["b40c6eca-a62a-44c5-acec-9525d98da12b"]],"spr_sneo_crew":[40,48,18,22,["b5d3a2ce-2c1d-4823-b9aa-0aded334209f","099a4364-e1db-4399-96aa-1652b8071da9","9f8dd33a-5838-4a30-995d-261e96ef8c83","956bcbf6-68bf-44c5-876f-f5ad4426e99e"]],"spr_sneo_crew_bullet":[20,24,10,12,["fc959d5c-7a77-424c-b267-43a695d55841"]],"spr_sneo_example":[82,89,0,0,["a2ecb224-0c82-47cf-a4a9-59c25d80caa7"]],"spr_sneo_head_sad":[82,89,30,29,["cfa1909e-e088-4383-9470-c7089422dc72"]],"spr_yheart_shot_hit2":[36,24,18,11,["9b0bbf3c-938e-4c12-a9ec-a3e6964ae87d","396de93c-17ab-448c-84cb-acb542e7ec6a","fe6d1f59-9552-426e-8f6d-bc45a0e22022","e1ea31c0-8f1b-41b4-8614-69a3a85c3117","a6f65514-62e9-4bae-9978-15573d7c76e1"]],"spr_queen_winebubble_edit2":[20,20,10,10,["6b949195-f23d-418c-8388-3ef3aed97dbd","59665919-8e53-4c94-8543-e961e2200f00","4cabcbc1-2a5f-45e1-88f3-274c8a3aa680","d7ce71af-4deb-490c-a5b5-302564560a68"]],"spr_sneo_phonehand":[58,27,29,13,["a76bf984-18cb-4082-83a5-76317999b7a7"]],"spr_sneo_head_open":[82,89,30,29,["0faef41d-9429-40c2-a44b-97f502e02f8f"]],"spr_sneo_bullet0":[11,11,5,5,["68cccf1a-7744-4a61-ac95-3e7aa6ebf922"]],"spr_sneo_soundbullet":[30,30,15,15,["d55d3222-56d2-4c3e-af57-0088c566e52d"]],"spr_sneo_bullet_box":[20,20,10,10,["a46d45b4-e742-4ee0-a99c-cce03d6aa711"]],"spr_sneo_wall_car":[58,24,0,0,["88348a5e-86ef-4c6b-9221-13fd8500a57c"]],"spr_sneo_mail":[20,20,10,10,["c7bd36fe-10cc-4a0b-b39f-8f94c0d72fac","f0855b7a-cab3-4a96-9173-bc9bf2150ae0"]],"spr_mettaton_bomb1":[24,30,12,18,["0e068d6b-a4e5-4d6c-a48f-dd20bf39876c","6f95180d-e834-4fce-b5a5-e98f4f3f46d5"]],"spr_mettaton_bomb2":[24,24,12,12,["133d0a9a-229d-418d-9ffd-12e39ec6736f","bd4ac25a-c988-4128-b0e1-c2a4c56478ff","58d292a0-b775-48ff-9577-f4fbbb1f1678","40ec3657-51db-4d0a-96d7-d85ebacf3377","9e2d17b7-2090-42d9-8f47-1bac1efda52d","41c9da41-1302-488f-98dc-042f03f23705","699d3af3-e3bc-4a8a-8442-fdeea6c243ff","94d020e7-2e0c-4250-ab1d-afaf52063e24"]],"spr_mettaton_bomb3":[24,24,12,12,["8257c4fc-4616-4ebd-86e0-1e5401bca153","5faf4f56-d236-47bd-a114-74d6e93ed8ae","9fa7b46e-9430-4f4b-967e-34073edd6ab7","a9077bf8-c1b1-419b-a0fd-972593e8c01d","4f257d7c-60c8-4782-9614-bf75b8ec0173","1b942f85-3e59-499e-a038-307d3f01c413","d314467b-1f3a-4463-9f82-42e8cade7c6f","28b3d0a1-6f27-495f-b068-43c8515b1ec5"]],"spr_sneo_wireheart":[52,52,26,26,["1cbaaf12-1a4e-4b6c-8223-3161ae2aefa7","05a7fea9-0357-49a6-b459-bb97f38649db","a43e8d9d-aeb6-4d57-b35b-a554c15fe964","4712542e-328c-4fff-bee3-ded4ef796fd3","cc1955f7-24ed-4943-bfd3-18b1dfc514e0","7e279c4e-b429-4336-b9ef-687b9f4a2aa1"]],"spr_sneo_wireheart_smaller":[34,34,17,17,["7f95dc57-485c-4dc7-82a8-f25a1ac363aa","4cb78de1-73a5-4256-9a29-3485ac17d6cc","5fbb24a2-cba3-4cc9-a1f3-e33ae2017801","2cf1ddad-9528-4c7e-b615-eb0471c3365c","fadb042f-7048-4897-ad48-d76848119a4d","ab3c6290-3be6-487c-a838-f27cdb12ab55"]],"spr_sneo_final_forme":[612,590,28,91,["689a6237-ea2e-4734-bfa6-2d8751b31a79","f268d50f-6e48-4d75-bb5c-8de532eeae2e","1f6d36d9-4bcb-4e06-b065-85719861d0b7","eccd4576-e9e1-47e9-acf4-cf98513f715e","23b1467b-e816-4e06-9ae4-4d007196385d","5e0480e8-451d-4a3c-9926-0618961d809a","f9a718e3-e5db-4d22-a8e2-681671f46b64","c6beaf19-2702-4bbd-a90c-48ade15aa147"]],"spr_spamton_dollar":[24,24,12,12,["c35e9fbd-1f3c-4132-ad83-ff849f777adb"]],"spr_sneo_track":[320,64,0,0,["52124d67-1562-4c97-9597-39b43d1f4311"]],"spr_sneo_car_front":[58,24,0,0,["e075266d-af73-4452-9213-4320a5cd1211"]],"spr_sneo_car_back":[58,24,0,0,["cfe3ba66-58d9-45a5-9f2c-13a816857958"]],"spr_sneo_car_empty":[58,24,0,0,["2cfc7cb4-e726-46f2-961f-2c488fe4fb55"]],"bg_dw_mansion_basement_cityscape_background":[198,49,0,0,["a7b47667-32b0-4190-b7a7-b257da48205b"]],"bg_dw_mansion_basement_cityscape_midground":[198,49,0,0,["367fedc4-9905-478f-b0c3-b242cdf82c5e"]],"bg_dw_mansion_basement_cityscape_foreground":[198,49,0,0,["6ca1c9e2-5e4b-4e0b-a54e-74bab1c9a48d"]],"spr_pipis_egg":[16,12,8,6,["28e191c6-afa5-45d2-81fe-e3eb86748754","ff83c78b-98e1-40ac-a4aa-ad9689d7893b","c81515e3-c531-490a-81cb-b3bf0c82c0f8","a52e497e-9b9e-4156-8583-1d13b2708101"]],"spr_pipis_wall":[75,2,37,0,["114c2c14-4108-49e1-b988-cb1aad0fec55"]],"spr_sneo_phone":[64,64,29,5,["be300ad4-724f-4155-a47e-f97794402864","4b5897e8-0067-4ead-a8e7-c119d4900419","9027202f-b736-41bb-9357-0214643b3dea","c00748a3-09ae-4934-a33a-edbca3de1aeb"]],"spr_sneo_arml_egg":[23,38,12,0,["7a63c852-59c2-45f0-b8ab-d27e8f0c0bd2"]],"spr_pipissign":[49,29,43,0,["d500a911-5e53-4a68-9127-1ad707b871e4","f5420727-f84f-48ab-a98b-aa18bb2433d2"]],"spr_spamtonneo_faceAttack_face":[42,71,0,0,["4bd94dda-c81e-4da1-89fa-4db970b022b0"]],"spr_spamtonneo_faceAttack_eyes":[42,71,0,0,["67ed419e-2991-4851-826e-42363ab2b91e","a9f6343c-61bc-427e-840b-cdaaee0584bd","ac379e96-abf2-4082-bbeb-ba0250b7ecfb"]],"spr_spamtonneo_faceAttack_nose":[42,71,0,0,["949c3bdd-1925-4606-ab45-57c70ad4cc8b","26743458-b39f-4a82-a235-9b36b0360fc2","b9c9b19e-33a6-43c3-99c4-182945d1d70c"]],"spr_spamtonneo_faceAttack_mouth":[42,71,0,0,["32ae36e7-8369-4dba-8d58-855ebfb2ccd0","4981e52d-afdb-4347-a704-17092534af1f","cf13234d-0b89-454b-b02b-a7271cf3bf4e","70ecb735-137f-4282-a224-e2b5339997fa","1144a5e8-1299-46ac-a92b-a2cea24a7580"]],"spr_spamtonneo_faceAttack_nose_bullet":[42,71,0,0,["79efab3f-a2dd-4c02-a6ca-85ed9815bf9d"]],"spr_spamtonneo_faceAttack_wisp":[29,19,14,9,["b12fe69c-90e7-4be0-acfe-c4f2c0441f61"]],"spr_bullet_laser_square_sneo":[8,8,8,4,["cd3ea9f5-ae53-4997-b4c9-8deb6aacddd0"]],"spr_bullet_laser_front_sneo":[8,8,8,4,["ac84382c-61ca-4f4c-861f-4d662d2a9a63","f845c587-3913-4648-979b-fecb02b0930a"]],"spr_boxing_crescent":[20,20,10,10,["817477a9-d56c-4409-b487-2817bd6d3cdf","136d15c4-24b4-4029-af04-987e7b745f3c","ef44d387-3a8c-4c55-92fe-45c204454f9a","4c25e825-a5d5-4fd8-b2f8-3d69e68b56be"]]}};
  const DR_KROUND_MUSIC='https://cdn.jsdelivr.net/gh/gagaimaboo/undertalebteng@37820509b7c663f9ed651fb1a17651a4353adc66/assets/dr/checker_dance.mp3';
 
  // ------------------------------------------------------------ assets ------
@@ -26673,15 +26742,20 @@ const DR=(()=>{
    imgs[n]=[];
    ids.forEach((g,i)=>jobs.push(loadImage(DR_RAW1+`sprites/${n}/${g}.png`).then(im=>{imgs[n][i]=im}).catch(()=>{})));
   }
+  for(const [n,[w,h,xo,yo,ids]] of Object.entries(A6.spr)){
+   imgs[n]=[];
+   ids.forEach((g,i)=>jobs.push(loadImage(DR_RAW+`sprites/${n}/${g}.png`).then(im=>{imgs[n][i]=im}).catch(()=>{})));
+  }
   for(const [n,[,,,,ids]] of Object.entries(A5.spr)){imgs[n]=[];ids.forEach(i=>jobs.push(loadImage(DR_RAW5+`${n}_${i}.png`).then(im=>{imgs[n][i]=im}).catch(()=>{})))}
   for(const f of Object.keys(A1.font))jobs.push(loadImage(DR_RAW1+`fonts/${f}/${f}.png`).then(im=>{imgs['font_'+f]=im}).catch(()=>{}));
-  for(const [k,n] of Object.entries(sndKeys))jobs.push(loadAudioAsset(sndUrl(n),k==='text'?.4:.66,false).then(a=>{sounds['dr_'+k]=a}).catch(()=>{}));
+  for(const [k,n] of Object.entries(sndKeys))jobs.push(loadAudioAsset(sndUrl(n),k==='text'?.4:k==='txtspam2'?.5:.66,false).then(a=>{sounds['dr_'+k]=a}).catch(()=>{}));
   jobs.push(loadAudioAsset('https://cdn.jsdelivr.net/gh/BenSFGamer/Deltarune-web@main/battle.ogg',.5,true).then(a=>{music=battleMusic=a}).catch(()=>{}));
   jobs.push(loadAudioAsset(DR_KING_MUSIC,.5,true).then(a=>{kingMusic=a}).catch(()=>{}));
   jobs.push(loadAudioAsset(DR_SUSIE_MUSIC,.5,true).then(a=>{susieMusic=a}).catch(()=>{}));
   jobs.push(loadAudioAsset(DR_KROUND_MUSIC,.5,true).then(a=>{kroundMusic=a}).catch(()=>{}));
   jobs.push(loadAudioAsset(DR_LANCER_MUSIC,.5,true).then(a=>{lancerMusic=a}).catch(()=>{}));
   jobs.push(loadAudioAsset(DR_JEVIL_MUSIC,.5,true).then(a=>{jevilMusic=a}).catch(()=>{}));
+  jobs.push(loadAudioAsset(DR_NEO_MUSIC,.5,true).then(a=>{neoMusic=a}).catch(()=>{}));
   loading=Promise.all(jobs).then(()=>{buildMasks();ready=true});
   return loading;
  }
@@ -26706,7 +26780,7 @@ const DR=(()=>{
   }
  }
  const frame=(n,i)=>{const f=imgs[n];if(!f||!f.length)return null;const k=((Math.floor(i)%f.length)+f.length)%f.length;return f[k]||f[0]};
- const meta=n=>A.spr[n]||A1.spr[n]||A5.spr[n]||[0,0,0,0,[]];
+ const meta=n=>A.spr[n]||A1.spr[n]||A5.spr[n]||A6.spr[n]||[0,0,0,0,[]];
  // draw_sprite_ext: x/y is the sprite origin; flash = white silhouette alpha (d3d_set_fog white).
  function draw(g,n,i,x,y,xs=1,ys=1,ang=0,alpha=1,o={}){
   const im=frame(n,i);if(!im||alpha<=0)return;
@@ -26899,7 +26973,7 @@ const DR=(()=>{
     if(c==='%'){this.done=true;return}
     this.pos++;typed++;
     // talking portraits use their own voice (snd_txtral / txtsus / txtnoe / txtlan)
-    if(c!==' '&&this.pos%2===1)snd(this.face?({R:'txtral',S:'txtsus',N:'txtnoe',L:'txtlan'}[this.face.face]||'text'):'text');
+    if(c!==' '&&this.pos%2===1)snd(this.face?({R:'txtral',S:'txtsus',N:'txtnoe',L:'txtlan'}[this.face.face]||'text'):(this.t.voice||'text'),this.t.vrate||1);
    }
    if(this.pos>=this.str.length){const e=this.str.trimEnd();if(e.endsWith('/%'))this.halt=2;else if(e.endsWith('/'))this.halt=1}
   }
@@ -27263,6 +27337,32 @@ const DR=(()=>{
   },
   // obj_joker (monstertype 20, the secret boss): JEVIL. His body (obj_joker_body) is drawn here;
   // the turn order, ACTs and attacks follow obj_joker Step_0 / Other_15.
+  // obj_spamton_neo_enemy (monstertype 50): the puppet body is drawn part by part (neoDraw),
+  // the SOUL turns yellow on his turn, and mercy comes from shooting him and snapping wires.
+  sneo:{name:'Spamton NEO',music:'neo',hp:4809,at:13,df:0,gold:0,x:460,y:80,mx:70,my:90,boss:1,noSupport:1,customBox:1,mercymax:100,
+   idle:'spr_sneo_example',idleSpeed:999,hurt:'spr_sneo_example',spared:'spr_sneo_example',still:'spr_sneo_example',
+   intro:'* It\'s time to be a BIG SHOT!',attack:'sneo',tiredAt:()=>false,
+   init(m){neoInit(m)},
+   acts:[{name:'Check',actor:1},{name:'Snap',actor:1},{name:'SnapAll',actor:2},{name:'Supercharge',actor:2,cost:200,desc:'Charge#faster'},{name:'FluffyGuard',actor:3,cost:100,desc:'Orbiting#shield'}],
+   act(name,m,i){
+    const n=m.n;
+    if(name==='Check'){
+     if(n.check++===0)return ['* SPAMTON NEO - YOU WON\'T FIND HIGHER ATTACK AND DEFENSE ANYWHERE ELSE!!!/','* THE SMOOTH TASTE OF NEO "WAKE UP AND TASTE THE PAIN"./','* [[note: pain is in red.]] ./%'];
+     return ['* Spamton Neo - He is his own worst invention./%'];
+    }
+    if(name==='Snap')return [neoSnap(m,2)>0?'* You snapped a wire!/%':'* You tried to snap a wire... but it failed!/%'];
+    if(name==='SnapAll')return [neoSnap(m,7)>0?'* Everyone snapped wires!/%':'* Everyone tried to snap wires... but it failed!/%'];
+    if(name==='Supercharge'){n.bigshot=20;snd('boost');return ['* You Super Charged! Can charge bullets faster! Lasts 20 shots./%']}
+    if(name==='FluffyGuard'){S.fluffy={hp:100,alarm:0,alpha:1,active:1};snd('boost');return ['* Ralsei\'s fluffy warmth surrounds you!/%']}
+    return ['* .../%'];
+   },
+   talk(m){return neoTalk(m)},
+   flavor(m){return neoFlavor(m)},
+   step(m){neoBodyStep(m)},
+   onHurt(m){m.n.mode=2;m.n.hurt=12;m.n.shth=10;m.n.shocker=0},
+   cars:1,bgDraw(g){neoBgDraw(g)},
+   draw(g,m,flash){neoDraw(g,m,flash)}
+  },
   jevil:{name:'Jevil',music:'jevil',hp:3500,at:10,df:5,gold:0,x:448,y:107,mx:42,my:41,turn:240,boss:1,mercymax:999,
    idle:'spr_joker_main',idleSpeed:999,hurt:'spr_joker_main',spared:'spr_joker_teleport',still:'spr_joker_teleport',
    intro:'* LET THE GAMES BEGIN!',attack:'jevil',tiredAt:()=>false,
@@ -27793,7 +27893,7 @@ const DR=(()=>{
   }
  };
  // Chapter 1 order.
- const ENEMY_IDS=['dummy','rudinn','hathy','jigsawry','ranger','headhathy','rabbick','bloxer','clover','ponman','kround','lancersolo','susie','king','jevil'].filter(id=>ENEMY[id]);
+ const ENEMY_IDS=['dummy','rudinn','hathy','jigsawry','ranger','headhathy','rabbick','bloxer','clover','ponman','kround','lancersolo','susie','king','jevil','sneo'].filter(id=>ENEMY[id]);
  // Story flags that outlive one fight (global.flag[503], [504]); kept for this session.
  const DRFLAG={503:0,504:0};
  // typer 50: the enemy speech bubble (fnt_dotumche, black, 9x20 spacing).
@@ -27891,8 +27991,8 @@ const DR=(()=>{
   for(const m of S.mons)m.acts=m.acts.filter(a=>(a.actor===1||has(a.actor))&&(a.name!=='Warning'||S.susieAuto));
   for(const m of S.mons)m.freezable=1; // scr_enemy_object_init
   try{stopMusic()}catch(_){}
-  for(const a of [battleMusic,kingMusic,susieMusic,kroundMusic,lancerMusic,jevilMusic])if(a)try{a.pause()}catch(_){}
-  const tracks={king:kingMusic,susie:susieMusic,kround:kroundMusic,lancer:lancerMusic,jevil:jevilMusic},want=(S.mons.find(m=>m.def.music&&tracks[m.def.music])||{}).def;
+  for(const a of [battleMusic,kingMusic,susieMusic,kroundMusic,lancerMusic,jevilMusic,neoMusic])if(a)try{a.pause()}catch(_){}
+  const tracks={king:kingMusic,susie:susieMusic,kround:kroundMusic,lancer:lancerMusic,jevil:jevilMusic,neo:neoMusic},want=(S.mons.find(m=>m.def.music&&tracks[m.def.music])||{}).def;
   music=(want&&tracks[want.music])||battleMusic;
   if(music){try{music.currentTime=0;playMusicElement(music)}catch(_){}}
   if(MP){
@@ -27993,6 +28093,7 @@ const DR=(()=>{
   else{S.myfight=4;S.spellphase={t:0,alarm:5,active:0,char:0,castyet:0,total:0,using:[0,0,0],gotspell:[0,0,0],gotitem:[0,0,0],delay:10}}
  }
  function mnendturn(){
+  if(S.yellow){if(S.yellow.loop)stopLoop(S.yellow.loop);S.yellow=null;S.yshots=[];S.yfx=[]}
   S.jfree=0;S.hsp=0;if(S.jhud||(S.bp<S.bpy&&S.intro!==1)){S.jhud=0;S.intro=1}
   if(monsterpop()===0){wincombat();return}
   if(S.mons.some(m=>m.alive&&m.endAfterTurn)){for(const m of S.mons)if(m.endAfterTurn){m.alive=false;m.drawGone=1}wincombat();return}
@@ -28383,7 +28484,7 @@ const DR=(()=>{
    if(say&&say.text){S.bubbles.push({x:say.bx,y:say.by,w:new Writer([say.text],say.bx+5,say.by+5,BUBBLE)});continue}
    if(say&&say.heads){S.bubbles.push(...cloverBubbles(m.x,m.y,say.heads,0));S.talkmax=Math.max(S.talkmax||90,m.def.talkmax||90)}
    else if(say&&say.heart)S.bubbles.push({x:m.x-100,y:m.y,heart:say.heart,siner:0});
-   else if(say&&say.pages)S.bubbles.push({x:m.x-160,y:m.y,spr:say.spr,manual:1,w:new Writer(say.pages,m.x-160+5,m.y+5,BUBBLE)});
+   else if(say&&say.pages){const bx=say.bx??m.x-160,by=say.by??m.y;S.bubbles.push({x:bx,y:by,spr:say.spr,xs:say.xs,ys:say.ys,manual:1,w:new Writer(say.pages,bx+5,by+5,say.bubble||BUBBLE)})}
    else if(say)S.bubbles.push({x:m.x-160,y:m.y,w:new Writer([say],m.x-160+5,m.y+5,BUBBLE)});
   }
   if(!S.bubbles.length&&!S.mons.some(m=>m.alive&&m.def.customBox))spawnBox(); // the Dummy: no speech, straight to its attack
@@ -28395,7 +28496,7 @@ const DR=(()=>{
   S.box={x,y,spr:o.spr||'spr_battlebg_0',sc:2,timer:0,max:15,grow:1,after:[]};
  }
  // Half width/height of the box as it is now (it grows in, and some attacks scale it).
- function boxHalf(b=S.box){const [w,h]=meta(b.spr);const k=b.grow===2?1:b.timer/b.max;return [w*b.sc*k/2,h*b.sc*k/2]}
+ function boxHalf(b=S.box){const [w,h]=meta(b.spr);const k=b.grow===2?1:b.timer/b.max;return [w*(b.sx||b.sc)*k/2,h*(b.sy||b.sc)*k/2]}
  function clampHeart(){
   const h=S.heart,b=S.box;if(!h||!b||h.fly>0)return;
   const [hw,hh]=boxHalf(b);
@@ -28434,6 +28535,7 @@ const DR=(()=>{
   else if(g.kind==='clubs')clubsGen(g);
   else if(g.kind==='kround')kroundGen(g);
   else if(g.kind==='jevil')jevilGen(g);
+  else if(g.kind==='sneo')neoGen(g);
   else if(g.kind==='susie')susieGen(g);
   else if(g.kind==='rabbick')rabbickGen(g);
   else if(g.kind==='bloxer')bloxerGen(g);
@@ -28930,6 +29032,7 @@ const DR=(()=>{
  function startPattern(g){
   const h=S.heart,m=g.m,pop=monsterpop();
   if(g.kind==='jevil'){jevilStart(g);return}
+  if(g.kind==='sneo'){neoStart(g);return}
   if(g.kind==='lancersolo'){
    S.turntimer=999;m.hidden=1;m.turns++;
    S.bullets.push(makeBike(m,g,m.bikeTurn===0?'race':'lap'));m.bikeTurn=m.bikeTurn?0:1;
@@ -29068,6 +29171,7 @@ const DR=(()=>{
   // The box walls (obj_growtangle as battlesolid): keep the 20x20 SOUL inside.
   h.x+=px;h.y+=py;if(S.box)clampHeart();else if(S.jfree){h.x=Math.max(0,Math.min(620,h.x));h.y=Math.max(160,Math.min(460,h.y))}
   if(S.inv>0){S.inv--;h.img+=.25}else h.img=0;
+  if(S.yellow)yellowStep(h); // Spamton NEO: the SOUL turns yellow and shoots
  }
  // online: my hero is down, so my SOUL just watches
  const soulOff=()=>{if(!MP)return false;const c=myHero();return c>=0&&S.party[c].hp<=0};
@@ -29111,6 +29215,7 @@ const DR=(()=>{
  }
  // obj_dbullet_maker / obj_regularbullet / obj_dbullet_vert (their Draw events run the logic).
  function diamondStep(b){
+  if(b.neo){neoBulletStep(b);return}
   if(b.jv){jevilBulletStep(b);return}
   const h=S.heart;
   if(b.kind==='spinheart'){spinHeartStep(b);return}
@@ -29460,6 +29565,7 @@ const DR=(()=>{
   grazeCheck(b,rotAabb(b,r,ang));
  }
  function bulletsStep(){
+  if(S.yellow){yshotsStep();fluffyStep()}
   for(const b of S.bullets)if(b.kind!=='needle')diamondStep(b);
   jigsawLock();
   clampHeart();
@@ -30111,6 +30217,7 @@ const DR=(()=>{
  // -------------------------------------------------------------- draw ------
  function drawBack(g){
   g.fillStyle='#000';g.fillRect(0,0,640,480);
+  const nbg=S.mons.find(m=>m.def.bgDraw);if(nbg){nbg.def.bgDraw(g,nbg);return}
   const ar=S.mons.find(m=>m.def.arena);
   if(ar){const im=frame(ar.def.arena,0);if(im){g.save();g.globalAlpha=Math.min(1,S.bgalpha);g.drawImage(im,0,0,640,480);g.restore()}return}
   const t=imgs.bg_battleback1?.[0];if(!t)return;
@@ -30167,10 +30274,10 @@ const DR=(()=>{
  function drawBox(g){
   const b=S.box;if(!b)return;
   const n=b.spr||'spr_battlebg_0',k=b.timer/b.max,s=(b.sc||2)*k,ang=b.grow===2?0:180+180*k,alpha=.5+k*.5;
-  const col=mix(C.green,C.lime,.5);
-  for(const a of b.after)draw(g,n,0,b.x,b.y,a.s,a.s,a.ang,a.a,{tint:col});
-  draw(g,n,1,b.x,b.y,s,s,ang,alpha);
-  draw(g,n,0,b.x,b.y,s,s,ang,alpha,{tint:col});
+  const col=mix(C.green,C.lime,.5),fx=(b.sx||b.sc||2)/(b.sc||2),fy=(b.sy||b.sc||2)/(b.sc||2);
+  for(const a of b.after)draw(g,n,0,b.x,b.y,a.s*fx,a.s*fy,a.ang,a.a,{tint:col});
+  draw(g,n,1,b.x,b.y,s*fx,s*fy,ang,alpha);
+  draw(g,n,0,b.x,b.y,s*fx,s*fy,ang,alpha,{tint:col});
  }
  // spr_bouncebox_spike along the four inner edges, every 11px.
  function drawSpikes(g,x,y,w,h,a){
@@ -30187,6 +30294,7 @@ const DR=(()=>{
   // type 85: the stand-in Lancer (cheering when you get hit) and Susie throwing axes
   for(const gn of S.gens||[]){const c=gn.ctl;if(c&&c.type===85&&!c.hide){draw(g,c.lan.spr,c.lan.f,c.lan.x,c.lan.y,2,2);draw(g,'spr_susie_enemy_attack',c.sus.f,c.sus.x,c.sus.y,2,2)}}
   for(const b of S.bullets){
+   if(b.neo){drawNeoBullet(g,b);continue}
    if(b.jv){drawJevilBullet(g,b);continue}
    if(b.kind==='needle'){
     const n=b.spawning?'spr_virovirokun_needle_spawn':'spr_virovirokun_needle';
@@ -30260,7 +30368,8 @@ const DR=(()=>{
   if(h&&MP&&soulOff()){draw(g,'spr_dodgeheart',0,h.x,h.y,1,1,0,.35);return}
   if(h){
    if(S.grazebox.timer>0){const a=S.grazebox.timer/6;draw(g,'spr_grazeappear',0,h.x+10,h.y+10,1,1,0,a);draw(g,'spr_grazeappear',3,h.x+10,h.y+10,1,1,0,a-.2)}
-   draw(g,'spr_dodgeheart',S.inv>0?h.img:0,h.x,h.y);
+   if(S.yellow){drawFluffy(g);draw(g,'spr_yellowheart',S.inv>0?h.img:S.yellow.frame,h.x,h.y);drawYellow(g)}
+   else draw(g,'spr_dodgeheart',S.inv>0?h.img:0,h.x,h.y);
   }
   const r=S.returnHeart;if(r)draw(g,'spr_dodgeheart',0,r.x,r.y,1,1,0,1-r.t/10);
  }
@@ -30455,6 +30564,1008 @@ const DR=(()=>{
   return true;
  }
  // ---------------------------------------------------------------- JEVIL ----
+ // ===================================================================================
+ // SPAMTON NEO (Chapter 2, obj_spamton_neo_enemy / monstertype 50)
+ // The puppet body (8 parts on wires), the yellow SOUL that shoots (obj_heart color 1,
+ // obj_yheart_shot, BIG SHOT), and his attacks (obj_sneo_bulletcontroller types).
+ // f = 2 in his objects: the game multiplies their per-step motion by it.
+ // ===================================================================================
+ const NEO_F=2;
+ // his balloon voice (scr_textsound: snd_txtspam2, pitch 1.2)
+ const NEOBUBBLE={typer:{...BUBBLE.typer,voice:'txtspam2',vrate:1.2},font:BUBBLE.font,color:BUBBLE.color};
+ const NEO_PARTS=['spr_sneo_wingl','spr_sneo_arml','spr_sneo_legl','spr_sneo_legr','spr_sneo_body','spr_sneo_head','spr_sneo_armr','spr_sneo_wingr'];
+ const neoOf=()=>S&&S.mons.find(o=>o.id==='sneo'&&o.alive);
+ const lerpN=(a,b,k)=>a+(b-a)*k;
+ const NEOHEAD=[(14-30)*2,(4-29)*2,(49-30+1)*2,(36-29+1)*2]; // spr_sneo_head bbox around its origin, x2
+ const CREWBOX=[10-18,14-22,29-18+1,35-22+1],CREWBUL=[6-10,8-12,13-10+1,15-12+1];
+ function neoInit(m){
+  const p=k=>Array.from({length:8},()=>k);
+  m.n={frame:p(0),siner:p(0),rot:p(0),px:p(0),py:p(0),vis:p(1),weak:p(0),blend:p(null),
+   xoff:NEO_PARTS.map(n=>meta(n)[2]*2),yoff:NEO_PARTS.map(n=>meta(n)[3]*2),
+   mode:1,shocker:0,shth:10,hit:0,hitT:0,hurt:0,weakT:0,
+   phase:1,phaseturn:0,turn:0,rr:0,diff:0,face:0,final:0,
+   ssm:0,bigshot:0,bigused:0,balloon:0,alt:0,alt2:0,check:0,xstart:m.x,ystart:m.y,
+   snapped:0,endcon:0,lastHp:m.hp,eyeshp:16,nosehp:16,mouthhp:16,facebroken:0,phoneevent:0,armO:null,headShake:0,sat:0};
+ }
+ // the part motion from his Draw event (partmode 1: idle sway; 0: slump; 2: shocked)
+ function neoBodyStep(m){
+  const n=m.n,f=NEO_F;
+  n.shocker-=f;
+  for(let i=0;i<8;i++){
+   if(n.mode===0){
+    n.siner[i]=0;n.frame[i]=0;
+    if(i===5){n.rot[i]=lerpN(n.rot[i],30,.25*f);n.px[i]=lerpN(n.px[i],-10,.25*f);n.py[i]=lerpN(n.py[i],10,.25*f);if(n.dead)n.frame[i]=3}
+    else{n.rot[i]=lerpN(n.rot[i],0,.25*f);n.px[i]=lerpN(n.px[i],0,.25*f);n.py[i]=lerpN(n.py[i],0,.25*f)}
+   }else if(n.mode===2){
+    n.siner[i]+=(1+i/5)*f;n.px[i]=Math.sin(n.siner[i]/2*f);n.py[i]=Math.cos(n.siner[i]/2*f);
+    if(n.shocker<0){n.rot[i]=60-rnd(120);if(i===5){n.frame[i]+=f;if(n.frame[i]>=3)n.frame[i]=0}}
+   }else{
+    n.siner[i]+=(1+i/5)*f;n.rot[i]=Math.sin(n.siner[i]/30)*15;
+    if(i===5){
+     n.px[i]=lerpN(n.px[i],0,.25*f);n.py[i]=lerpN(n.py[i],0,.25*f);n.rot[i]-=10*f;
+     n.frame[i]+=(n.mode===11?.2:.05)*f;if(n.frame[i]>=3)n.frame[i]=0;if(n.frame[i]>=2)n.rot[i]+=20*f;
+    }
+   }
+  }
+  if(n.shocker<0){n.shocker=n.shth;if(n.shth>2)n.shth-=.25*f}
+  // the phone call: the arm swings up with the phone, the head shakes at the news
+  if(S.mnfight!==2){n.armO=null;n.headShake=0}
+  if(n.armO){n.rot[1]=lerpN(n.rot[1],n.armO.rot,.25*f);n.frame[1]=n.armO.frame}
+  if(n.headShake){n.rot[5]+=Math.sin(n.sat/5)*15;n.sat+=.2*f}
+  neoBgStep();
+  // hitcon: the head flashes orange, then fades back to white
+  if(n.hit===1){n.blend[5]='#ffa040';n.hitT=0;n.hit=2}
+  if(n.hit===2){n.hitT+=f;if(n.hitT>=15){n.hit=0;n.blend[5]=null}}
+  if(n.hurt>0){n.hurt--;if(n.hurt===0&&n.mode===2)n.mode=1}
+  if(n.weakT>0)n.weakT++;
+  // scr_move_to_point_over_time: he slides aside for some attacks and back after
+  if(n.slide){m.x+=(n.slide.x-m.x)/Math.max(1,n.slide.t);if(--n.slide.t<=0){m.x=n.slide.x;n.slide=null}}
+  // he fades out while his head is off being the phone, and back in after
+  if(!n.hide&&!S.bullets.some(b=>b.kind==='phmaster'||b.kind==='fforme')&&(m.alpha??1)<1)m.alpha=Math.min(1,(m.alpha??1)+.1);
+ }
+ function neoHead(m){const n=m.n;return {x:m.x+n.px[5]+n.xoff[5],y:m.y+n.py[5]+n.yoff[5],ang:n.rot[5]}}
+ function neoDraw(g,m,flash){
+  const n=m.n,a=m.alpha??1,sh=n.hurt>0?(rnd(n.hurt)/2-n.hurt/4):0;
+  // the wires (green, orange once weakened), from each part up past the top of the screen
+  g.save();g.lineWidth=2;
+  for(let i=0;i<6;i++){
+   if(!n.vis[i])continue;
+   g.strokeStyle=n.weak[i]?'#ff8000':'#00ff00';g.globalAlpha=a;
+   const x1=m.x+n.px[i]+n.xoff[i]/1.2+i*5+Math.sin(n.siner[i]/30)*2,y1=m.y+n.py[i]-10+n.yoff[i];
+   g.beginPath();g.moveTo(x1,y1);g.lineTo(m.x+n.px[i]+n.xoff[i]/1.5+i*8,-400);g.stroke();
+   if(n.weak[i]===1&&n.weakT<11){g.strokeStyle='#ffffff';g.globalAlpha=a*Math.min(1,11-n.weakT/10);g.stroke()}
+  }
+  if(n.endcon<2){g.lineWidth=1;g.strokeStyle='#00ff00';g.globalAlpha=a;g.beginPath();g.moveTo(m.x+n.px[4]+n.xoff[4]/1.2+20+Math.sin(n.siner[4]/25)*1.8,m.y+n.py[4]-10+n.yoff[4]);g.lineTo(m.x+n.px[4]+n.xoff[4]/1.5+32,-400);g.stroke()}
+  g.restore();
+  for(let i=0;i<8;i++){
+   if(!n.vis[i])continue;
+   const spr=i===5&&n.sad?'spr_sneo_head_sad':NEO_PARTS[i];
+   draw(g,spr,n.frame[i],m.x+n.px[i]+n.xoff[i]+sh,m.y+n.py[i]+n.yoff[i]-sh,2,2,n.rot[i],a,{tint:n.blend[i]||undefined,flash});
+  }
+ }
+ // ------------------------------------------------------------------ the original fight's coaster
+ // obj_ch2_sceneex2: the cityscape (3 layers, 5 / 5.5 / 6 px a step), three rails at -15 px a step,
+ // and the party's go-karts (o_coaster_hero_sneo) that follow each hero.
+ function neoBgStep(){const b=S.nbg||(S.nbg={cs:0,tx:0});b.cs-=5;b.tx=(b.tx-15)%640}
+ function neoBgDraw(g){
+  const b=S.nbg||{cs:0,tx:0},a=Math.min(1,S.bgalpha);
+  const row=(n,x0)=>{const tw=meta(n)[0]*2;let x=(((x0%tw)+tw)%tw)-tw;for(;x<640;x+=tw)draw(g,n,0,x,0,2,2,0,a)};
+  row('bg_dw_mansion_basement_cityscape_background',b.cs);
+  row('bg_dw_mansion_basement_cityscape_midground',b.cs*1.1);
+  row('bg_dw_mansion_basement_cityscape_foreground',b.cs*1.2);
+  for(const y of [180,240,300])for(let k=-1;k<=1;k++)draw(g,'spr_sneo_track',0,b.tx+k*640,y,2,2,0,a);
+ }
+ const NEO_CARX=[-15,-5,-10],NEO_CARY=[101,182,260];
+ function drawNeoCar(g,h,front){
+  if(h.absent||h.i>2)return;
+  draw(g,front?'spr_sneo_car_front':'spr_sneo_car_back',0,h.x+NEO_CARX[h.i],NEO_CARY[h.i],2,2);
+ }
+ // ------------------------------------------------------------------ yellow SOUL
+ // obj_heart (color 1): Z shoots (3 on screen at most); hold Z to charge a BIG SHOT
+ function yellowStep(h){
+  const y=S.yellow,K=MP?MP.lk:held,hold=!!K.confirm,rel=y.prev&&!hold,m=neoOf();y.prev=hold;
+  if(y.delay>0)y.delay--;
+  if(P.confirm||(y.zhold>=10&&y.zhold<=39&&rel)){
+   if(S.yshots.filter(s=>!s.dead).length<3&&y.delay===0){neoShot(h.x+10,h.y+10,0);snd('heartshot')}
+  }
+  // snd_chargeshot_charge: pitch 0.1 at z_hold 20, +0.05 per step up to 40 (a rising whine)
+  if(y.zhold===20&&!y.loop)y.loop=sndLoop('chargecharge',.1);
+  if(y.loop&&y.zhold>=20&&y.zhold<40)y.loop.rate(.1+(y.zhold-20)/20);
+  y.zcharge=Math.min(35,y.zhold-15);
+  if(y.zcharge<15)y.count=0;
+  y.frame=y.zhold>=40?2:0;
+  if(y.zhold>=40&&rel){
+   if(y.loop){stopLoop(y.loop);y.loop=null}
+   snd('chargefire');
+   const b=neoShot(h.x+10,h.y+10,1);
+   y.zhold=0;y.delay=5;y.frame=0;y.count++;
+   if(m){m.n.bigused=1;
+    if(m.n.bigshot>0){
+     b.hs=10*NEO_F;b.trail=1;m.n.bigshot--;
+     if(m.n.bigshot===0)snd('stardrop');
+     neoParticles(h.x+10,h.y+10,m.n.bigshot===0?16:8,m.n.bigshot===0);
+    }
+   }
+  }
+  if(hold){if(m&&m.n.bigshot>0)y.zhf++;y.zhf++}
+  else{y.zhf=0;if(y.loop){stopLoop(y.loop);y.loop=null}}
+  y.zhold=y.zhf*2;
+ }
+ function neoShot(x,y,big){
+  const s=big?{x,y,big:1,hs:4*NEO_F,acc:.2*NEO_F,alpha:.5,xs:.1,ys:2,trail:0,tt:0}:{x,y,big:0,hs:8*NEO_F,acc:0,alpha:1,xs:1,ys:1};
+  S.yshots.push(s);return s;
+ }
+ function neoParticles(x,y,sp,big){
+  let a=rnd(45);
+  for(let k=0;k<8;k++){const d=a+rnd(15);S.yfx.push({kind:'part',x,y,hs:Math.cos(d*Math.PI/180)*sp,vs:-Math.sin(d*Math.PI/180)*sp,fric:.8,xs:big?2+rnd(2):1,ys:big?2+rnd(2):1,t:0});a+=45}
+ }
+ function yshotHitFx(s){S.yfx.push({kind:'hit',spr:s.big?'spr_yheart_shot_hit':'spr_yheart_shot_hit',x:s.x,y:s.y,sc:s.big?3:1,f:0});s.dead=true}
+ // the shot rectangle (spr_yheart_shot 25x9 / spr_yheart_bigshot 45x28, origins at the tip)
+ const yshotRect=s=>s.big?[s.x-32*s.xs,s.y-14*s.ys,s.x+13*s.xs,s.y+14*s.ys]:[s.x-18,s.y-4,s.x+7,s.y+5];
+ function rectHitsRot(r,o,box,ang){
+  // does rect r touch box (around o, rotated by ang)? test r's corners + center against the box
+  const c=Math.cos(ang*Math.PI/180),s=Math.sin(ang*Math.PI/180);
+  for(const [px,py] of [[r[0],r[1]],[r[2],r[1]],[r[0],r[3]],[r[2],r[3]],[(r[0]+r[2])/2,(r[1]+r[3])/2],[r[2],(r[1]+r[3])/2]]){
+   const dx=px-o.x,dy=py-o.y,lx=dx*c-dy*s,ly=dx*s+dy*c;
+   if(lx>=box[0]&&lx<box[2]&&ly>=box[1]&&ly<box[3])return true;
+  }
+  return false;
+ }
+ function yshotsStep(){
+  const m=neoOf();
+  for(const s of S.yshots){
+   if(s.dead)continue;
+   if(s.big){s.hs+=s.acc;s.alpha=Math.min(1,s.alpha+.1*NEO_F);if(s.xs<1)s.xs=Math.min(1,s.xs+.1*NEO_F);if(s.ys>1)s.ys=Math.max(1,s.ys-.1*NEO_F)}
+   s.x+=s.hs;
+   if(s.trail&&++s.tt>=2){s.tt=0;S.yfx.push({kind:'trail',x:s.x-10,y:s.y,a:1,t:0})}
+   if(s.x>=700){s.dead=true;continue}
+   const r=yshotRect(s);
+   // bullets that can be shot down (destroyable)
+   for(const b of S.bullets){
+    if(b.dead||!b.neo||!b.destroyable||!b.box)continue;
+    if(!rectHitsRot(r,b,b.box,b.boxAng||0))continue;
+    neoShootBullet(b,s);if(s.dead)break;
+   }
+   if(s.dead)continue;
+   // his head (obj_sneo_hitdetector)
+   if(m&&!m.n.noHit&&rectHitsRot(r,neoHead(m),NEOHEAD,neoHead(m).ang)){neoHeadHit(m,s);yshotHitFx(s)}
+  }
+  S.yshots=S.yshots.filter(s=>!s.dead);
+  for(const e of S.yfx){
+   e.t++;
+   if(e.kind==='part'){e.x+=e.hs;e.y+=e.vs;const sp=Math.hypot(e.hs,e.vs);if(sp>0){const k=Math.max(0,sp-e.fric)/sp;e.hs*=k;e.vs*=k}if(sp<.5)e.xs-=.1,e.ys-=.1;if(e.xs<=0||e.t>40)e.dead=true}
+   if(e.kind==='hit'){e.f+=.5;if(e.f>=5)e.dead=true}
+   if(e.kind==='head'){e.x+=Math.cos(e.dir*Math.PI/180)*e.sp;e.y-=Math.sin(e.dir*Math.PI/180)*e.sp;e.a-=.04;if(e.a<=0||e.x>700)e.dead=true}
+   if(e.kind==='trail'){e.a-=.15;if(e.a<=0)e.dead=true}
+  }
+  S.yfx=S.yfx.filter(e=>!e.dead);
+ }
+ // obj_sneo_hitdetector: at full HP a hit counts toward MERCY, after that it hurts him
+ function neoHeadHit(m,s){
+  const n=m.n;if(n.noHit)return;
+  n.hit=1;
+  if(m.hp>=m.maxhp){
+   if(s.big)mercyadd(S.mons.indexOf(m),1);
+   else if(++n.ssm>9){n.ssm=0;mercyadd(S.mons.indexOf(m),1)}
+  }else{
+   const dmg=Math.ceil(m.maxhp*(s.big?.01:.002));
+   m.hp=Math.max(1,m.hp-dmg);
+   S.dmgw.push(dmgwriter(monsterx(m),monstery(m)+20-S.hittarget[S.mons.indexOf(m)]*20,dmg,1,{delay:8}));
+  }
+  snd('damage');
+ }
+ function neoShootBullet(b,s){
+  if(b.onShot){b.onShot(b,s);return}
+  if(!s.big)yshotHitFx(s);
+  if(b.kind==='crew')snd('bomb',1.1+Math.random()*.2); // snd_play_x(snd_bomb, .7, 1.1+random(.2))
+  S.yfx.push({kind:'hit',spr:'spr_yheart_shot_hit3',x:b.x,y:b.y,sc:1,f:0});b.dead=true;
+ }
+ function drawYellow(g){
+  const h=S.heart,y=S.yellow;if(!h||!y)return;
+  for(const e of S.yfx){
+   if(e.kind==='trail')draw(g,'spr_yheart_bigshot_trail',0,e.x,e.y,.8,.5,0,e.a);
+   if(e.kind==='part')draw(g,'spr_yheart_charge',0,e.x,e.y,e.xs,e.ys);
+   if(e.kind==='hit')draw(g,e.spr,e.f,e.x,e.y,e.sc,e.sc);
+   if(e.kind==='head')draw(g,'spr_sneo_crew',0,e.x,e.y,1,1,0,Math.max(0,e.a));
+  }
+  for(const s of S.yshots)draw(g,s.big?'spr_yheart_bigshot':'spr_yheart_shot',0,s.x,s.y,s.xs,s.ys,0,s.alpha);
+  if(S.mnfight!==2)return;
+  const zn=y.zhold-35;
+  if(zn>=0){let k=Math.abs(Math.sin(zn/10));draw(g,'spr_yellowheart',0,h.x-k*10,h.y-k*10,1+k,1+k,0,.3);k=Math.abs(Math.sin(zn/14));draw(g,'spr_yellowheart',0,h.x-2-k*10,h.y-2-k*10,1.2+k,1.2+k,0,.3)}
+  if(y.zhold>=15){const zc=Math.min(35,y.zhold-15);for(let i=0;i<4;i++){const rx=(i*90+zc*5)*Math.PI/180,xx=Math.sin(rx)*(35-zc),yy=Math.cos(rx)*(35-zc);draw(g,'spr_yheart_charge',0,h.x+9-xx,h.y+10-yy,4-zc*2/35,4-zc*2/35,0,zc/5)}}
+  const m=neoOf();
+  if(m&&m.n.bigshot>0){y.sct=(y.sct||0)+1;let k=Math.abs(Math.sin(y.sct/10));draw(g,'spr_yellowheart',0,h.x-k*10,h.y-k*10,1+k,1+k,0,.5,{tint:'#ffa040'})}
+ }
+ // ---------------------------------------------------------------- his turn
+ // obj_spamton_neo_enemy Other_10: the attack each phase turn, and the phase changes.
+ const NEO_ORDER={1:[0,1],2:[6,0],3:[2,0],4:[8,0],5:[8.5,0],6:[7,0],7:[2,2],8:[0,3],9:[7,0],10:[8.5,2],11:[8,1],12:[6,1]};
+ const NEO_FINAL={1:[2,1],2:[8,3],3:[9,0],4:[2,1],5:[7,0],6:[9,0]};
+ // what he says before each attack (ballooncon), then the in-between quips
+ const NEO_SAY={
+  1:['3X THE [Fire]POWER.&2X THE [Water]POWER.&AND BEST OF ALL,&FLYING [Heads]!'],
+  2:['KRIS! ISN\'T THIS&[Body] JUST [Heaven]LY!?','WE\'LL TURN THOSE&[Schmoes] AND [Daves]&INTO [Rosen Graves]','THOSE [Cathode Screens]&INTO [Cathode Screams]'],
+  3:['ALL YOU GOTTA&DO IS [Big].','THEN WE\'LL BE&THE ONES MAKING&THE [Calls], KRIS!'],
+  4:['KRIS, DON\'T YOU&WANNA BE [Part]&OF MY BEAUTIFUL [Heart]?!','OR... DID YOU NEED&A LITTLE&[Specil Tour]?'],
+  5:['IT\'S CALLING, KRIS...&MY [Heart]...&MY [Hands]...','LOOK IN MY [Eyes]&LOOK IN MY [Nose]&LOOK IN MY [Mouth]'],
+  6:['[Die Now] AND I\'LL&THROW IN [50]&[Bullets] FOR FREE!'],
+  7:['KRIS!! THINK!!&WHAT ARE MY&[Eggs] GOING TO DO!?'],
+  8:['YOU DON\'T NEED [Friends]!!','I CAN MAKE MY&HANDS INTO&PHONES!!!'],
+  10:['KRIS!&CAN YOU REALLY&LOOK IN MY [Eyes]&AND SAY NO!?','I WILL GIVE YOU&[3 Easy Payments&of $9.99!]'],
+  11:['I CAN ONLY [Kill]&YOU [50-percent faster&than similar products]&OR [No Money Back!]'],
+  12:['DO YOU WANNA BE&A [Heart] ON A [Chain]&YOUR WHOLE LIFE!?'],
+  13:['KRIS...&I WON\'T FORCE YOU.&I CAN\'T.&I CAN\'T FORCE YOU.','Did you wanna&be...'],
+  25:['BUT JUST LOOK, KRIS.&LOOK AT THE [Power of&NEO] AND ASK YOURSELF...','WELL, DON\'T YOU?','DON\'T YOU WANNA&BE A [Big Shot]!?']
+ };
+ function neoBalloon(n){
+  const r=n.rr,d=n.diff;
+  if(r===0&&d===1)return 1;if(r===6&&d===0)return 2;if(r===8&&d===0)return 3;if(r===2&&d===0)return 4;
+  if(r===8.5&&d===0)return 0;if(r===7&&n.face===0)return 5;if(r===0&&d===3)return 6;if(r===2&&d===2)return 0;
+  if(r===8&&d===1)return 7;if(r===8.5&&d===2)return 8;if(r===7&&n.face===1)return 10;if(r===6&&d===1)return 11;
+  if(r===2&&d===1)return 12;if(r===8&&d===3)return 13;if(r===9&&!n.finalTalk){n.finalTalk=1;return 25}
+  return -1;
+ }
+ function neoQuip(n){
+  const k=choose(0,1,2,3);
+  if(k===0){const t=n.alt2?'[BreaKing] and&[CracKing]':'CAN A [Little&Sponge] DO THIS?';n.alt2=n.alt2?0:1;return t}
+  if(k===1){const t=n.alt?'THE [@$@!] TASTE&OF SPAMTON':'[The Smooth&Taste Of] NEO';n.alt=n.alt?0:1;return t}
+  if(k===2)return 'DON\'T YOU&WANNA BE A&BIG SHOT?';
+  return '[Clown]!? NO!!!&I FEEL SICK!!!';
+ }
+ // the attacks this port has so far; the rest stand in with one that does
+ const NEO_HAVE=new Set([0,8.5,6,2,9,7,8]);
+ function neoTalk(m){
+  const n=m.n,r=m.hp/m.maxhp,mc=m.mercy;
+  if(n.phase===1&&(mc>25||r<.75))n.phase=2;
+  if(n.phase===2&&(mc>50||r<.5))n.phase=3;
+  if(n.phase===3&&(mc>70||r<.3)){n.phaseturn=0;n.phase=4}
+  n.turn++;n.phaseturn++;
+  let pick=(n.phase===4?NEO_FINAL:NEO_ORDER)[n.phaseturn];
+  if(n.phase<4&&n.phaseturn===12)n.phaseturn=7;
+  if(n.phase===4&&n.phaseturn===6)n.phaseturn=3;
+  if(!pick)pick=[0,1];
+  [n.rr,n.diff]=pick;
+  if(((r<.1)||mc>90)&&!n.final){n.rr=9;n.diff=0;n.final=1;n.phaseturn=3}
+  if(n.rr===9)n.final=1;
+  const b=neoBalloon(n);
+  if(n.rr===7)n.face++;
+  n.atk=NEO_HAVE.has(n.rr)?n.rr:0;
+  const pages=b>0?NEO_SAY[b]:b<0?[neoQuip(n)]:null;
+  if(!pages)return null;
+  // his balloon is wider than the usual one: up to 25 characters a line
+  const tall=pages.some(p=>p.split('&').length>4);
+  return {pages:pages.map((p,k)=>p+(k===pages.length-1?'/%':'/')),spr:tall?'spr_battleblcon_long_tall':'spr_battleblcon_long',xs:1.75,bx:m.x-285,by:m.y+20,bubble:NEOBUBBLE};
+ }
+ function neoFlavor(m){
+  const n=m.n;
+  if(m.hp<m.maxhp*.1&&!n.final)return '* Spamton looks to the heavens.';
+  if(!n.bigused&&m.hp>m.maxhp*.7)return '* Hold and release Z to fire a BIG SHOT!';
+  if(n.bigused){
+   const o=n.order=(n.order||0);n.order++;
+   const L={0:'* Spamton turns to the audience and laughs.',1:'* Spamton appeals to the audience with a festive jig!',2:'* Spamton begs to the audience, Spamton prays to the audience.',3:'* There is no audience.',6:'* Spamton begs the audience to stop taking the furniture out of his room.',9:'* Spamton feels the sweet breeze as he takes a ride around town.'};
+   if(L[o])return L[o];
+  }
+  return choose('* The stage lights are shattered.','* It pulls the strings and makes them ring.','* The air crackles with freedom.','* Smells like rotten glass.');
+ }
+ // obj_growtangle for each attack: [x offset from 245, y offset from 170, xscale, yscale]
+ const NEO_BOX={0:[54,0,3.2,1.5],3:[44,54,2,2],6:[58,0,3.3333,2.3],7:[15,0,2,2],8.5:[64,8,3.2,1.5],4:[64,8,3.2,1.5],9:[0,10,2.5,1.9]};
+ function neoStart(g){
+  const m=g.m,n=m.n,a=n.atk,bx=NEO_BOX[a]||[0,0,2,2];
+  spawnBox({x:245+bx[0],y:170+bx[1]});S.box.sx=bx[2];S.box.sy=bx[3];
+  S.yellow={zhold:0,zhf:0,delay:0,count:0,frame:0,prev:1,loop:null};S.yshots=[];S.yfx=[];
+  S.hsp=5;
+  g.ctl={type:a,btimer:0,atimer:0,timer:0,dmg:Math.round(m.at*5),target:g.target,diff:n.diff,init:1};
+  S.turntimer=260;
+  if(a===0)S.turntimer=n.diff===2?360:n.diff===3?300:240;
+  if(a===6)S.turntimer=330;
+ }
+ function neoGen(g){
+  const c=g.ctl;if(!c)return;
+  c.btimer++;
+  if(c.type===0)neoFlyingHeads(c);
+  if(c.type===8.5)neoPhonehands(c,g.m);
+  if(c.type===6)neoWalls(c,g.m);
+  if(c.type===2)neoHeartAttack(c,g.m);
+  if(c.type===9)neoFinale(c,g.m);
+  if(c.type===7)neoFace(c,g.m);
+  if(c.type===8)neoPhone(c,g.m);
+  for(const b of S.bubbles||[])if(b.manual&&b.w&&!c.ph)b.w.step();
+ }
+ // ---- FlyingHeads: obj_sneo_guymaker spawning obj_sneo_lilguy
+ function neoCrew(x,y,o,c){
+  const b=Object.assign({kind:'crew',neo:1,x,y,hs:0,vs:0,grav:0,gdir:270,fric:0,f:0,t:0,a0:44,a1:40,a2:32,destroyable:1,fluffyKill:1,
+   dmg:c.dmg,target:c.target,grazepoints:2,timepoints:2,grazed:0,box:CREWBOX,ysin:0},o);
+  S.bullets.push(b);return b;
+ }
+ function neoFlyingHeads(c){
+  const type=c.diff===0?1:c.diff===1?2:c.diff===2?3:4;
+  c.timer++;
+  if(c.timer===1){
+   if(type===1)c.row=choose(0,1);
+   if(type===2){let aa=choose(0,1,2);if(c.prowy===0)aa=choose(1,2);if(c.prowy===1)aa=choose(0,2);if(c.prowy===2)aa=choose(0,1);c.rowy=210-46*aa;c.prowy=aa;c.row=2}
+   if(type===3||type===4){c.rowy=210-40*choose(0,1);c.row=choose(0,1,3,6);if(c.prow===2)c.row=choose(0,1,3,6);if(c.prow===3)c.row=choose(0,1);if(c.row===3&&!c.first)c.row=choose(0,1);c.first=1}
+  }
+  if([5,10,15,20].includes(c.timer)){
+   if(c.row<=2){
+    const b=neoCrew(700,280,{hs:-18,vs:-2,fric:-.1,grav:.5,gdir:0},c);
+    if(c.row===1){b.y-=240;b.vs=-b.vs}
+    if(c.row===2){b.y-=120;b.vs=0;b.hs=-21}
+    if(c.row===2&&type===2){b.hs=-21;b.grav=0;b.fric=.5;b.a0=36;b.change={dir:180,sp:4,fric:-.2,grav:0}}
+    if(type>=2&&c.row===2)b.y=c.rowy;
+   }
+   if(c.row===3&&c.timer!==20)for(let k=0;k<2;k++)neoCrew(300,-40+400*k,{vs:18-36*k,grav:.8-1.6*k,gdir:90},c);
+   if(c.row===6&&c.timer===5)for(let a=0;a<2;a++){neoCrew(410+a*70,-20,{vs:15,grav:.53,gdir:90,a1:30},c);neoCrew(445+a*70,380,{vs:-15,grav:-.53,gdir:90},c)}
+  }
+  if((type===2&&c.timer>=41)||(type===3&&c.timer>=69)||(type===4&&c.timer>=50)||c.timer>=50)c.timer=0;
+  if(c.timer===0)c.prow=c.row;
+ }
+ function neoCrewStep(b){
+  b.t++;
+  if(b.t===b.a0&&b.change){const ch=b.change,sp=ch.sp;b.hs=Math.cos(ch.dir*Math.PI/180)*sp;b.vs=-Math.sin(ch.dir*Math.PI/180)*sp;b.fric=ch.fric;b.grav=ch.grav}
+  if(b.t===b.a2)b.f=1;
+  if(b.t===b.a1){
+   const h=S.heart;
+   if(h){const d=Math.atan2(h.y+8-(b.y+12),h.x+8-b.x);S.bullets.push({kind:'crewbul',neo:1,x:b.x,y:b.y+12,hs:Math.cos(d)*8,vs:Math.sin(d)*8,ang:0,dmg:b.dmg,target:b.target,grazepoints:3,timepoints:2,grazed:0,box:CREWBUL,fluffyKill:1})}
+   b.f=2;b.anim=1;
+  }
+  if(b.anim){b.f+=1;if(b.f>=4){b.f=0;b.anim=0}}
+  b.ysin++;
+  gmMove(b);
+  if(b.x>=1000||b.x<=-200||b.y>=600||b.y<=-200){b.dead=true;return}
+  collide(b,CREWBOX,0);
+ }
+ function neoBulletStep(b){
+  if(b.kind==='crew'){neoCrewStep(b);return}
+  if(b.kind==='nb'){neoBulStep(b);return}
+  if(b.kind==='wall'||b.kind==='wbomb'){neoWallStep(b);return}
+  if(b.kind==='wheart'){neoWheartStep(b);return}
+  if(b.kind==='fforme'){neoFormeStep(b);return}
+  if(b.kind==='pegg'){neoEggStep(b);return}
+  if(b.kind==='pcannon'){neoCannonStep(b);return}
+  if(b.kind==='pwall'){if(b.al<1)b.al+=.1;if(S.turntimer<1)b.dead=true;return}
+  if(b.kind==='phone'){return}
+  if(b.kind==='fpart'){neoFacePartStep(b);return}
+  if(b.kind==='nb2'){neoBul2Step(b);return}
+  if(b.kind==='dollar'){neoDollarStep(b);return}
+  if(b.kind==='phmaster'){neoPhoneMasterStep(b);return}
+  if(b.kind==='phand'){neoPhoneHandStep(b);return}
+  if(b.kind==='crewbul'){b.x+=b.hs;b.y+=b.vs;b.ang+=36;if(b.x>740||b.x<-100||b.y>580||b.y<-100){b.dead=true;return}collide(b,CREWBUL,0);return}
+ }
+ // the heads blink between NEO blue and aqua while they can be shot
+ function drawNeoBullet(g,b){
+  if(b.kind==='crew'){const k=.25+Math.sin(b.ysin/3)*.25;draw(g,'spr_sneo_crew',b.f,b.x,b.y,1,1,0,1,{tint:mix('#00a2e8','#00ffff',k)});return}
+  if(b.kind==='crewbul'){draw(g,'spr_sneo_crew_bullet',0,b.x,b.y,1,1,b.ang);return}
+  if(b.kind==='wall'||b.kind==='wbomb'){drawNeoWall(g,b);return}
+  if(b.kind==='wheart'){drawNeoWheart(g,b);return}
+  if(b.kind==='fforme'){draw(g,'spr_sneo_final_forme',b.f,b.x,b.y,1,1);return}
+  if(b.kind==='pegg'){
+   if(b.label)draw(g,'spr_pipissign',0,b.x-4+rnd(1),b.y+24+rnd(1),1,1);
+   draw(g,'spr_pipis_egg',b.f,b.x+(b.shake?rnd(8)-4:0),b.y+(b.shake?rnd(8)-4:0),2,2,b.ang);return}
+  if(b.kind==='pcannon'){drawNeoCannon(g,b);return}
+  if(b.kind==='pwall'){draw(g,'spr_pipis_wall',0,b.x,b.y,b.xs,1,0,b.al,{tint:'#00ff00'});return}
+  if(b.kind==='phone'){drawNeoPhone(g,b);return}
+  if(b.kind==='fpart'){drawNeoFacePart(g,b);return}
+  if(b.kind==='nb2'){draw(g,b.spr,b.frame||0,b.x,b.y,b.xs,b.ys);return}
+  if(b.kind==='dollar'){draw(g,'spr_spamton_dollar',0,b.x,b.y,b.sc,b.sc,0,b.alpha);return}
+  if(b.kind==='nb'){draw(g,b.spr,b.frame||0,b.x,b.y,b.xs,b.ys,b.noRot?0:b.dir);if(b.flash>0)draw(g,b.spr,0,b.x-2,b.y-2,b.xs,b.ys,0,b.flash/5,{fog:'#ffff00'});return}
+  if(b.kind==='phmaster'){if(b.vt>=2)draw(g,b.spr,0,b.x,b.y,2,2,0,b.alpha,{tint:mix('#00a2e8','#00ffff',.25+Math.sin(b.siner/3)*.25)});return}
+  if(b.kind==='phand'){
+   if(b.vt<2)return;
+   const ms=b.boss;g.save();g.globalAlpha*=b.alpha;g.strokeStyle='#00ff00';g.lineWidth=4;
+   g.beginPath();g.moveTo(b.x,b.y);g.lineTo(b.jx,b.jy);g.lineTo(ms.x,ms.y);g.stroke();g.restore();
+   for(let i=0;i<4;i++){draw(g,'spr_sneo_bullet0',0,lerpN(b.x,b.jx,i/4),lerpN(b.y,b.jy,i/4),2,2,0,b.alpha,{tint:'#00ff00'});draw(g,'spr_sneo_bullet0',0,lerpN(b.jx,ms.x,i/4),lerpN(b.jy,ms.y,i/4),2,2,0,b.alpha,{tint:'#00ff00'})}
+   draw(g,'spr_sneo_phonehand',0,b.x,b.y,1,b.ys,0,b.alpha);return;
+  }
+ }
+ // FluffyGuard (Ralsei): a bubble on the SOUL that soaks hits until its 100 HP run out
+ function fluffyStep(){
+  const fg=S.fluffy,h=S.heart;if(!fg||!h)return;
+  if(fg.hp<1){if(fg.active)snd('hurt',2); // snd_pitch(snd_play(snd_hurt1), 2)
+   fg.active=0;fg.alpha-=.05;if(fg.alpha<.01)S.fluffy=null;return}
+  if(fg.alarm>0)fg.alarm--;
+  if(S.mnfight!==2)return;
+  const cx=h.x+10,cy=h.y+9;
+  for(const b of S.bullets){
+   if(b.dead||!b.neo||!b.box)continue;
+   const bx=(b.box[0]+b.box[2])/2+b.x,by=(b.box[1]+b.box[3])/2+b.y,rr=Math.max(b.box[2]-b.box[0],b.box[3]-b.box[1])/2+22;
+   if(Math.hypot(bx-cx,by-cy)>rr)continue;
+   if(b.fluffyKill){if(b.kind==='crew')snd('bomb',1.1+Math.random()*.2);b.dead=true}
+   if(fg.alarm>0)continue;
+   fg.hp-=10;fg.alarm=10;snd('hurt');
+  }
+ }
+ function drawFluffy(g){const fg=S.fluffy,h=S.heart;if(!fg||!h||S.mnfight!==2||[9,8,5,4,1].includes(fg.alarm))return;draw(g,'spr_queen_winebubble_edit2',S.t/2,h.x+10,h.y+9,2,2,0,fg.alpha)}
+ // ---- ACT (Check / Snap / SnapAll / Supercharge / FluffyGuard)
+ function neoSnap(m,amount){
+  const n=m.n,ok=[];for(let i=0;i<6;i++)if(n.vis[i]&&!n.weak[i])ok.push(i);
+  const set=Math.min(amount,100-m.mercy);
+  if(set>0)mercyadd(S.mons.indexOf(m),set);
+  if(ok.length&&set>0){const i=ok[Math.floor(R()*ok.length)];n.weak[i]=1;n.weakT=1;snd('weirdeffect')}
+  return set;
+ }
+ // ---- plain GameMaker bullets (obj_basicbullet_sneo / obj_regularbullet): speed, direction, friction
+ const SOUNDBUL=[-5,-5,6,8],BUL0=[-2,-2,3,3];
+ const scaleBox=(r,xs,ys=xs)=>{const a=[r[0]*xs,r[1]*ys,r[2]*xs,r[3]*ys];return [Math.min(a[0],a[2]),Math.min(a[1],a[3]),Math.max(a[0],a[2]),Math.max(a[1],a[3])]};
+ function neoBul(o,c){
+  const b=Object.assign({kind:'nb',neo:1,x:0,y:0,dir:180,sp:0,fric:0,spr:'spr_sneo_soundbullet',xs:1,ys:1,box:SOUNDBUL,
+   dmg:c.dmg,target:c.target,grazepoints:3,timepoints:2,grazed:0,fluffyKill:1,t:0},o);
+  b.box=scaleBox(b.box,b.xs,b.ys);S.bullets.push(b);return b;
+ }
+ function neoBulStep(b){
+  b.t++;
+  if(b.fric>0)b.sp=Math.max(0,b.sp-b.fric);else if(b.fric<0)b.sp-=b.fric;
+  b.x+=Math.cos(b.dir*Math.PI/180)*b.sp;b.y-=Math.sin(b.dir*Math.PI/180)*b.sp;
+  if(b.split&&b.t===b.split){
+   // obj_sneo_mmx_spreadshot Alarm_0: three sound bullets fanning out behind it
+   for(let i=0;i<3;i++)neoBul({x:b.x,y:b.y,dir:120+i*60,sp:2,fric:-.6,grazepoints:7},b);
+   b.dead=true;return;
+  }
+  if(b.split&&(b.split-b.t===8||b.split-b.t===16))b.flash=5;
+  if(b.flash>0)b.flash--;
+  if(b.x>740||b.x<-100||b.y>580||b.y<-100){b.dead=true;return}
+  collide(b,b.box,b.noRot?0:b.dir);
+ }
+ // ---- Phonehands (bulletcontroller type 8.5 / obj_sneo_phonehand_master + obj_sneo_phonehand)
+ const PHONEHAND=[-28,-8,28,13];
+ function neoPhonehands(c,m){
+  if(c.btimer>=1&&S.turntimer>11&&(m.alpha??1)>-.2)m.alpha=(m.alpha??1)-.2;
+  if(c.btimer===115){
+   const [hw]=boxHalf();
+   const x=S.box.x+40+hw,y=S.box.y;
+   const ms={kind:'phmaster',neo:1,x,y,ystart:y,hs:0,fric:0,hp:200,siner:0,bt:0,alpha:0,vt:0,spr:'spr_sneo_head_sad',open:0,diff:c.diff,
+    dmg:c.dmg,target:c.target,grazepoints:3,timepoints:2,grazed:0,box:[-32,-46,16,12],destroyable:1,onShot:neoPhoneShot};
+   S.bullets.push(ms);
+   const hand=(top)=>({kind:'phand',neo:1,x:x-70,y:top?y-70:y+60,hs:0,fric:0,top,boss:ms,cs:0,alpha:0,vt:0,bt:0,alt:c.diff===2,
+    jx:x-10,jy:top?y-100:y+90,rjy:top?y-100:y+90,ys:top?1:-1,dmg:c.dmg,target:c.target,grazepoints:3,timepoints:2,grazed:0,box:top?PHONEHAND:scaleBox(PHONEHAND,1,-1)});
+   ms.top=hand(1);ms.bottom=hand(0);S.bullets.push(ms.top,ms.bottom);
+  }
+ }
+ function neoPhoneShot(ms,s){
+  ms.hp--;
+  if(ms.x<=480){ms.fric=.5;ms.hs+=s.big?8:4;for(const h of [ms.top,ms.bottom]){h.fric=.5;h.hs+=2+(s.big?4:0)}}
+  snd('damage');if(ms.x>=480)ms.x=480;
+  yshotHitFx(s);
+ }
+ const glide=b=>{if(b.hs){b.x+=b.hs;const sp=Math.abs(b.hs);b.hs=Math.sign(b.hs)*Math.max(0,sp-b.fric)}};
+ function neoPhoneMasterStep(b){
+  if(++b.vt>=2&&b.alpha<1)b.alpha+=.1;
+  b.siner++;glide(b);
+  if(b.x>=480)b.x=480;
+  const h=S.heart;if(h&&h.x>b.x-36)h.x=b.x-36;
+  b.y=b.diff===0?b.ystart+Math.sin(b.siner/8)*40:b.ystart+Math.sin(b.siner/10)*60;
+  if(!b.top.dead){if(b.diff<2)b.x=lerpN(b.x,b.top.x+70,.2);else b.x-=1}
+  if(b.open>0&&--b.open===0)b.spr='spr_sneo_head';
+  b.bt++;
+  const th=b.diff===1?15:b.diff===2?30:20;
+  if(b.bt>=th&&b.alpha>=1){
+   b.bt=0;
+   const dir=180+rnd(10)-5;
+   if(b.diff<2)neoBul({x:b.x,y:b.y,dir,sp:12,fric:1,spr:'spr_sneo_bullet0',xs:3,ys:3,box:BUL0,split:25,grazepoints:2,timepoints:1},b);
+   else neoBul({x:b.x,y:b.y,dir,sp:10,spr:'spr_sneo_bullet0',xs:3,ys:3,box:BUL0},b);
+   b.spr='spr_sneo_head_open';b.open=10;
+  }
+  collide(b,b.box,0);
+ }
+ function neoPhoneHandStep(b){
+  if(++b.vt>=2&&b.alpha<1)b.alpha+=.1;
+  glide(b);
+  const ms=b.boss,P5=5,A=4;
+  if(!b.alt){
+   b.cs++;
+   if(b.top){if(Math.sin(b.cs/P5)<0){b.y+=Math.cos(b.cs/P5)*A*2;b.x+=Math.sin(b.cs/P5)*A}}
+   else{const q=b.cs/P5+Math.PI/2;if(Math.cos(q)<0){b.y+=Math.sin(q)*A*2;b.x+=Math.cos(q)*A}}
+  }else{
+   b.cs+=b.top?1:-1;
+   const xx=200,ex=ms.x-20;b.x=xx+(ex-xx)/2+Math.sin(b.cs/12)*((ex-xx)/2);
+   b.bt++;
+   if(b.bt>=(b.top?28:18)){
+    const dir=(b.top?270:90)+rnd(4)-2;
+    neoBul({x:b.x,y:b.y,dir,sp:3,grazepoints:3},b);
+    b.bt=b.top?10:0;
+   }
+  }
+  b.jx=(b.x+ms.x)/2;b.jy=(b.rjy+b.y)/2;
+  if(b.alpha>=1)collide(b,b.box,0);
+ }
+ // ---- RECREW Columns (bulletcontroller type 6 / obj_sneo_wall_controller_new)
+ // Each column: 5 cells (0 mail, 1 gap, 2 a crew you can shoot out, 3 a Pipis bomb,
+ // 4 a red crew that takes the whole column down) and the frame-delay before it.
+ // Groups pick a random layout; 's' groups reuse the previous group's pick.
+ const W=(a,b,c,d,e,t)=>[[a,b,c,d,e],t];
+ const NEO_WALLS={
+  0:[{o:[[W(0,0,0,2,0,1),W(0,2,3,0,0,30),W(0,3,0,2,0,30)],[W(0,2,0,3,0,1),W(0,3,0,2,0,30),W(0,2,0,3,0,30)],[W(0,0,0,0,2,1),W(0,3,2,0,0,30),W(0,2,3,0,0,30)]]},
+     {o:[[W(0,1,1,0,0,40),W(0,2,2,0,0,6),W(0,2,2,0,0,6),W(0,2,2,0,0,6)],[W(0,0,0,1,1,40),W(0,0,0,2,2,6),W(0,0,0,2,2,6),W(0,0,0,2,2,6)],[W(0,0,1,1,0,40),W(0,0,2,1,0,6),W(0,0,2,2,0,6),W(0,0,2,2,0,6)]]},
+     {s:1,o:[[W(0,0,0,0,2,30),W(0,2,0,0,0,30),W(0,3,0,2,0,30)],[W(0,2,0,0,0,30),W(0,0,0,2,0,30),W(0,2,0,3,0,30)],[W(2,0,0,0,0,30),W(0,0,2,0,0,30),W(0,2,3,0,0,30)]]},
+     {o:[[W(0,1,1,0,0,40),W(0,2,2,0,0,6),W(0,2,2,0,0,6),W(0,2,2,0,0,6)]]}],
+  1:[{o:[[W(3,0,0,2,0,1),W(0,2,3,0,0,20),W(0,3,0,2,0,20)],[W(0,2,0,3,0,1),W(0,3,0,2,0,20),W(0,2,0,3,0,20)],[W(0,0,0,3,2,1),W(0,3,2,0,0,20),W(0,2,3,0,0,20)],[W(2,3,0,0,0,1),W(0,0,2,3,0,20),W(0,0,3,2,0,20)]]},
+     {o:[[W(3,0,0,2,0,20),W(0,2,3,0,0,20),W(0,3,0,2,0,20)],[W(0,2,0,3,0,20),W(0,3,0,2,0,20),W(0,2,0,3,0,20)],[W(0,0,0,3,2,20),W(0,3,2,0,0,20),W(0,2,3,0,0,20)],[W(2,3,0,0,0,20),W(0,0,2,3,0,20),W(0,0,3,2,0,20)]]},
+     {s:1,o:[[W(0,1,1,0,0,32),W(0,2,2,0,0,6),W(0,2,2,0,0,6),W(0,2,2,0,0,6)],[W(0,0,0,1,1,32),W(0,0,0,2,2,6),W(0,0,0,2,2,6),W(0,0,0,2,2,6)],[W(0,0,1,1,0,32),W(0,0,2,2,0,6),W(0,0,2,2,0,6),W(0,0,2,2,0,6)],[W(1,1,0,0,0,32),W(2,2,0,0,0,6),W(2,2,0,0,0,6),W(2,2,0,0,0,6)]]},
+     {s:1,o:[[W(0,0,0,0,2,20),W(0,2,0,0,0,20),W(0,3,0,2,0,20)],[W(0,2,0,0,0,20),W(0,0,0,2,0,20),W(0,2,0,3,0,20)],[W(2,0,0,0,0,20),W(0,2,0,0,0,20),W(0,2,3,0,0,20)],[W(0,0,0,2,0,20),W(2,0,0,0,0,20),W(0,0,3,2,0,20)]]},
+     {o:[[W(3,0,0,2,0,20),W(0,2,3,0,0,20),W(0,3,0,2,0,20)],[W(0,2,0,3,0,20),W(0,3,0,2,0,20),W(0,2,0,3,0,20)],[W(0,0,0,3,2,20),W(0,3,2,0,0,20),W(0,2,3,0,0,20)],[W(2,3,0,0,0,20),W(0,0,2,3,0,20),W(0,0,3,2,0,20)]]}]
+ };
+ const MAILBOX=scaleBox([-4,-7,4,7],1.2,1.71),CREWWALL=scaleBox(CREWBOX,1.2,1.2),BOMBBOX=[-12,-10,12,10];
+ function neoWallsSetup(c){
+  const seq=[];let pick=0;
+  for(const gp of NEO_WALLS[c.diff===1?1:0]){if(!gp.s)pick=Math.floor(R()*gp.o.length);seq.push(...gp.o[Math.min(pick,gp.o.length-1)])}
+  c.walls=seq;c.wi=0;c.wt=0;
+ }
+ function neoWalls(c,m){
+  if(!c.walls){neoWallsSetup(c);m.n.slide={x:m.n.xstart+200,t:16}}
+  if(S.turntimer===10)m.n.slide={x:m.n.xstart,t:8};
+  if(c.wi>=c.walls.length)return;
+  if(++c.wt<c.walls[c.wi][1])return;
+  const cells=c.walls[c.wi][0],wn=c.wi;c.wt=0;c.wi++;
+  const cell=(i,o)=>S.bullets.push(Object.assign({kind:'wall',neo:1,wn,x:640,y:68+i*34,dmg:c.dmg,target:c.target,grazepoints:2,timepoints:2,grazed:0,t:0},o));
+  cell(0,{spr:'spr_sneo_bullet_box',xs:1.25,ys:1.6,box:null,deco:1});
+  cell(6,{spr:'spr_sneo_wall_car',xs:1.25,ys:1.6,x:590,y:264,box:null,deco:1});
+  for(let i=1;i<=5;i++){
+   const k=cells[i-1];
+   if(k===1)continue;
+   if(k===3){cell(i,{kind:'wbomb',spr:'spr_mettaton_bomb1',box:BOMBBOX,destroyable:1,onShot:neoBombShot,timer:0,f:0});continue}
+   if(k===2||k===4)cell(i,{spr:'spr_sneo_crew',xs:1.2,ys:1.2,box:CREWWALL,destroyable:1,red:k===4,anim:1,onShot:neoWallShot});
+   else cell(i,{spr:'spr_sneo_mail',xs:1.2,ys:1.71,box:MAILBOX,destroyable:1,mail:1,onShot:neoWallShot});
+  }
+ }
+ function neoWallShot(b,s){
+  if(b.mail){
+   // mail stops your shot (a BIG SHOT only when it hits it square)
+   if(s.big&&Math.abs(s.y-b.y)>12)return;
+   yshotHitFx(s);snd('bell');return;
+  }
+  if(!s.big)yshotHitFx(s);
+  if(b.red)for(const o of S.bullets)if(o.kind==='wall'&&o.wn===b.wn&&!o.deco&&o!==b){o.dead=true;S.yfx.push({kind:'hit',spr:'spr_yheart_shot_hit3',x:o.x,y:o.y,sc:1.2,f:0})}
+  snd('bomb',1.1+Math.random()*.2);S.yfx.push({kind:'hit',spr:'spr_yheart_shot_hit3',x:b.x,y:b.y,sc:1.2,f:0});b.dead=true;
+ }
+ function neoBombShot(b,s){if(b.timer)return;snd('damage');if(!s.big)yshotHitFx(s);b.timer=1;b.anim=1}
+ function neoWallStep(b){
+  if(S.turntimer<1){b.dead=true;return}
+  if(b.kind==='wbomb'){
+   if(b.timer>0){
+    b.timer++;b.f+=1;
+    if(b.timer===6){snd('bomb');S.shake={amt:4,t:0};b.spr='spr_mettaton_bomb2';b.f=0;b.boom=1}
+    if(b.boom){const h=S.heart;if(h&&S.inv<=0){const cx=h.x+10,cy=h.y+10;if(Math.abs(cy-b.y)<7||Math.abs(cx-b.x)<6)damageHero(b)}}
+    if(b.timer===12)b.dead=true;
+    return;
+   }
+   b.x-=7;collide(b,b.box,0);return;
+  }
+  b.x-=7;if(b.anim)b.f+=.5;
+  if(b.box&&b.x>-60&&b.x<700)collide(b,b.box,0);
+ }
+ function drawNeoWall(g,b){
+  if(b.kind==='wbomb'){
+   draw(g,b.spr,b.f,b.x,b.y);
+   if(b.boom)for(let i=1;i<24;i++){draw(g,'spr_mettaton_bomb3',b.f,b.x+24*i,b.y,1,1,90);draw(g,'spr_mettaton_bomb3',b.f,b.x-24*i,b.y,1,1,90);draw(g,'spr_mettaton_bomb3',b.f,b.x,b.y-24*i);draw(g,'spr_mettaton_bomb3',b.f,b.x,b.y+24*i)}
+   return;
+  }
+  const tint=b.red?'#ff0000':b.mail||b.deco?null:'#40d1f4';
+  draw(g,b.spr,b.f||0,b.x,b.y,b.xs,b.ys,0,1,{tint:tint||undefined});
+ }
+ // ---- HeartAttack (bulletcontroller type 1.5 / obj_sneo_wireheart): his heart flies out on its wire
+ // and sprays diamonds. Shooting it ends the attack sooner.
+ const WHEART=[-16,-21,18,21],WHEART_S=[-11,-12,11,14];
+ const easeOut=(a,b,t)=>a+(b-a)*(1-(1-t)*(1-t)),easeIn=(a,b,t)=>a+(b-a)*t*t;
+ function neoHeartAttack(c,m){
+  if(!c.ha){c.ha=1;c.btimer=100;m.n.release=0;S.turntimer=c.diff===1?850:750}
+  if(c.btimer===110){
+   const mk=(type,big)=>S.bullets.push({kind:'wheart',neo:1,type,big,boss:m,bossx:m.x+10,bossy:m.y+80,x:m.x+10,y:m.y+80,rx:m.x+10,ry:m.y+80,
+    sc:.5,sct:0,con:1,mf:type===1?24:big?16:30,mt:0,shott:0,inv:2,fired:0,f:0,hp:type===1?10:300,bigc:0,smc:0,
+    dmg:Math.floor(m.at*5*.6),target:3,grazepoints:3,timepoints:2,grazed:0,box:type===1?WHEART_S:WHEART,destroyable:1,onShot:neoWheartShot});
+   mk(0,c.diff===2);
+   if(c.diff===1){mk(1,0);mk(1,0)}
+  }
+ }
+ function neoWheartShot(b,s){
+  if(b.inv>0&&!s.big){s.dead=true;return}
+  b.inv=10;
+  if(S.turntimer<150){
+   b.hp=0;
+   if(b.type===0){S.turntimer=Math.min(S.turntimer,20);for(const o of S.bullets)if(o.kind==='wheart')o.gone=1}
+  }else if(b.type===0){
+   if(s.big){S.turntimer-=80-b.bigc*10;if(b.bigc<3)b.bigc++}
+   else{S.turntimer-=20-b.smc;if(b.smc<10)b.smc++}
+  }else b.hp-=s.big?5:1;
+  snd('damage');yshotHitFx(s);
+  if(b.hp<=0)b.gone=1;
+ }
+ function neoWheartStep(b){
+  const m=b.boss,h=S.heart;
+  if(b.gone){b.sc-=.1;if(b.sc<=0)b.dead=true;return}
+  if(b.sct<20){b.sct++;b.sc=easeOut(.5,1,b.sct/20)}
+  b.rx=lerpN(b.rx,m.x+50-(m.n.release||0)*100,.16);b.ry=m.y+80;
+  if(b.inv>0)b.inv--;
+  if(b.con===1){
+   b.tx=300+rnd(70);b.ty=145+rnd(140)-70;
+   if(h&&b.type!==3&&!(S.htt>0)&&choose(0,1,2)===0){b.ty=h.y+10;S.htt=6}
+   b.mt=0;b.con=2;if(b.type===0)m.n.release=1;
+  }
+  if(S.htt>0)S.htt--;
+  if(b.con===2){b.mt+=1/b.mf;b.x=easeOut(b.bossx,b.tx,Math.min(1,b.mt));b.y=easeOut(b.bossy,b.ty,Math.min(1,b.mt));if(b.mt>=1){b.mt=0;b.con=10}}
+  else if(b.con===10){b.mt+=1/b.mf;b.x=easeIn(b.tx,b.bossx,Math.min(1,b.mt));b.y=easeIn(b.ty,b.bossy,Math.min(1,b.mt));if(b.mt>.5&&b.type===0)m.n.release=0;if(b.mt>=1){b.mt=0;b.shott=0;b.con=1}}
+  // it fires while it's near the end of its lunge
+  if(Math.abs((b.x-b.tx)/((b.tx-b.bossx)||1))<.2&&--b.shott<=0){
+   b.fired=4;
+   if(b.type===0){
+    let dir=0;if(b.big)dir=b.y<S.box.y?25+rnd(10):-rnd(10)-25;
+    for(let i=0;i<5;i++)S.bullets.push({kind:'nb',neo:1,x:b.x,y:b.y,dir:i/5*180+110+dir,sp:1,fric:b.big?-.23:-.3,spr:'spr_diamondbullet',xs:1,ys:1,box:DBOX,dmg:b.dmg,target:b.target,grazepoints:3,timepoints:2,grazed:0,t:0,fluffyKill:1});
+    b.shott=b.big?6:10;
+   }else{
+    const d=h?Math.atan2(-(h.y+10-b.y),h.x+10-b.x)*180/Math.PI:180;
+    S.bullets.push({kind:'nb',neo:1,x:b.x,y:b.y,dir:d,sp:3,fric:-.2,spr:'spr_diamondbullet',xs:.5,ys:.5,box:scaleBox(DBOX,.5),dmg:b.dmg,target:b.target,grazepoints:3,timepoints:2,grazed:0,t:0,fluffyKill:1});
+    b.shott=6;
+   }
+  }
+  if(b.fired>0)b.fired--;
+  b.f+=.25;
+  collide(b,b.box,0);
+ }
+ function drawNeoWheart(g,b){
+  const hide=[10,9,6,5,3,2].includes(b.inv);
+  if(hide)return;
+  for(let i=10;i>=0;i--)draw(g,'spr_sneo_wireheart',4,lerpN(b.x,b.rx,i/9),lerpN(b.y,b.ry,i/9),b.sc,b.sc);
+  draw(g,b.type===1?'spr_sneo_wireheart_smaller':'spr_sneo_wireheart',b.fired>0?1:0,b.x,b.y,b.sc,b.sc);
+ }
+ // ---- NEO Finale (bulletcontroller type 9 / obj_sneo_final_forme + obj_sneo_dollar): his final
+ // form flies in, opens its mouth, and swallows a stream of [[Dollars]] that cut through the box.
+ const FFORME=[41,8,129,106],DOLLAR=[-4,-6,2,6];
+ function neoFinale(c,m){
+  if(!c.fin){c.fin=1;c.special=1;c.btimer=0;S.turntimer=600;m.n.noHit=1;m.n.hide=1}
+  if(m.n.hide&&(m.alpha??1)>0)m.alpha=Math.max(0,(m.alpha??1)-.1);
+  if(c.special===1&&c.btimer===45){
+   c.special=2;c.btimer=0;
+   c.ff={kind:'fforme',neo:1,x:680,y:m.y,sp:16.75,f:0,dest:0,m,dmg:c.dmg,target:c.target,grazepoints:0,timepoints:0,grazed:0,box:FFORME,destroyable:1,onShot:neoFormeShot};
+   S.bullets.push(c.ff);snd('screenshake');
+  }
+  if(c.special===2&&c.btimer===70){c.ff.dest=1;c.ff.f=1;c.special=3;c.dc=0;c.opT=0;c.op=sndLoop('overpower',.1)} // snd_sneo_overpower: pitch .1 -> 1 over 90 frames
+  if(c.op){c.opT++;c.op.rate(Math.min(1,.1+.9*c.opT/90));if(S.turntimer<20){stopLoop(c.op);c.op=null}}
+  if(c.special===3&&c.btimer>=10){
+   c.btimer=0;const [hw,hh]=boxHalf();
+   const big=c.dc%5===2;c.dc++;
+   S.bullets.push({kind:'dollar',neo:1,x:S.box.x-hw-40-rnd(30),y:S.box.y-hh+rnd(hh*2),sp:8,dir:0,fric:0,sc0:big?1.5:1,sc:1,alpha:0,ff:c.ff,
+    dmg:Math.floor(m.at*5/3),target:c.target,grazepoints:4,timepoints:2,grazed:0,box:DOLLAR});
+  }
+  if(S.turntimer<=12){m.n.noHit=0;m.n.hide=0}
+ }
+ function neoFormeShot(b,s){if(!b.dest){yshotHitFx(s);return}neoHeadHit(b.m,s);yshotHitFx(s)}
+ function neoFormeStep(b){
+  if(b.sp>0){b.x-=b.sp;b.sp=Math.max(0,b.sp-.5)}
+  if(S.turntimer<20){b.x+=12;if(b.x>700)b.dead=true}
+ }
+ function neoDollarStep(b){
+  const ff=b.ff;if(b.alpha<1)b.alpha+=.2;
+  if(ff&&!ff.dead){
+   const mx=ff.x+90,my=ff.y+142;
+   if(b.x>mx-50)b.y+=Math.max(-5,Math.min(5,my-b.y));
+   if(b.x<mx-10){b.dir=Math.atan2(-(my-b.y),mx-b.x)*180/Math.PI;b.fric=-.1}
+   b.sc=lerpN(b.sc0,1,Math.max(0,Math.min(1,(b.x-(mx-200))/150)));
+   if(b.x>mx+50){b.dead=true;snd('swallow');return}
+  }
+  b.sp-=b.fric;b.x+=Math.cos(b.dir*Math.PI/180)*b.sp;b.y-=Math.sin(b.dir*Math.PI/180)*b.sp;
+  if(b.x>760){b.dead=true;return}
+  collide(b,scaleBox(DOLLAR,b.sc),0);
+ }
+ // ====================================================================================
+ // FOOTBALL PIPIS (bulletcontroller type 1 / obj_pipis_controller variant 2 / obj_pipis_egg_bullet type 2)
+ // NEO's arm cannon lobs eggs that bounce toward the box; one that reaches it bursts into ten
+ // crew heads aimed at the SOUL. Three shots (or one BIG SHOT and a bit) break an egg first.
+ // ====================================================================================
+ const EGGBOX=[-18,-14,18,14],CONEBOX=scaleBox(CREWBOX,.5);
+ const boxEdges=()=>{const b=S.box,[hw,hh]=boxHalf();return {x:b.x,y:b.y,l:b.x-hw,r:b.x+hw,t:b.y-hh,b:b.y+hh}};
+ function neoEgg(x,y,o,c){
+  const e=Object.assign({kind:'pegg',neo:1,x,y,hs:0,vs:0,grav:.2,gdir:270,fric:0,type:2,hp:3,con:0,al:0,ang:rnd(360),f:0,shake:0,direct:0,label:0,bounce:-5-rnd(3),
+   dmg:c.dmg,target:c.target,grazepoints:2,timepoints:2,grazed:0,box:EGGBOX,destroyable:1,onShot:neoEggShot},o);
+  S.bullets.push(e);return e;
+ }
+ function neoEggShot(e,s){
+  e.shake=8;e.hp-=s.big?4:1;if(e.f<3)e.f++;snd('damage');
+  if(!s.big)yshotHitFx(s);
+  const m=neoOf();
+  if(e.hp<1){
+   S.yfx.push({kind:'hit',spr:'spr_yheart_shot_hit',x:e.x,y:e.y,sc:2,f:0});e.dead=true;
+   tensionheal(m&&m.n.diff===1?2:3);
+  }else if(e.x<500)e.hs/=1.05;
+ }
+ function neoEggBurst(e){
+  S.yfx.push({kind:'hit',spr:'spr_yheart_shot_hit',x:e.x,y:e.y,sc:2,f:0});
+  const h=S.heart;
+  for(let i=0;i<10;i++){
+   const d=(h?Math.atan2(-(h.y+10-e.y),h.x+10-e.x)*180/Math.PI:180)-25+rnd(50);
+   neoBul({x:e.x,y:e.y,dir:d,sp:15+rnd(5),spr:'spr_sneo_crew',xs:.5,ys:.5,box:CONEBOX,noRot:1,grazepoints:1,dmg:e.dmg,target:e.target},e);
+  }
+  e.dead=true;
+ }
+ function neoEggStep(e){
+  const bx=boxEdges();
+  gmMove(e);
+  if(e.shake>0)e.shake--;
+  if(e.al>0)e.al--;
+  e.ang+=45;
+  if(e.con===0&&e.y>bx.b-20&&e.vs>0)e.con=1;
+  if(e.con===1){snd('bump');e.ang=-30-rnd(30);e.grav=.24;e.vs=e.bounce;e.con=2;e.al=10}
+  // reached the box: it goes off
+  if(e.x<bx.r+10&&e.y>bx.t+10){snd('bomb');neoEggBurst(e);return}
+  if(e.y>bx.b-20&&e.vs>0&&e.con===2&&e.al<1)e.con=1;
+  if((e.con===2&&e.y<bx.t&&e.x<bx.r+80)||(e.direct&&e.y<bx.t))e.grav+=.01;
+  if(e.x<-60||e.y>540){e.dead=true;return}
+  collide(e,e.box,0);
+ }
+ // the cannon: a second NEO at the right edge, bobbing, with one arm pointed at the box
+ function neoCannon(c,m){
+  const k={kind:'pcannon',neo:1,x:0,y:0,con:0,timer:0,count:0,eggs:20,maxp:10,ang:-170,angF:-170,spr:'spr_sneo_arml_egg',xs:2,siner:rnd(100),tv:30,mc:0,mt:0,diff:c.diff,
+   dmg:c.dmg,target:c.target,xx:710,yy:250,shake:0};
+  S.bullets.push(k);return k;
+ }
+ function neoCannonStep(k){
+  k.siner+=.25;
+  let xx=630,yy=250+Math.sin(k.siner/6)*21;
+  k.shake=k.spr==='spr_sneo_arml_egg'?-4+rnd(8):0;
+  if(k.mc===0){k.mt++;xx=lerpN(710,630,k.mt/10);if(k.mt===10){k.mt=0;k.mc=1}}
+  if(S.turntimer<16)k.mc=2;
+  if(k.mc===2){k.mt++;xx=lerpN(630,710,k.mt/10);if(k.mt===10){k.dead=true;return}}
+  k.xx=xx;k.yy=yy;
+  const bx=boxEdges();
+  const out=()=>({x:xx+5+Math.cos((k.ang+270)*Math.PI/180)*50,y:yy-Math.sin((k.ang+270)*Math.PI/180)*50});
+  const eggs=()=>S.bullets.filter(b=>b.kind==='pegg'&&!b.dead).length;
+  if(k.mc===1){
+   if(k.con===0){
+    if(!S.bullets.some(b=>b.kind==='pwall'))S.bullets.push({kind:'pwall',neo:1,x:bx.x+200,y:bx.y+(bx.b-bx.t)/2,al:0,xs:2.9});
+    k.con=1;k.timer=0;
+   }
+   if(k.con===1){
+    let aa=1;k.count++;
+    if(k.count===3||k.count===5||k.count===9)aa=0;
+    if(k.count===0||k.count===4||k.count===8||k.count===11)aa=1;
+    const o=out(),rr=(eggs()<2&&S.turntimer<250)?1:0;
+    const slow=(d)=>neoEgg(o.x,o.y,Object.assign({type:2},d),k);
+    if(k.diff===0){
+     const rand=S.turntimer>380?.5:.8;
+     if(eggs()<3&&k.count<k.maxp){
+      if(aa)slow({grav:.5+rnd(10)/100,vs:-14,hs:-1.55-rr-rnd(rand)});
+      else slow({grav:.063+rnd(4)/100,vs:-4.25,hs:-4,direct:1});
+     }
+    }else if(eggs()<3){
+     if(aa){for(let i=0;i<2;i++)slow({grav:.5+rnd(10)/100,vs:-14,hs:-1.55-rr-rnd(.8)})}
+     else{slow({grav:.063+rnd(4)/100,vs:-4.25,hs:-4,direct:1});slow({grav:.5+rnd(10)/100,vs:-14,hs:-1.4-rnd(.4)})}
+    }
+    k.spr='spr_sneo_arml';k.angF=-180+rnd(50);k.con=2;
+   }
+   const reps=eggs()<1?3:1;
+   for(let r=0;r<reps;r++){
+    if(k.con!==2)break;
+    k.timer++;
+    if(k.timer<11)k.ang=lerpN(k.ang,k.angF,k.timer/10);
+    if(k.timer<k.tv-15&&k.eggs>.4)k.xs=lerpN(1.8,2.5,k.timer/(k.tv-15));
+    if(k.timer===k.tv-15&&k.eggs>.4&&k.count<k.maxp){k.spr='spr_sneo_arml_egg';k.xs=2}
+    if(k.timer>=k.tv){
+     k.eggs-=.4;k.tv=30+Math.floor(rnd(16));
+     if(k.eggs>0){k.con=0;k.timer=0}else{k.dead=true;return}
+    }
+   }
+  }
+  // it's over once the last egg is out of the way
+  if(k.count>=k.maxp&&S.turntimer>10&&!eggs())S.turntimer=10;
+ }
+ function drawNeoCannon(g,k){
+  const sh=k.shake;
+  draw(g,'spr_sneo_wingl',0,k.xx,k.yy+20,2,2,20);
+  draw(g,k.spr,1,k.xx,k.yy+11+sh/2,k.xs,2,k.ang+sh);
+  draw(g,'spr_sneo_body',0,k.xx,k.yy+20,2,2);
+  draw(g,'spr_sneo_head',1,k.xx+26,k.yy,2,2);
+ }
+ // the controller itself (bulletcontroller type 1): NEO slides off, the first egg drops
+ function neoPipis(c,m){
+  const n=m.n;c.pa=(c.pa||0)+1;
+  if(c.pa===6)neoEgg(m.x+4,m.y+60,{type:2,label:1,grav:.2+rnd(10)/100,vs:0,hs:-1.55},c);
+  if(c.pa<20){const t=c.pa/20;m.x=n.xstart+300*t*t}
+  if(c.pa===20){m.x=n.xstart+300;neoCannon(c,m)}
+  if(S.turntimer===20)n.slide={x:n.xstart,t:8};
+  if(S.turntimer===1)m.x=n.xstart;
+ }
+ // ====================================================================================
+ // PHONE CALL (bulletcontroller type 8 / obj_sneo_phonecall): a phone drops from the ceiling and
+ // rings; NEO answers, hands it to you ("... IT'S FOR YOU.") and the Football Pipis come.
+ // The last one (difficulty 3) is the short one before the finale: he takes the call himself.
+ // ====================================================================================
+ function neoPhone(c,m){
+  const n=m.n;
+  if(!c.ph){
+   const skip=c.diff===3?0:(n.phoneevent>=1?1:0);
+   if(c.diff===3)n.phoneevent=2;else n.phoneevent++;
+   c.ph={st:0,tt:-15,talking:false,ring:0,siner:0,ydrop:0,x0:m.x-10,y0:m.y+20,x:m.x-10,y:-30,skip,ang:0,pc:null,heads:0};
+   S.bullets.push({kind:'phone',neo:1,x:0,y:0,ph:c.ph,m,noHit:1});
+   if(c.diff===3)S.turntimer=100;
+  }
+  const p=c.ph;
+  if(p.st<7)S.turntimer=c.diff===3?100:430;
+  p.siner++;
+  if(p.ydrop<1)p.ydrop+=.02;
+  const e=1-Math.pow(1-Math.min(1,p.ydrop),2);
+  p.y=lerpN(-30,p.y0,e);p.x=p.x0+Math.sin(p.siner/20)*10;p.ang=Math.sin(p.siner/20)*10;
+  if(p.ring>0){p.ang+=(p.ring%2===0)?1:-1;p.ring--;if(p.ring<=6)n.mode=1}
+  const say=text=>{
+   S.bubbles=[{x:m.x-285,y:m.y+20,xs:1.75,spr:'spr_battleblcon_long',manual:1,w:new Writer([text+'/%'],m.x-285+5,m.y+25,NEOBUBBLE)}];
+   p.talking=true;p.tt=0;
+  };
+  if(p.talking){
+   p.tt++;
+   for(const b of S.bubbles)b.w.step();
+   const canSkip=!(c.diff===3&&p.st>=5);
+   if(p.tt>=45||(canSkip&&p.tt>5&&P.confirm)){S.bubbles=[];p.talking=false;p.tt=-10;p.st++;n.headShake=0}
+   return;
+  }
+  if(p.st===6){
+   // the call is over: hand the phone over and the attack starts
+   p.st=7;
+   if(c.diff!==3)p.pc={dmg:c.dmg,target:c.target,diff:c.diff,pa:0};
+   return;
+  }
+  if(p.st>=7){
+   if(p.pc)neoPipis(p.pc,m);
+   else if(c.diff===3){
+    // a stream of crew heads sprayed from his head: scenery, they can't hurt
+    const h=neoHead(m);
+    S.yfx.push({kind:'head',x:h.x-4+rnd(8),y:h.y+56+rnd(8),dir:-5+rnd(38),sp:7+rnd(13),a:1,t:0,hs:0,vs:0});
+   }
+   return;
+  }
+  if(p.tt<0){p.tt++;return}
+  if(p.st===0){p.ring=12;snd('phone');p.tt=-10;p.st=1}
+  else if(p.st===1){p.tt=-10;p.st=p.skip?5:2;n.armO={rot:-160,frame:2}}
+  else if(p.st===2){say('WHAT!?');if(c.diff!==3){n.headShake=1;n.sat=0}}
+  else if(p.st===3){if(c.diff===3)p.st=5;else{say('WHAT? ARE YOU SERIOUS!?');n.headShake=1;n.sat=0}}
+  else if(p.st===4)p.st=5;
+  else if(p.st===5){
+   n.armO={rot:-180,frame:c.diff===3?4:3};
+   if(!p.skip&&!p.asked){p.asked=1;say(c.diff===3?'IT\'S FOR&ME!?':'... IT\'S&FOR YOU.')}
+   else p.st=6;
+  }
+ }
+ function drawNeoPhone(g,b){
+  const p=b.ph,m=b.m,n=m.n;
+  if(!p)return;
+  const h=neoHead(m);
+  g.save();g.strokeStyle='#ffffff';g.lineWidth=2;
+  if(p.st===0||(p.st===1&&n.frame[1]===0)){
+   draw(g,'spr_sneo_phone',0,p.x,p.y,2,2,p.ang);
+   g.beginPath();g.moveTo(p.x,p.y);g.lineTo(m.x+n.px[5],-20);g.stroke();
+  }else{
+   // the cord runs from the end of his arm
+   const ox=m.x+n.px[1]+n.xoff[1],oy=m.y+n.py[1]+n.yoff[1],d=(n.rot[1]-93)*Math.PI/180;
+   g.beginPath();g.moveTo(ox+Math.cos(d)*72,oy-Math.sin(d)*72);g.lineTo(m.x+n.px[5],-20);g.stroke();
+  }
+  g.restore();
+ }
+ // ====================================================================================
+ // FACE ATTACK (bulletcontroller type 12 / obj_sneo_faceattack): his face smashes in with its eyes,
+ // nose and mouth firing. Each part has 16 HP: shoot them out (a BIG SHOT does 4). Break all three
+ // and the attack ends early; next time the face comes back already broken and the attack is shorter.
+ // ====================================================================================
+ const FACEPART={1:{spr:'spr_spamtonneo_faceAttack_eyes',box:[40,12,84,54],tx:62,ty:32,ex:58,ey:32},2:{spr:'spr_spamtonneo_faceAttack_nose',box:[0,46,68,76],tx:34,ty:64,ex:30,ey:64},3:{spr:'spr_spamtonneo_faceAttack_mouth',box:[18,62,82,140],tx:52,ty:102,ex:48,ey:102}};
+ const NOSEBOX=[14,31,21,35],WISPBOX=[-8,-3,0,4]; // sprite bboxes; neoBul scales them by the draw scale
+ const faceHp=(n,t)=>t===1?n.eyeshp:t===2?n.nosehp:n.mouthhp;
+ function neoFace(c,m){
+  const n=m.n;
+  c.at=(c.at||0)+1;
+  if(c.at===1){
+   if(n.facebroken===2){S.turntimer=170;n.facebroken=1}
+   else S.turntimer=300;
+  }
+  if(c.at<20)m.x=n.xstart+300*Math.pow(c.at/20,2);
+  if(c.at===20){
+   m.x=n.xstart+300;
+   const fb=n.facebroken===1,first=n.face===1,fx=424,fy=100;
+   let inc=0;for(const t of [1,2,3])if(faceHp(n,t)<=0)inc++;
+   c.parts=[];
+   for(const t of [0,1,2,3]){
+    const p={kind:'fpart',neo:1,t,x:first?730:fx,y:fy,xs0:fx,al:first?1:0,hp:t?(fb?-1:faceHp(n,t)):0,broken:t&&(fb||faceHp(n,t)<=0)?1:0,inv:0,hurt:0,shootf:0,shake:0,tm:0,first,sm:25,intro:0,
+     boxs:FACEPART[t]?FACEPART[t].box:null,box:null,destroyable:1,onShot:t?neoFacePartShot:null,boxx:S.box.x,fx0:0,exp:0,dmg:c.dmg,target:c.target,grazepoints:0,timepoints:0,grazed:0,c};
+    p.tm=t&&t!==1?(inc===1?20:(inc>=2?50:0)):(t===1?(inc>=1?20:0):0);
+    if(t)p.box=p.boxs; // broken parts still stop your shots (with a bell)
+    c.parts.push(p);S.bullets.push(p);
+   }
+  }
+  if(c.parts&&S.turntimer>80&&n.facebroken===0&&c.parts.slice(1).every(p=>p.broken))S.turntimer=80;
+  if(S.turntimer===20)n.slide={x:n.xstart,t:8};
+  if(S.turntimer<21&&S.turntimer>1&&c.parts)for(const p of c.parts){p.al-=.1;if(p.al<0)p.dead=true}
+  if(S.turntimer===1){
+   if(n.eyeshp<=0&&n.nosehp<=0&&n.mouthhp<=0){n.eyeshp=16;n.nosehp=16;n.mouthhp=16;n.facebroken=2}
+   else if(n.facebroken===1)n.facebroken=0;
+   m.x=n.xstart;
+  }
+ }
+ function neoFacePartShot(p,s){
+  const m=neoOf(),n=m.n;
+  if(p.al<.9)return;
+  if(p.broken){snd('bell');yshotHitFx(s);return}
+  if(p.inv>0&&!s.big){s.dead=true;return}
+  p.shake=6;
+  const d=s.big?4:1;
+  if(p.t===1)n.eyeshp-=d;if(p.t===2)n.nosehp-=d;if(p.t===3)n.mouthhp-=d;
+  snd('damage');p.inv=10;p.hurt=3;
+  p.hp=faceHp(n,p.t);
+  if(p.hp<=0){p.broken=1;snd('rocket');p.exp=16}
+  yshotHitFx(s);
+ }
+ function neoFacePartStep(p){
+  const c=p.c,m=neoOf();if(!m){p.dead=true;return}
+  const n=m.n,ft=c.parts[0];
+  if(p.first){
+   if(p.intro===0){
+    p.x-=p.sm;p.sm+=.5;
+    if(p.x<p.xs0){p.intro=15;if(p.t===0){S.shake={amt:6,t:0};snd('closetimpact')}}
+   }
+   if(p.intro>0){
+    p.intro--;
+    if(p.intro===0){p.first=false;p.x=p.xs0;if(p.t===0)S.box.x=p.boxx}
+    else{p.x=p.xs0-Math.sin(Math.PI*(p.intro/15))*20;if(p.t===0)S.box.x=p.boxx-Math.sin(Math.PI*(p.intro/15))*20}
+   }
+   if(p.first)return;
+  }
+  p.tm++;
+  if(p.al<1&&S.turntimer>21)p.al=Math.min(1,p.al+.1);
+  if(p.inv>0)p.inv--;
+  if(p.shake>0)p.shake--;
+  if(p.exp>0){
+   const F=FACEPART[p.t];
+   if(p.exp%2===0)S.yfx.push({kind:'hit',spr:'spr_boxing_crescent',x:p.x+F.ex-25+rnd(50),y:p.y+F.ey-25+rnd(50),sc:2,f:0});
+   p.exp--;
+  }
+  const bro=c.parts.slice(1).filter(q=>q.broken).length,h=S.heart;
+  if(p.t===1&&!p.broken){
+   if(p.tm===30||!p.lz){p.bm=bro;p.lx=p.x-10+56;p.ly=p.y+32;p.ld=h?Math.atan2(-(h.y+10-p.ly),h.x+10-p.lx)*180/Math.PI:180;p.lz=1}
+   if(p.tm>=30&&p.tm%3===0&&S.turntimer>21){
+    let a=p.ld;if(p.bm===2)a+=p.bm*(rnd(16)-8);
+    // obj_werewire_bullet_lasercircle: a short chain of laser squares along the line
+    for(let k=0;k<3;k++){
+     const back=(2-k)*7;
+     neoBul({x:p.lx+Math.cos(a*Math.PI/180)*back,y:p.ly-Math.sin(a*Math.PI/180)*back,dir:a,sp:7,fric:-(p.bm*.25),spr:k===2?'spr_bullet_laser_front_sneo':'spr_bullet_laser_square_sneo',frame:k===2?1:0,box:[-8,-1,0,1],xs:2,ys:2,grazepoints:3,dmg:p.dmg,target:p.target},p);
+    }
+    p.shootf=3;
+   }
+   if(p.tm===50)p.tm=p.bm*5;
+  }
+  if(p.t===2&&!p.broken){
+   if(p.tm>=70&&!p.ni){p.bm=bro;p.ni=1}
+   if(p.tm>=80&&p.tm%5===0){
+    const rv=rnd(4)-2;
+    for(let i=0;i<3;i++){
+     const b=neoBul({kind:'nb2',x:p.x,y:p.y,hs:-3,vs:-4+i*4.5+(p.bm===2?rv:0),grav:.6,gdir:180,fric:.4,spr:'spr_spamtonneo_faceAttack_nose_bullet',xs:2,ys:2,box:NOSEBOX,grazepoints:3,dmg:p.dmg,target:p.target,noRot:1,origin0:1},p);
+    }
+    p.shootf=3;
+   }
+   if(p.tm===90)p.tm=26+(p.bm||0)*10;
+  }
+  if(p.t===3&&!p.broken){
+   if(p.tm>=10&&!p.ei){p.ei=1;p.bm=bro}
+   if(p.tm>=42){p.mf=0;p.tm=-40+(p.bm||0)*20}
+   if(p.tm>=10&&p.tm%6===0){
+    const b=neoBul({kind:'nb2',x:p.x+30,y:p.y+98,hs:-(4+rnd(3)),vs:6-rnd(8)+(h&&S.box&&h.y>=S.box.y?1:0),grav:-.2,gdir:270,spr:'spr_spamtonneo_faceAttack_wisp',xs:2,ys:2,box:WISPBOX,grazepoints:3,dmg:p.dmg,target:p.target,noRot:1},p);
+    p.shootf=3;
+   }
+  }
+ }
+ function neoBul2Step(b){
+  gmMove(b);
+  if(b.fric&&b.fric>0){}
+  if(b.x<-80||b.x>780||b.y<-80||b.y>580){b.dead=true;return}
+  collide(b,b.box,0);
+ }
+ function drawNeoFacePart(g,p){
+  if(p.t===0){
+   const m=neoOf();
+   draw(g,'spr_spamtonneo_faceAttack_face',0,p.x,p.y,2,2,0,p.al);
+   draw(g,'spr_battlebg_0',0,p.x-3,p.y+70,2.4,2,0,p.al,{tint:mix('#00ff00','#00ff00',.5)});
+   return;
+  }
+  const F=FACEPART[p.t],hurt=p.hurt>0;if(hurt)p.hurt--;
+  let col=p.broken?null:mix('#800080','#00b9ee',Math.max(0,Math.min(1,p.hp/16)));
+  if(p.shootf>0){col='#ffff00';p.shootf--}
+  if(hurt)col='#ff0000';
+  if(p.inv>0){col='#ff0000';if([10,9,6,5,3,2].includes(p.inv))return}
+  let f=1;
+  if(p.t===3)f=p.broken?4:(p.tm>=10?3:1);else f=p.broken?2:1;
+  draw(g,F.spr,f,p.x+(p.shake?rnd(6)-3:0),p.y,2,2,0,p.al,{tint:col||undefined});
+  if(!p.broken)draw(g,'spr_boxing_crescent',0,p.x+F.tx,p.y+F.ty,.4,.4,0,Math.min(1,p.al),{tint:'#ff0000'});
+ }
  function jevilTire(m){if(m.tired)return;m.tired=1;m.status=1;m.dl=2;m.mercymax=100;m.mercy=100;m.comment='(Tired)'}
  // obj_joker_body: idle / dance / tired / shadow dance, the chain-and-head wobble when hit,
  // vanishing for some attacks, and the spin into a scythe (metamorphosis)
@@ -31004,7 +32115,8 @@ const DR=(()=>{
   drawBack(g);
   for(const m of S.mons)if(m.def.drawBg&&!m.spared)m.def.drawBg(g,m);
   if(S.darkener){g.fillStyle='rgba(0,0,0,'+(S.darkener.amt/20)+')';g.fillRect(-40,-40,720,560)}
-  for(let i=S.party.length-1;i>=0;i--){const h=S.party[i];if(h.id==='susie'&&!h.absent&&h.hp>0&&((S.kw&&S.kw.learned)||(S.fbx&&S.fbx.uses)))drawFrostAura(g,h);drawHero(g,h)}
+  const carsOn=S.mons.some(m=>m.def.cars&&!m.spared);
+  for(let i=S.party.length-1;i>=0;i--){const h=S.party[i];if(h.id==='susie'&&!h.absent&&h.hp>0&&((S.kw&&S.kw.learned)||(S.fbx&&S.fbx.uses)))drawFrostAura(g,h);if(carsOn)drawNeoCar(g,h,0);drawHero(g,h);if(carsOn)drawNeoCar(g,h,1)}
   for(const m of S.mons)drawMonster(g,m);
   drawFx(g);
   drawJevilBehind(g);
@@ -31014,7 +32126,7 @@ const DR=(()=>{
   drawJevilFinal(g,true);
   for(const b of S.bubbles||[]){
    if(b.heart){draw(g,'spr_battleblcon',0,b.x,b.y);draw(g,b.heart,b.siner*.2,b.x+15+Math.round(Math.sin(b.siner/8)),b.y+15+Math.round(Math.cos(b.siner/8)))}
-   else{draw(g,b.spr||'spr_battleblcon_long',b.img||0,b.x,b.y);b.w.draw(g)}
+   else{draw(g,b.spr||'spr_battleblcon_long',b.img||0,b.x,b.y,b.xs||1,b.ys||1);b.w.draw(g)}
   }
   drawPanel(g);
   if(MP)drawMp(g);
@@ -31054,8 +32166,8 @@ function drLoadPrefs(){
 function drSavePrefs(){drLS('utbg.drEnemy',DR.enemyIds[drSel]);drLS('utbg.drSupports',JSON.stringify(drSup));drLS('utbg.drParty',drParty?'noelle':'ralsei');drLS('utbg.drSusieAuto',drSusieAuto?'1':'0');drLS('utbg.drWeird',drWeird?'1':'0')}
 function drStart(){drLoadPrefs();DR.load();drFocus=0;screen='drroster'}
 function drFight(){
- drSavePrefs();play('select');screen='dr';
- DR.start({party:DR.parties[drParty],enemy:DR.enemyIds[drSel],supports:drSup.slice(),susieAuto:drSusieAuto,weird:drWeird,custom:drCustom.on?drCustomCfg():null,onExit(){screen='drroster';drFocus=0;try{startMenuMusic()}catch(_){}}});
+ drSavePrefs();play('select');
+ withFightAssets(()=>{screen='dr';DR.start({party:DR.parties[drParty],enemy:DR.enemyIds[drSel],supports:drSup.slice(),susieAuto:drSusieAuto,weird:drWeird,custom:drCustom.on?drCustomCfg():null,onExit(){screen='drroster';drFocus=0;try{startMenuMusic()}catch(_){}}})});
 }
 // The enemy's sprite for the menus (its idle animation once the DELTARUNE assets are in).
 function drEnemyImage(id,now){const e=DR.enemies[id];return e&&DR.ready?DR.gfx.frame(e.idle,Math.floor(now/(1000/30)/e.idleSpeed)):null}
@@ -31066,7 +32178,7 @@ function drCheckText(id){
 }
 // The roster page is the same CHOOSE A FIGHT page as UNDERTALE's, on DELTARUNE's battle grid.
 const DR_GROUPS=[
- {id:'bosses',label:'BOSSES',color:'#ff3355',ids:['kround','lancersolo','susie','king','jevil']},
+ {id:'bosses',label:'BOSSES',color:'#ff3355',ids:['kround','lancersolo','susie','king','jevil','sneo']},
  {id:'enemies',label:'ENEMIES',color:'#36d6f0',ids:[]}
 ];
 let drGroupCache=null;
@@ -31747,7 +32859,7 @@ const NBO=(()=>{
   game={id:rid(6),st:'setup',cfg,parts,p:players.map(q=>q.id),bossName:clean(bossLabel(),24),clients:{},F:[],leaves:[],au:null,t0:performance.now(),ok:false,running:false};
   for(const p of lobby)game.clients[p.id]={ok:false,ack:0,lastQ:0,buf:new Map(),gone:false,held:0,pos:null,dmTot:0,dmSeen:0,acSeen:0,acNew:[]};
   // everyone has the battle and its sprites before the first step
-  nbLoadAssets().then(()=>{if(game&&game.st==='setup')game.ok=true;refreshUI()});
+  Promise.all([nbLoadAssets(),ensureFightAssets()]).then(()=>{if(game&&game.st==='setup')game.ok=true;refreshUI()});
   log('starting '+game.bossName+' ('+players.length+' players)');
   pubDirty=true;refreshUI();
  }
@@ -31760,7 +32872,7 @@ const NBO=(()=>{
   for(let i=0;i<text.length;i+=size){const c=text.slice(i,i+size),arr=[];for(let j=0;j<c.length;j+=1000)arr.push(c.slice(j,j+1000));parts.push(arr)}
   game={id:rid(6),st:'setup',dr:1,cfg,parts,p:players.map(q=>q.id),bossName:clean(drLabel(),24),clients:{},F:[],leaves:[],au:null,t0:performance.now(),ok:false,running:false};
   for(const p of lobby)game.clients[p.id]={ok:false,ack:0,lastQ:0,buf:new Map(),gone:false,held:0,pos:null,dmTot:0,dmSeen:0,acSeen:0,acNew:[]};
-  DR.load().then(()=>{if(game&&game.st==='setup')game.ok=true;refreshUI()});
+  Promise.all([DR.load(),ensureFightAssets()]).then(()=>{if(game&&game.st==='setup')game.ok=true;refreshUI()});
   log('starting '+game.bossName+' ('+players.length+' players)');
   pubDirty=true;refreshUI();
  }
@@ -31861,6 +32973,7 @@ const NBO=(()=>{
   gm.loading=true;
   try{
    gm.cfg=JSON.parse(b64d(gm.parts.join('')));
+   await ensureFightAssets();
    if(gm.cfg.dr){gm.dr=1;await DR.load();if(game===gm){gm.ok=true;pubDirty=true;publish(true)}return}
    await nbLoadAssets();
    swapIn(gm.cfg);

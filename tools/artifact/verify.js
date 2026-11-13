@@ -32,12 +32,16 @@ const CSP="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' 'un
  for(let i=0;i<120;i++){if(await p.evaluate(()=>typeof screen==='string'?screen:'loading')!=='loading')break;await sleep(500)}
  // sprites can be <img> or tinted canvases
  const ok=im=>`!!(${im}&&(${im}.naturalWidth||${im}.width))`;
- const title=await p.evaluate(`({screen,heart:${ok('images.heart')},font:${ok('images.fntMainAtlas')},froggit:${ok('images.froggit&&images.froggit[0]')},buttons:${ok('images.btn_fight_sel')},menus:['main','text','small','sans','logo','save'].every(k=>ui6Img[k])})`);
+ const title=await p.evaluate(`({screen,heart:${ok('images.heart')},font:${ok('images.fntMainAtlas')},buttons:${ok('images.btn_fight_sel')},menus:['main','text','small','sans','logo','save'].every(k=>ui6Img[k]),
+  // boot only loads the menus' assets; the fight's wait for the first fight
+  lazy:typeof fightAssetsReady!=='undefined'&&!fightAssetsReady&&ASSET_TASKS.filter(t=>t.done).length<ASSET_TASKS.length/2})`);
  // a Susie + Noelle party battle on the new engine pulls in the DELTARUNE sprites
  await p.evaluate(()=>{newEngineEnabled=true;vanillaMode=false;sandboxConfig.vanilla=false;sandboxConfig.enemyOverrides={};supportPartyIds=[];sandboxConfig.party=['classic','susie','noelle'];bossSelected=BOSS_OPTIONS.findIndex(b=>b.id==='froggit');startPracticeMode()});
+ // the fight waits on the LOADING screen for its assets, then starts
+ for(let i=0;i<120;i++){if(await p.evaluate(()=>screen==='nb'&&fightAssetsReady))break;await sleep(500)}
  for(let i=0;i<40;i++){if(await p.evaluate(()=>DR.ready))break;await sleep(500)}
  await sleep(1500);
- const battle=await p.evaluate(()=>({party:!!(NB.S&&NB.S.party&&NB.S.party.length===3),deltarune:!!(DR.ready&&DR.gfx.frame('spr_headsusie',0)?.naturalWidth)}));
+ const battle=await p.evaluate(()=>({froggit:!!(images.froggit&&images.froggit[0]&&(images.froggit[0].naturalWidth||images.froggit[0].width)),party:!!(NB.S&&NB.S.party&&NB.S.party.length===3),deltarune:!!(DR.ready&&DR.gfx.frame('spr_headsusie',0)?.naturalWidth)}));
  const audio=await p.evaluate(async()=>{const a=await loadAudioAsset(Object.values(MUSIC)[0]);return a.src.startsWith('blob:')});
  for(const u of await p.evaluate(()=>window.__blocked))if(/^https?:/.test(u))ext.add(u);
  // assets missing upstream (404 on the CDNs too) fail on the real site as well
@@ -45,7 +49,7 @@ const CSP="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' 'un
  for(const u of [...ext])if(missing.has(u))ext.delete(u);
  await p.screenshot({path:SHOT});
  await b.close();srv.close();
- const checks={title:title.screen!=='loading',sprites:title.heart&&title.font&&title.froggit&&title.buttons,menus:title.menus,party:battle.party,deltarune:battle.deltarune,audio,offline:ext.size===0,errors:errs.length===0};
+ const checks={title:title.screen!=='loading',sprites:title.heart&&title.font&&title.buttons&&battle.froggit,lazy:title.lazy,menus:title.menus,party:battle.party,deltarune:battle.deltarune,audio,offline:ext.size===0,errors:errs.length===0};
  if(!checks.sprites||!checks.menus)console.log('title screen:',JSON.stringify(title));
  for(const [k,v] of Object.entries(checks))console.log(`${v?'ok  ':'FAIL'} ${k}`);
  if(ext.size)console.log('external requests:',[...ext].slice(0,10));
