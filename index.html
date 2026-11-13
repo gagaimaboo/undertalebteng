@@ -26709,8 +26709,8 @@ const DR1_ASSETS={"spr":{"spr_blockguy_part":[26,14,0,0,["67fcb502-060f-45ab-b91
 const DR=(()=>{
  const A=DR_ASSETS,A1=DR1_ASSETS,STEP_MS=1000/30;
  const imgs={},masks={};let ready=false,loading=null,S=null;
- const sndKeys={heartshot:'snd_heartshot_dr_b',chargecharge:'snd_chargeshot_charge',chargefire:'snd_chargeshot_fire',stardrop:'snd_stardrop',spamlaugh:'snd_spamton_laugh',sneolaugh:'snd_sneo_laugh_long',phone:'snd_phone',firespell:'snd_firespell',janything:'snd_joker_anything',jchaos:'snd_joker_chaos',jlaugh0:'snd_joker_laugh0',jha0:'snd_joker_ha0',jha1:'snd_joker_ha1',joh:'snd_joker_oh',jbyebye:'snd_joker_byebye',jmeta:'snd_joker_metamorphosis',jneochaos:'snd_joker_neochaos',bomb:'snd_bomb',spearappear:'snd_spearappear',scytheburst:'snd_scytheburst',hypnosis:'snd_hypnosis',pirouette:'snd_pirouette',badexplosion:'snd_badexplosion',carhonk:'snd_carhonk',toilet:'snd_toilet',weirdeffect:'snd_weirdeffect',awkward:'snd_awkward',shadowpendant:'snd_shadowpendant',birdtweet:'snd_birdtweet',applause:'snd_applause',rumble:'snd_rumble',menumove:'snd_menumove',select:'snd_select',laz:'snd_laz_c',crit:'snd_criticalswing',damage:'snd_damage',impact:'snd_impact',hurt:'snd_hurt1',graze:'snd_graze',mercyadd:'snd_mercyadd',spare:'snd_spare',power:'snd_power',rbswing:'snd_rudebuster_swing',rbhit:'snd_rudebuster_hit',pacify:'snd_pacify',text:'snd_text',boost:'snd_boost',icespell:'snd_icespell',snowgrave:'snd_snowgrave',petrify:'snd_petrify',deathnoise:'snd_deathnoise',ghostappear:'snd_ghostappear',spellpacify:'snd_spell_pacify',defeatrun:'snd_defeatrun',bell:'snd_bell',dadlaugh:'snd_dadlaugh',ralsing1:'snd_ralseising1',ralsing2:'snd_ralseising2',dadblast:'snd_dadblast',chainext:'snd_chain_extend',locker:'snd_locker',screenshake:'snd_screenshake',chainwave:'snd_chain_wave',spearrise:'snd_spearrise',bump:'snd_bump',magicsprinkle:'snd_magicsprinkle',jump:'snd_jump',ultraswing:'snd_ultraswing',swing:'snd_swing',item:'snd_item',cardrive:'snd_cardrive',whistle2:'snd_whistlebreath',txtral:'snd_txtral',txtsus:'snd_txtsus',txtnoe:'snd_txtnoe',txtlan:'snd_txtlan',drive:'snd_drive',honk:'snd_lancerhonk',whistle:'snd_lancerwhistle',splat:'snd_splat',sussurprise:'snd_sussurprise'};
- const sndFiles={snd_mercyadd:'snd_mercyadd.ogg',snd_pacify:'snd_pacify.ogg',snd_text:'snd_text.wav',snd_icespell:'snd_icespell.ogg',snd_snowgrave:'snd_snowgrave.ogg',snd_ghostappear:'snd_ghostappear.ogg',snd_spell_pacify:'snd_spell_pacify.ogg'};
+ const sndKeys={rocket:'snd_rocket',closetimpact:'snd_closet_impact',txtspam2:'snd_txtspam2',swallow:'snd_swallow',overpower:'snd_sneo_overpower',heartshot:'snd_heartshot_dr_b',chargecharge:'snd_chargeshot_charge',chargefire:'snd_chargeshot_fire',stardrop:'snd_stardrop',spamlaugh:'snd_spamton_laugh',sneolaugh:'snd_sneo_laugh_long',phone:'snd_phone',firespell:'snd_firespell',janything:'snd_joker_anything',jchaos:'snd_joker_chaos',jlaugh0:'snd_joker_laugh0',jha0:'snd_joker_ha0',jha1:'snd_joker_ha1',joh:'snd_joker_oh',jbyebye:'snd_joker_byebye',jmeta:'snd_joker_metamorphosis',jneochaos:'snd_joker_neochaos',bomb:'snd_bomb',spearappear:'snd_spearappear',scytheburst:'snd_scytheburst',hypnosis:'snd_hypnosis',pirouette:'snd_pirouette',badexplosion:'snd_badexplosion',carhonk:'snd_carhonk',toilet:'snd_toilet',weirdeffect:'snd_weirdeffect',awkward:'snd_awkward',shadowpendant:'snd_shadowpendant',birdtweet:'snd_birdtweet',applause:'snd_applause',rumble:'snd_rumble',menumove:'snd_menumove',select:'snd_select',laz:'snd_laz_c',crit:'snd_criticalswing',damage:'snd_damage',impact:'snd_impact',hurt:'snd_hurt1',graze:'snd_graze',mercyadd:'snd_mercyadd',spare:'snd_spare',power:'snd_power',rbswing:'snd_rudebuster_swing',rbhit:'snd_rudebuster_hit',pacify:'snd_pacify',text:'snd_text',boost:'snd_boost',icespell:'snd_icespell',snowgrave:'snd_snowgrave',petrify:'snd_petrify',deathnoise:'snd_deathnoise',ghostappear:'snd_ghostappear',spellpacify:'snd_spell_pacify',defeatrun:'snd_defeatrun',bell:'snd_bell',dadlaugh:'snd_dadlaugh',ralsing1:'snd_ralseising1',ralsing2:'snd_ralseising2',dadblast:'snd_dadblast',chainext:'snd_chain_extend',locker:'snd_locker',screenshake:'snd_screenshake',chainwave:'snd_chain_wave',spearrise:'snd_spearrise',bump:'snd_bump',magicsprinkle:'snd_magicsprinkle',jump:'snd_jump',ultraswing:'snd_ultraswing',swing:'snd_swing',item:'snd_item',cardrive:'snd_cardrive',whistle2:'snd_whistlebreath',txtral:'snd_txtral',txtsus:'snd_txtsus',txtnoe:'snd_txtnoe',txtlan:'snd_txtlan',drive:'snd_drive',honk:'snd_lancerhonk',whistle:'snd_lancerwhistle',splat:'snd_splat',sussurprise:'snd_sussurprise'};
+ const sndFiles={snd_closet_impact:'snd_closet_impact.ogg',snd_mercyadd:'snd_mercyadd.ogg',snd_pacify:'snd_pacify.ogg',snd_text:'snd_text.wav',snd_icespell:'snd_icespell.ogg',snd_snowgrave:'snd_snowgrave.ogg',snd_ghostappear:'snd_ghostappear.ogg',snd_spell_pacify:'snd_spell_pacify.ogg'};
  const SND_CH1=new Set(['snd_dadlaugh','snd_dadblast','snd_ralseising1','snd_ralseising2','snd_whistlebreath','snd_joker_anything','snd_joker_chaos','snd_joker_laugh0','snd_joker_ha0','snd_joker_ha1','snd_joker_oh','snd_joker_byebye','snd_joker_metamorphosis','snd_joker_neochaos','snd_bomb','snd_spearappear','snd_scytheburst','snd_hypnosis','snd_pirouette','snd_badexplosion','snd_carhonk','snd_toilet','snd_weirdeffect','snd_awkward','snd_shadowpendant','snd_birdtweet','snd_applause','snd_rumble']);
  const sndUrl=n=>n==='snd_firespell'?DR_RAW5+'snd_firespell.wav':(SND_CH1.has(n)?DR_RAW1:DR_RAW)+`sounds/${n}/${sndFiles[n]||n}`;
  let music=null,battleMusic=null,kingMusic=null,susieMusic=null,kroundMusic=null,lancerMusic=null,jevilMusic=null,neoMusic=null;
@@ -26725,7 +26725,7 @@ const DR=(()=>{
  const DR_RAW5='https://cdn.jsdelivr.net/gh/gagaimaboo/undertalebteng@070cb32f453834e16836546c76e8b6edb53ab6cf/assets/dr/ch5/';
  const A5={spr:{spr_firespell_flame:[46,46,23,23,[0]],spr_firespell_smallflame:[22,22,11,11,[0]],spr_spell_fireball:[34,20,0,0,[0,1,2]],spr_ralsei_spell_fireball_right:[48,42,17,-2,[0,1,2,3,4,5]]}};
  // Spamton NEO's sprites (Chapter 2 decomp)
- const A6={spr:{"spr_sneo_wingl":[82,89,20,40,["bc1c79ca-d78c-4147-a562-afbbbca86493"]],"spr_sneo_arml":[82,89,20,37,["7fdd1645-d671-4ddc-bdd0-94505213dd13","03434dd7-59e6-4911-ba70-f917db28a201","786bb25f-e5ca-4569-88c3-fd4250e9435f","7407920e-d53c-4af6-83c3-d1907fae8fb4","fcc3c5fc-4cf3-44b7-9cfd-e21f501f2cc6"]],"spr_sneo_legl":[82,89,23,52,["5964f370-476e-45d5-8733-de4811522f7e"]],"spr_sneo_legr":[82,89,30,51,["b0b19c8d-089b-4ce6-a29a-a5c603d4f137"]],"spr_sneo_body":[82,89,18,40,["24f6988a-2ceb-4709-93e8-b71eb00bf154"]],"spr_sneo_head":[82,89,30,29,["a19b937d-0356-4ccb-9a15-b98c0d32ab3f","28a60411-e094-4207-b8e0-140361355364","c3302304-b88e-48a4-b3f2-6ee2307b5599","7615a2fb-f309-4f23-b7d4-b19ee3d1d968"]],"spr_sneo_armr":[82,89,35,35,["9f37ef8c-e55c-4c32-b53b-3a6c0a8dd2f5"]],"spr_sneo_wingr":[82,89,30,30,["ab42b1fa-a005-40e8-9589-ec2c151f12ea"]],"spr_yellowheart":[20,20,0,0,["1e9bd9cf-10d5-4a04-ac65-82b1a2d24cea","c8d9b0eb-01c5-4c4a-913a-5fda12856e12","b28f7fe5-6f80-45ea-a6f9-bc6aea0457d7"]],"spr_yheart_shot":[25,9,18,4,["583a7020-6c1c-4cbe-a65e-9271e56bd010"]],"spr_yheart_bigshot":[45,28,32,14,["ec2d609d-5847-45ae-97b9-1c7753cbdac1"]],"spr_yheart_charge":[7,7,3,3,["967e5ce8-bfbf-4e95-8107-be09b364dd0a"]],"spr_yheart_shot_hit":[36,24,18,11,["192e89f3-90af-470f-9643-425981825007","337aab1c-6065-49e0-b9b8-364ff92ed9d0","04d1abc8-8921-445a-a965-690bf7679409","9b45e643-243a-49e4-ac0f-dae3aae4844c","a20d9ae7-c8b7-4a21-8cc7-4b4cd1210ea1"]],"spr_yheart_shot_hit3":[36,24,21,11,["6dd10c8b-b555-416d-a7f6-b12e28dd3581","d6d7be8c-a2b2-44cf-a5ab-cba3dbca46e6","1481c4f2-f975-47bf-bdcd-db67b5a2e55f","52703fd0-b4ec-49d3-94b9-2e816edfabf9","88553c5b-f2aa-4f7f-ac1b-22965906443b"]],"spr_yheart_bigshot_trail":[45,28,32,14,["b40c6eca-a62a-44c5-acec-9525d98da12b"]],"spr_sneo_crew":[40,48,18,22,["b5d3a2ce-2c1d-4823-b9aa-0aded334209f","099a4364-e1db-4399-96aa-1652b8071da9","9f8dd33a-5838-4a30-995d-261e96ef8c83","956bcbf6-68bf-44c5-876f-f5ad4426e99e"]],"spr_sneo_crew_bullet":[20,24,10,12,["fc959d5c-7a77-424c-b267-43a695d55841"]],"spr_sneo_example":[82,89,0,0,["a2ecb224-0c82-47cf-a4a9-59c25d80caa7"]],"spr_sneo_head_sad":[82,89,30,29,["cfa1909e-e088-4383-9470-c7089422dc72"]],"spr_yheart_shot_hit2":[36,24,18,11,["9b0bbf3c-938e-4c12-a9ec-a3e6964ae87d","396de93c-17ab-448c-84cb-acb542e7ec6a","fe6d1f59-9552-426e-8f6d-bc45a0e22022","e1ea31c0-8f1b-41b4-8614-69a3a85c3117","a6f65514-62e9-4bae-9978-15573d7c76e1"]],"spr_queen_winebubble_edit2":[20,20,10,10,["6b949195-f23d-418c-8388-3ef3aed97dbd","59665919-8e53-4c94-8543-e961e2200f00","4cabcbc1-2a5f-45e1-88f3-274c8a3aa680","d7ce71af-4deb-490c-a5b5-302564560a68"]],"spr_sneo_phonehand":[58,27,29,13,["a76bf984-18cb-4082-83a5-76317999b7a7"]],"spr_sneo_head_open":[82,89,30,29,["0faef41d-9429-40c2-a44b-97f502e02f8f"]],"spr_sneo_bullet0":[11,11,5,5,["68cccf1a-7744-4a61-ac95-3e7aa6ebf922"]],"spr_sneo_soundbullet":[30,30,15,15,["d55d3222-56d2-4c3e-af57-0088c566e52d"]],"spr_sneo_bullet_box":[20,20,10,10,["a46d45b4-e742-4ee0-a99c-cce03d6aa711"]],"spr_sneo_wall_car":[58,24,0,0,["88348a5e-86ef-4c6b-9221-13fd8500a57c"]],"spr_sneo_mail":[20,20,10,10,["c7bd36fe-10cc-4a0b-b39f-8f94c0d72fac","f0855b7a-cab3-4a96-9173-bc9bf2150ae0"]],"spr_mettaton_bomb1":[24,30,12,18,["0e068d6b-a4e5-4d6c-a48f-dd20bf39876c","6f95180d-e834-4fce-b5a5-e98f4f3f46d5"]],"spr_mettaton_bomb2":[24,24,12,12,["133d0a9a-229d-418d-9ffd-12e39ec6736f","bd4ac25a-c988-4128-b0e1-c2a4c56478ff","58d292a0-b775-48ff-9577-f4fbbb1f1678","40ec3657-51db-4d0a-96d7-d85ebacf3377","9e2d17b7-2090-42d9-8f47-1bac1efda52d","41c9da41-1302-488f-98dc-042f03f23705","699d3af3-e3bc-4a8a-8442-fdeea6c243ff","94d020e7-2e0c-4250-ab1d-afaf52063e24"]],"spr_mettaton_bomb3":[24,24,12,12,["8257c4fc-4616-4ebd-86e0-1e5401bca153","5faf4f56-d236-47bd-a114-74d6e93ed8ae","9fa7b46e-9430-4f4b-967e-34073edd6ab7","a9077bf8-c1b1-419b-a0fd-972593e8c01d","4f257d7c-60c8-4782-9614-bf75b8ec0173","1b942f85-3e59-499e-a038-307d3f01c413","d314467b-1f3a-4463-9f82-42e8cade7c6f","28b3d0a1-6f27-495f-b068-43c8515b1ec5"]],"spr_sneo_wireheart":[52,52,26,26,["1cbaaf12-1a4e-4b6c-8223-3161ae2aefa7","05a7fea9-0357-49a6-b459-bb97f38649db","a43e8d9d-aeb6-4d57-b35b-a554c15fe964","4712542e-328c-4fff-bee3-ded4ef796fd3","cc1955f7-24ed-4943-bfd3-18b1dfc514e0","7e279c4e-b429-4336-b9ef-687b9f4a2aa1"]],"spr_sneo_wireheart_smaller":[34,34,17,17,["7f95dc57-485c-4dc7-82a8-f25a1ac363aa","4cb78de1-73a5-4256-9a29-3485ac17d6cc","5fbb24a2-cba3-4cc9-a1f3-e33ae2017801","2cf1ddad-9528-4c7e-b615-eb0471c3365c","fadb042f-7048-4897-ad48-d76848119a4d","ab3c6290-3be6-487c-a838-f27cdb12ab55"]],"spr_sneo_final_forme":[612,590,28,91,["689a6237-ea2e-4734-bfa6-2d8751b31a79","f268d50f-6e48-4d75-bb5c-8de532eeae2e","1f6d36d9-4bcb-4e06-b065-85719861d0b7","eccd4576-e9e1-47e9-acf4-cf98513f715e","23b1467b-e816-4e06-9ae4-4d007196385d","5e0480e8-451d-4a3c-9926-0618961d809a","f9a718e3-e5db-4d22-a8e2-681671f46b64","c6beaf19-2702-4bbd-a90c-48ade15aa147"]],"spr_spamton_dollar":[24,24,12,12,["c35e9fbd-1f3c-4132-ad83-ff849f777adb"]]}};
+ const A6={spr:{"spr_sneo_wingl":[82,89,20,40,["bc1c79ca-d78c-4147-a562-afbbbca86493"]],"spr_sneo_arml":[82,89,20,37,["7fdd1645-d671-4ddc-bdd0-94505213dd13","03434dd7-59e6-4911-ba70-f917db28a201","786bb25f-e5ca-4569-88c3-fd4250e9435f","7407920e-d53c-4af6-83c3-d1907fae8fb4","fcc3c5fc-4cf3-44b7-9cfd-e21f501f2cc6"]],"spr_sneo_legl":[82,89,23,52,["5964f370-476e-45d5-8733-de4811522f7e"]],"spr_sneo_legr":[82,89,30,51,["b0b19c8d-089b-4ce6-a29a-a5c603d4f137"]],"spr_sneo_body":[82,89,18,40,["24f6988a-2ceb-4709-93e8-b71eb00bf154"]],"spr_sneo_head":[82,89,30,29,["a19b937d-0356-4ccb-9a15-b98c0d32ab3f","28a60411-e094-4207-b8e0-140361355364","c3302304-b88e-48a4-b3f2-6ee2307b5599","7615a2fb-f309-4f23-b7d4-b19ee3d1d968"]],"spr_sneo_armr":[82,89,35,35,["9f37ef8c-e55c-4c32-b53b-3a6c0a8dd2f5"]],"spr_sneo_wingr":[82,89,30,30,["ab42b1fa-a005-40e8-9589-ec2c151f12ea"]],"spr_yellowheart":[20,20,0,0,["1e9bd9cf-10d5-4a04-ac65-82b1a2d24cea","c8d9b0eb-01c5-4c4a-913a-5fda12856e12","b28f7fe5-6f80-45ea-a6f9-bc6aea0457d7"]],"spr_yheart_shot":[25,9,18,4,["583a7020-6c1c-4cbe-a65e-9271e56bd010"]],"spr_yheart_bigshot":[45,28,32,14,["ec2d609d-5847-45ae-97b9-1c7753cbdac1"]],"spr_yheart_charge":[7,7,3,3,["967e5ce8-bfbf-4e95-8107-be09b364dd0a"]],"spr_yheart_shot_hit":[36,24,18,11,["192e89f3-90af-470f-9643-425981825007","337aab1c-6065-49e0-b9b8-364ff92ed9d0","04d1abc8-8921-445a-a965-690bf7679409","9b45e643-243a-49e4-ac0f-dae3aae4844c","a20d9ae7-c8b7-4a21-8cc7-4b4cd1210ea1"]],"spr_yheart_shot_hit3":[36,24,21,11,["6dd10c8b-b555-416d-a7f6-b12e28dd3581","d6d7be8c-a2b2-44cf-a5ab-cba3dbca46e6","1481c4f2-f975-47bf-bdcd-db67b5a2e55f","52703fd0-b4ec-49d3-94b9-2e816edfabf9","88553c5b-f2aa-4f7f-ac1b-22965906443b"]],"spr_yheart_bigshot_trail":[45,28,32,14,["b40c6eca-a62a-44c5-acec-9525d98da12b"]],"spr_sneo_crew":[40,48,18,22,["b5d3a2ce-2c1d-4823-b9aa-0aded334209f","099a4364-e1db-4399-96aa-1652b8071da9","9f8dd33a-5838-4a30-995d-261e96ef8c83","956bcbf6-68bf-44c5-876f-f5ad4426e99e"]],"spr_sneo_crew_bullet":[20,24,10,12,["fc959d5c-7a77-424c-b267-43a695d55841"]],"spr_sneo_example":[82,89,0,0,["a2ecb224-0c82-47cf-a4a9-59c25d80caa7"]],"spr_sneo_head_sad":[82,89,30,29,["cfa1909e-e088-4383-9470-c7089422dc72"]],"spr_yheart_shot_hit2":[36,24,18,11,["9b0bbf3c-938e-4c12-a9ec-a3e6964ae87d","396de93c-17ab-448c-84cb-acb542e7ec6a","fe6d1f59-9552-426e-8f6d-bc45a0e22022","e1ea31c0-8f1b-41b4-8614-69a3a85c3117","a6f65514-62e9-4bae-9978-15573d7c76e1"]],"spr_queen_winebubble_edit2":[20,20,10,10,["6b949195-f23d-418c-8388-3ef3aed97dbd","59665919-8e53-4c94-8543-e961e2200f00","4cabcbc1-2a5f-45e1-88f3-274c8a3aa680","d7ce71af-4deb-490c-a5b5-302564560a68"]],"spr_sneo_phonehand":[58,27,29,13,["a76bf984-18cb-4082-83a5-76317999b7a7"]],"spr_sneo_head_open":[82,89,30,29,["0faef41d-9429-40c2-a44b-97f502e02f8f"]],"spr_sneo_bullet0":[11,11,5,5,["68cccf1a-7744-4a61-ac95-3e7aa6ebf922"]],"spr_sneo_soundbullet":[30,30,15,15,["d55d3222-56d2-4c3e-af57-0088c566e52d"]],"spr_sneo_bullet_box":[20,20,10,10,["a46d45b4-e742-4ee0-a99c-cce03d6aa711"]],"spr_sneo_wall_car":[58,24,0,0,["88348a5e-86ef-4c6b-9221-13fd8500a57c"]],"spr_sneo_mail":[20,20,10,10,["c7bd36fe-10cc-4a0b-b39f-8f94c0d72fac","f0855b7a-cab3-4a96-9173-bc9bf2150ae0"]],"spr_mettaton_bomb1":[24,30,12,18,["0e068d6b-a4e5-4d6c-a48f-dd20bf39876c","6f95180d-e834-4fce-b5a5-e98f4f3f46d5"]],"spr_mettaton_bomb2":[24,24,12,12,["133d0a9a-229d-418d-9ffd-12e39ec6736f","bd4ac25a-c988-4128-b0e1-c2a4c56478ff","58d292a0-b775-48ff-9577-f4fbbb1f1678","40ec3657-51db-4d0a-96d7-d85ebacf3377","9e2d17b7-2090-42d9-8f47-1bac1efda52d","41c9da41-1302-488f-98dc-042f03f23705","699d3af3-e3bc-4a8a-8442-fdeea6c243ff","94d020e7-2e0c-4250-ab1d-afaf52063e24"]],"spr_mettaton_bomb3":[24,24,12,12,["8257c4fc-4616-4ebd-86e0-1e5401bca153","5faf4f56-d236-47bd-a114-74d6e93ed8ae","9fa7b46e-9430-4f4b-967e-34073edd6ab7","a9077bf8-c1b1-419b-a0fd-972593e8c01d","4f257d7c-60c8-4782-9614-bf75b8ec0173","1b942f85-3e59-499e-a038-307d3f01c413","d314467b-1f3a-4463-9f82-42e8cade7c6f","28b3d0a1-6f27-495f-b068-43c8515b1ec5"]],"spr_sneo_wireheart":[52,52,26,26,["1cbaaf12-1a4e-4b6c-8223-3161ae2aefa7","05a7fea9-0357-49a6-b459-bb97f38649db","a43e8d9d-aeb6-4d57-b35b-a554c15fe964","4712542e-328c-4fff-bee3-ded4ef796fd3","cc1955f7-24ed-4943-bfd3-18b1dfc514e0","7e279c4e-b429-4336-b9ef-687b9f4a2aa1"]],"spr_sneo_wireheart_smaller":[34,34,17,17,["7f95dc57-485c-4dc7-82a8-f25a1ac363aa","4cb78de1-73a5-4256-9a29-3485ac17d6cc","5fbb24a2-cba3-4cc9-a1f3-e33ae2017801","2cf1ddad-9528-4c7e-b615-eb0471c3365c","fadb042f-7048-4897-ad48-d76848119a4d","ab3c6290-3be6-487c-a838-f27cdb12ab55"]],"spr_sneo_final_forme":[612,590,28,91,["689a6237-ea2e-4734-bfa6-2d8751b31a79","f268d50f-6e48-4d75-bb5c-8de532eeae2e","1f6d36d9-4bcb-4e06-b065-85719861d0b7","eccd4576-e9e1-47e9-acf4-cf98513f715e","23b1467b-e816-4e06-9ae4-4d007196385d","5e0480e8-451d-4a3c-9926-0618961d809a","f9a718e3-e5db-4d22-a8e2-681671f46b64","c6beaf19-2702-4bbd-a90c-48ade15aa147"]],"spr_spamton_dollar":[24,24,12,12,["c35e9fbd-1f3c-4132-ad83-ff849f777adb"]],"spr_sneo_track":[320,64,0,0,["52124d67-1562-4c97-9597-39b43d1f4311"]],"spr_sneo_car_front":[58,24,0,0,["e075266d-af73-4452-9213-4320a5cd1211"]],"spr_sneo_car_back":[58,24,0,0,["cfe3ba66-58d9-45a5-9f2c-13a816857958"]],"spr_sneo_car_empty":[58,24,0,0,["2cfc7cb4-e726-46f2-961f-2c488fe4fb55"]],"bg_dw_mansion_basement_cityscape_background":[198,49,0,0,["a7b47667-32b0-4190-b7a7-b257da48205b"]],"bg_dw_mansion_basement_cityscape_midground":[198,49,0,0,["367fedc4-9905-478f-b0c3-b242cdf82c5e"]],"bg_dw_mansion_basement_cityscape_foreground":[198,49,0,0,["6ca1c9e2-5e4b-4e0b-a54e-74bab1c9a48d"]],"spr_pipis_egg":[16,12,8,6,["28e191c6-afa5-45d2-81fe-e3eb86748754","ff83c78b-98e1-40ac-a4aa-ad9689d7893b","c81515e3-c531-490a-81cb-b3bf0c82c0f8","a52e497e-9b9e-4156-8583-1d13b2708101"]],"spr_pipis_wall":[75,2,37,0,["114c2c14-4108-49e1-b988-cb1aad0fec55"]],"spr_sneo_phone":[64,64,29,5,["be300ad4-724f-4155-a47e-f97794402864","4b5897e8-0067-4ead-a8e7-c119d4900419","9027202f-b736-41bb-9357-0214643b3dea","c00748a3-09ae-4934-a33a-edbca3de1aeb"]],"spr_sneo_arml_egg":[23,38,12,0,["7a63c852-59c2-45f0-b8ab-d27e8f0c0bd2"]],"spr_pipissign":[49,29,43,0,["d500a911-5e53-4a68-9127-1ad707b871e4","f5420727-f84f-48ab-a98b-aa18bb2433d2"]],"spr_spamtonneo_faceAttack_face":[42,71,0,0,["4bd94dda-c81e-4da1-89fa-4db970b022b0"]],"spr_spamtonneo_faceAttack_eyes":[42,71,0,0,["67ed419e-2991-4851-826e-42363ab2b91e","a9f6343c-61bc-427e-840b-cdaaee0584bd","ac379e96-abf2-4082-bbeb-ba0250b7ecfb"]],"spr_spamtonneo_faceAttack_nose":[42,71,0,0,["949c3bdd-1925-4606-ab45-57c70ad4cc8b","26743458-b39f-4a82-a235-9b36b0360fc2","b9c9b19e-33a6-43c3-99c4-182945d1d70c"]],"spr_spamtonneo_faceAttack_mouth":[42,71,0,0,["32ae36e7-8369-4dba-8d58-855ebfb2ccd0","4981e52d-afdb-4347-a704-17092534af1f","cf13234d-0b89-454b-b02b-a7271cf3bf4e","70ecb735-137f-4282-a224-e2b5339997fa","1144a5e8-1299-46ac-a92b-a2cea24a7580"]],"spr_spamtonneo_faceAttack_nose_bullet":[42,71,0,0,["79efab3f-a2dd-4c02-a6ca-85ed9815bf9d"]],"spr_spamtonneo_faceAttack_wisp":[29,19,14,9,["b12fe69c-90e7-4be0-acfe-c4f2c0441f61"]],"spr_bullet_laser_square_sneo":[8,8,8,4,["cd3ea9f5-ae53-4997-b4c9-8deb6aacddd0"]],"spr_bullet_laser_front_sneo":[8,8,8,4,["ac84382c-61ca-4f4c-861f-4d662d2a9a63","f845c587-3913-4648-979b-fecb02b0930a"]],"spr_boxing_crescent":[20,20,10,10,["817477a9-d56c-4409-b487-2817bd6d3cdf","136d15c4-24b4-4029-af04-987e7b745f3c","ef44d387-3a8c-4c55-92fe-45c204454f9a","4c25e825-a5d5-4fd8-b2f8-3d69e68b56be"]]}};
  const DR_KROUND_MUSIC='https://cdn.jsdelivr.net/gh/gagaimaboo/undertalebteng@37820509b7c663f9ed651fb1a17651a4353adc66/assets/dr/checker_dance.mp3';
 
  // ------------------------------------------------------------ assets ------
@@ -26748,7 +26748,7 @@ const DR=(()=>{
   }
   for(const [n,[,,,,ids]] of Object.entries(A5.spr)){imgs[n]=[];ids.forEach(i=>jobs.push(loadImage(DR_RAW5+`${n}_${i}.png`).then(im=>{imgs[n][i]=im}).catch(()=>{})))}
   for(const f of Object.keys(A1.font))jobs.push(loadImage(DR_RAW1+`fonts/${f}/${f}.png`).then(im=>{imgs['font_'+f]=im}).catch(()=>{}));
-  for(const [k,n] of Object.entries(sndKeys))jobs.push(loadAudioAsset(sndUrl(n),k==='text'?.4:.66,false).then(a=>{sounds['dr_'+k]=a}).catch(()=>{}));
+  for(const [k,n] of Object.entries(sndKeys))jobs.push(loadAudioAsset(sndUrl(n),k==='text'?.4:k==='txtspam2'?.5:.66,false).then(a=>{sounds['dr_'+k]=a}).catch(()=>{}));
   jobs.push(loadAudioAsset('https://cdn.jsdelivr.net/gh/BenSFGamer/Deltarune-web@main/battle.ogg',.5,true).then(a=>{music=battleMusic=a}).catch(()=>{}));
   jobs.push(loadAudioAsset(DR_KING_MUSIC,.5,true).then(a=>{kingMusic=a}).catch(()=>{}));
   jobs.push(loadAudioAsset(DR_SUSIE_MUSIC,.5,true).then(a=>{susieMusic=a}).catch(()=>{}));
@@ -26973,7 +26973,7 @@ const DR=(()=>{
     if(c==='%'){this.done=true;return}
     this.pos++;typed++;
     // talking portraits use their own voice (snd_txtral / txtsus / txtnoe / txtlan)
-    if(c!==' '&&this.pos%2===1)snd(this.face?({R:'txtral',S:'txtsus',N:'txtnoe',L:'txtlan'}[this.face.face]||'text'):'text');
+    if(c!==' '&&this.pos%2===1)snd(this.face?({R:'txtral',S:'txtsus',N:'txtnoe',L:'txtlan'}[this.face.face]||'text'):(this.t.voice||'text'),this.t.vrate||1);
    }
    if(this.pos>=this.str.length){const e=this.str.trimEnd();if(e.endsWith('/%'))this.halt=2;else if(e.endsWith('/'))this.halt=1}
   }
@@ -27360,6 +27360,7 @@ const DR=(()=>{
    flavor(m){return neoFlavor(m)},
    step(m){neoBodyStep(m)},
    onHurt(m){m.n.mode=2;m.n.hurt=12;m.n.shth=10;m.n.shocker=0},
+   cars:1,bgDraw(g){neoBgDraw(g)},
    draw(g,m,flash){neoDraw(g,m,flash)}
   },
   jevil:{name:'Jevil',music:'jevil',hp:3500,at:10,df:5,gold:0,x:448,y:107,mx:42,my:41,turn:240,boss:1,mercymax:999,
@@ -28483,7 +28484,7 @@ const DR=(()=>{
    if(say&&say.text){S.bubbles.push({x:say.bx,y:say.by,w:new Writer([say.text],say.bx+5,say.by+5,BUBBLE)});continue}
    if(say&&say.heads){S.bubbles.push(...cloverBubbles(m.x,m.y,say.heads,0));S.talkmax=Math.max(S.talkmax||90,m.def.talkmax||90)}
    else if(say&&say.heart)S.bubbles.push({x:m.x-100,y:m.y,heart:say.heart,siner:0});
-   else if(say&&say.pages){const bx=say.bx??m.x-160,by=say.by??m.y;S.bubbles.push({x:bx,y:by,spr:say.spr,xs:say.xs,ys:say.ys,manual:1,w:new Writer(say.pages,bx+5,by+5,BUBBLE)})}
+   else if(say&&say.pages){const bx=say.bx??m.x-160,by=say.by??m.y;S.bubbles.push({x:bx,y:by,spr:say.spr,xs:say.xs,ys:say.ys,manual:1,w:new Writer(say.pages,bx+5,by+5,say.bubble||BUBBLE)})}
    else if(say)S.bubbles.push({x:m.x-160,y:m.y,w:new Writer([say],m.x-160+5,m.y+5,BUBBLE)});
   }
   if(!S.bubbles.length&&!S.mons.some(m=>m.alive&&m.def.customBox))spawnBox(); // the Dummy: no speech, straight to its attack
@@ -30216,6 +30217,7 @@ const DR=(()=>{
  // -------------------------------------------------------------- draw ------
  function drawBack(g){
   g.fillStyle='#000';g.fillRect(0,0,640,480);
+  const nbg=S.mons.find(m=>m.def.bgDraw);if(nbg){nbg.def.bgDraw(g,nbg);return}
   const ar=S.mons.find(m=>m.def.arena);
   if(ar){const im=frame(ar.def.arena,0);if(im){g.save();g.globalAlpha=Math.min(1,S.bgalpha);g.drawImage(im,0,0,640,480);g.restore()}return}
   const t=imgs.bg_battleback1?.[0];if(!t)return;
@@ -30569,6 +30571,8 @@ const DR=(()=>{
  // f = 2 in his objects: the game multiplies their per-step motion by it.
  // ===================================================================================
  const NEO_F=2;
+ // his balloon voice (scr_textsound: snd_txtspam2, pitch 1.2)
+ const NEOBUBBLE={typer:{...BUBBLE.typer,voice:'txtspam2',vrate:1.2},font:BUBBLE.font,color:BUBBLE.color};
  const NEO_PARTS=['spr_sneo_wingl','spr_sneo_arml','spr_sneo_legl','spr_sneo_legr','spr_sneo_body','spr_sneo_head','spr_sneo_armr','spr_sneo_wingr'];
  const neoOf=()=>S&&S.mons.find(o=>o.id==='sneo'&&o.alive);
  const lerpN=(a,b,k)=>a+(b-a)*k;
@@ -30581,7 +30585,7 @@ const DR=(()=>{
    mode:1,shocker:0,shth:10,hit:0,hitT:0,hurt:0,weakT:0,
    phase:1,phaseturn:0,turn:0,rr:0,diff:0,face:0,final:0,
    ssm:0,bigshot:0,bigused:0,balloon:0,alt:0,alt2:0,check:0,xstart:m.x,ystart:m.y,
-   snapped:0,endcon:0,lastHp:m.hp};
+   snapped:0,endcon:0,lastHp:m.hp,eyeshp:16,nosehp:16,mouthhp:16,facebroken:0,phoneevent:0,armO:null,headShake:0,sat:0};
  }
  // the part motion from his Draw event (partmode 1: idle sway; 0: slump; 2: shocked)
  function neoBodyStep(m){
@@ -30604,6 +30608,11 @@ const DR=(()=>{
    }
   }
   if(n.shocker<0){n.shocker=n.shth;if(n.shth>2)n.shth-=.25*f}
+  // the phone call: the arm swings up with the phone, the head shakes at the news
+  if(S.mnfight!==2){n.armO=null;n.headShake=0}
+  if(n.armO){n.rot[1]=lerpN(n.rot[1],n.armO.rot,.25*f);n.frame[1]=n.armO.frame}
+  if(n.headShake){n.rot[5]+=Math.sin(n.sat/5)*15;n.sat+=.2*f}
+  neoBgStep();
   // hitcon: the head flashes orange, then fades back to white
   if(n.hit===1){n.blend[5]='#ffa040';n.hitT=0;n.hit=2}
   if(n.hit===2){n.hitT+=f;if(n.hitT>=15){n.hit=0;n.blend[5]=null}}
@@ -30634,6 +30643,23 @@ const DR=(()=>{
    draw(g,spr,n.frame[i],m.x+n.px[i]+n.xoff[i]+sh,m.y+n.py[i]+n.yoff[i]-sh,2,2,n.rot[i],a,{tint:n.blend[i]||undefined,flash});
   }
  }
+ // ------------------------------------------------------------------ the original fight's coaster
+ // obj_ch2_sceneex2: the cityscape (3 layers, 5 / 5.5 / 6 px a step), three rails at -15 px a step,
+ // and the party's go-karts (o_coaster_hero_sneo) that follow each hero.
+ function neoBgStep(){const b=S.nbg||(S.nbg={cs:0,tx:0});b.cs-=5;b.tx=(b.tx-15)%640}
+ function neoBgDraw(g){
+  const b=S.nbg||{cs:0,tx:0},a=Math.min(1,S.bgalpha);
+  const row=(n,x0)=>{const tw=meta(n)[0]*2;let x=(((x0%tw)+tw)%tw)-tw;for(;x<640;x+=tw)draw(g,n,0,x,0,2,2,0,a)};
+  row('bg_dw_mansion_basement_cityscape_background',b.cs);
+  row('bg_dw_mansion_basement_cityscape_midground',b.cs*1.1);
+  row('bg_dw_mansion_basement_cityscape_foreground',b.cs*1.2);
+  for(const y of [180,240,300])for(let k=-1;k<=1;k++)draw(g,'spr_sneo_track',0,b.tx+k*640,y,2,2,0,a);
+ }
+ const NEO_CARX=[-15,-5,-10],NEO_CARY=[101,182,260];
+ function drawNeoCar(g,h,front){
+  if(h.absent||h.i>2)return;
+  draw(g,front?'spr_sneo_car_front':'spr_sneo_car_back',0,h.x+NEO_CARX[h.i],NEO_CARY[h.i],2,2);
+ }
  // ------------------------------------------------------------------ yellow SOUL
  // obj_heart (color 1): Z shoots (3 on screen at most); hold Z to charge a BIG SHOT
  function yellowStep(h){
@@ -30642,7 +30668,9 @@ const DR=(()=>{
   if(P.confirm||(y.zhold>=10&&y.zhold<=39&&rel)){
    if(S.yshots.filter(s=>!s.dead).length<3&&y.delay===0){neoShot(h.x+10,h.y+10,0);snd('heartshot')}
   }
-  if(y.zhold===20&&!y.loop)y.loop=sndLoop('chargecharge',.6);
+  // snd_chargeshot_charge: pitch 0.1 at z_hold 20, +0.05 per step up to 40 (a rising whine)
+  if(y.zhold===20&&!y.loop)y.loop=sndLoop('chargecharge',.1);
+  if(y.loop&&y.zhold>=20&&y.zhold<40)y.loop.rate(.1+(y.zhold-20)/20);
   y.zcharge=Math.min(35,y.zhold-15);
   if(y.zcharge<15)y.count=0;
   y.frame=y.zhold>=40?2:0;
@@ -30707,6 +30735,7 @@ const DR=(()=>{
    e.t++;
    if(e.kind==='part'){e.x+=e.hs;e.y+=e.vs;const sp=Math.hypot(e.hs,e.vs);if(sp>0){const k=Math.max(0,sp-e.fric)/sp;e.hs*=k;e.vs*=k}if(sp<.5)e.xs-=.1,e.ys-=.1;if(e.xs<=0||e.t>40)e.dead=true}
    if(e.kind==='hit'){e.f+=.5;if(e.f>=5)e.dead=true}
+   if(e.kind==='head'){e.x+=Math.cos(e.dir*Math.PI/180)*e.sp;e.y-=Math.sin(e.dir*Math.PI/180)*e.sp;e.a-=.04;if(e.a<=0||e.x>700)e.dead=true}
    if(e.kind==='trail'){e.a-=.15;if(e.a<=0)e.dead=true}
   }
   S.yfx=S.yfx.filter(e=>!e.dead);
@@ -30728,6 +30757,7 @@ const DR=(()=>{
  function neoShootBullet(b,s){
   if(b.onShot){b.onShot(b,s);return}
   if(!s.big)yshotHitFx(s);
+  if(b.kind==='crew')snd('bomb',1.1+Math.random()*.2); // snd_play_x(snd_bomb, .7, 1.1+random(.2))
   S.yfx.push({kind:'hit',spr:'spr_yheart_shot_hit3',x:b.x,y:b.y,sc:1,f:0});b.dead=true;
  }
  function drawYellow(g){
@@ -30736,6 +30766,7 @@ const DR=(()=>{
    if(e.kind==='trail')draw(g,'spr_yheart_bigshot_trail',0,e.x,e.y,.8,.5,0,e.a);
    if(e.kind==='part')draw(g,'spr_yheart_charge',0,e.x,e.y,e.xs,e.ys);
    if(e.kind==='hit')draw(g,e.spr,e.f,e.x,e.y,e.sc,e.sc);
+   if(e.kind==='head')draw(g,'spr_sneo_crew',0,e.x,e.y,1,1,0,Math.max(0,e.a));
   }
   for(const s of S.yshots)draw(g,s.big?'spr_yheart_bigshot':'spr_yheart_shot',0,s.x,s.y,s.xs,s.ys,0,s.alpha);
   if(S.mnfight!==2)return;
@@ -30781,7 +30812,7 @@ const DR=(()=>{
   return '[Clown]!? NO!!!&I FEEL SICK!!!';
  }
  // the attacks this port has so far; the rest stand in with one that does
- const NEO_HAVE=new Set([0,8.5,6,2,9]);
+ const NEO_HAVE=new Set([0,8.5,6,2,9,7,8]);
  function neoTalk(m){
   const n=m.n,r=m.hp/m.maxhp,mc=m.mercy;
   if(n.phase===1&&(mc>25||r<.75))n.phase=2;
@@ -30797,13 +30828,12 @@ const DR=(()=>{
   if(n.rr===9)n.final=1;
   const b=neoBalloon(n);
   if(n.rr===7)n.face++;
-  // Phonecall and FaceAttack aren't ported yet: Phonehands / Flying Heads stand in for them
-  n.atk=NEO_HAVE.has(n.rr)?n.rr:n.rr===8?8.5:0;
+  n.atk=NEO_HAVE.has(n.rr)?n.rr:0;
   const pages=b>0?NEO_SAY[b]:b<0?[neoQuip(n)]:null;
   if(!pages)return null;
   // his balloon is wider than the usual one: up to 25 characters a line
   const tall=pages.some(p=>p.split('&').length>4);
-  return {pages:pages.map((p,k)=>p+(k===pages.length-1?'/%':'/')),spr:tall?'spr_battleblcon_long_tall':'spr_battleblcon_long',xs:1.75,bx:m.x-285,by:m.y+20};
+  return {pages:pages.map((p,k)=>p+(k===pages.length-1?'/%':'/')),spr:tall?'spr_battleblcon_long_tall':'spr_battleblcon_long',xs:1.75,bx:m.x-285,by:m.y+20,bubble:NEOBUBBLE};
  }
  function neoFlavor(m){
   const n=m.n;
@@ -30836,6 +30866,9 @@ const DR=(()=>{
   if(c.type===6)neoWalls(c,g.m);
   if(c.type===2)neoHeartAttack(c,g.m);
   if(c.type===9)neoFinale(c,g.m);
+  if(c.type===7)neoFace(c,g.m);
+  if(c.type===8)neoPhone(c,g.m);
+  for(const b of S.bubbles||[])if(b.manual&&b.w&&!c.ph)b.w.step();
  }
  // ---- FlyingHeads: obj_sneo_guymaker spawning obj_sneo_lilguy
  function neoCrew(x,y,o,c){
@@ -30886,6 +30919,12 @@ const DR=(()=>{
   if(b.kind==='wall'||b.kind==='wbomb'){neoWallStep(b);return}
   if(b.kind==='wheart'){neoWheartStep(b);return}
   if(b.kind==='fforme'){neoFormeStep(b);return}
+  if(b.kind==='pegg'){neoEggStep(b);return}
+  if(b.kind==='pcannon'){neoCannonStep(b);return}
+  if(b.kind==='pwall'){if(b.al<1)b.al+=.1;if(S.turntimer<1)b.dead=true;return}
+  if(b.kind==='phone'){return}
+  if(b.kind==='fpart'){neoFacePartStep(b);return}
+  if(b.kind==='nb2'){neoBul2Step(b);return}
   if(b.kind==='dollar'){neoDollarStep(b);return}
   if(b.kind==='phmaster'){neoPhoneMasterStep(b);return}
   if(b.kind==='phand'){neoPhoneHandStep(b);return}
@@ -30898,8 +30937,16 @@ const DR=(()=>{
   if(b.kind==='wall'||b.kind==='wbomb'){drawNeoWall(g,b);return}
   if(b.kind==='wheart'){drawNeoWheart(g,b);return}
   if(b.kind==='fforme'){draw(g,'spr_sneo_final_forme',b.f,b.x,b.y,1,1);return}
+  if(b.kind==='pegg'){
+   if(b.label)draw(g,'spr_pipissign',0,b.x-4+rnd(1),b.y+24+rnd(1),1,1);
+   draw(g,'spr_pipis_egg',b.f,b.x+(b.shake?rnd(8)-4:0),b.y+(b.shake?rnd(8)-4:0),2,2,b.ang);return}
+  if(b.kind==='pcannon'){drawNeoCannon(g,b);return}
+  if(b.kind==='pwall'){draw(g,'spr_pipis_wall',0,b.x,b.y,b.xs,1,0,b.al,{tint:'#00ff00'});return}
+  if(b.kind==='phone'){drawNeoPhone(g,b);return}
+  if(b.kind==='fpart'){drawNeoFacePart(g,b);return}
+  if(b.kind==='nb2'){draw(g,b.spr,b.frame||0,b.x,b.y,b.xs,b.ys);return}
   if(b.kind==='dollar'){draw(g,'spr_spamton_dollar',0,b.x,b.y,b.sc,b.sc,0,b.alpha);return}
-  if(b.kind==='nb'){draw(g,b.spr,0,b.x,b.y,b.xs,b.ys,b.noRot?0:b.dir);if(b.flash>0)draw(g,b.spr,0,b.x-2,b.y-2,b.xs,b.ys,0,b.flash/5,{fog:'#ffff00'});return}
+  if(b.kind==='nb'){draw(g,b.spr,b.frame||0,b.x,b.y,b.xs,b.ys,b.noRot?0:b.dir);if(b.flash>0)draw(g,b.spr,0,b.x-2,b.y-2,b.xs,b.ys,0,b.flash/5,{fog:'#ffff00'});return}
   if(b.kind==='phmaster'){if(b.vt>=2)draw(g,b.spr,0,b.x,b.y,2,2,0,b.alpha,{tint:mix('#00a2e8','#00ffff',.25+Math.sin(b.siner/3)*.25)});return}
   if(b.kind==='phand'){
    if(b.vt<2)return;
@@ -30912,7 +30959,8 @@ const DR=(()=>{
  // FluffyGuard (Ralsei): a bubble on the SOUL that soaks hits until its 100 HP run out
  function fluffyStep(){
   const fg=S.fluffy,h=S.heart;if(!fg||!h)return;
-  if(fg.hp<1){fg.active=0;fg.alpha-=.05;if(fg.alpha<.01)S.fluffy=null;return}
+  if(fg.hp<1){if(fg.active)snd('hurt',2); // snd_pitch(snd_play(snd_hurt1), 2)
+   fg.active=0;fg.alpha-=.05;if(fg.alpha<.01)S.fluffy=null;return}
   if(fg.alarm>0)fg.alarm--;
   if(S.mnfight!==2)return;
   const cx=h.x+10,cy=h.y+9;
@@ -30920,7 +30968,7 @@ const DR=(()=>{
    if(b.dead||!b.neo||!b.box)continue;
    const bx=(b.box[0]+b.box[2])/2+b.x,by=(b.box[1]+b.box[3])/2+b.y,rr=Math.max(b.box[2]-b.box[0],b.box[3]-b.box[1])/2+22;
    if(Math.hypot(bx-cx,by-cy)>rr)continue;
-   if(b.fluffyKill){if(b.kind==='crew')snd('bomb');b.dead=true}
+   if(b.fluffyKill){if(b.kind==='crew')snd('bomb',1.1+Math.random()*.2);b.dead=true}
    if(fg.alarm>0)continue;
    fg.hp-=10;fg.alarm=10;snd('hurt');
   }
@@ -31065,7 +31113,7 @@ const DR=(()=>{
   }
   if(!s.big)yshotHitFx(s);
   if(b.red)for(const o of S.bullets)if(o.kind==='wall'&&o.wn===b.wn&&!o.deco&&o!==b){o.dead=true;S.yfx.push({kind:'hit',spr:'spr_yheart_shot_hit3',x:o.x,y:o.y,sc:1.2,f:0})}
-  snd('bomb');S.yfx.push({kind:'hit',spr:'spr_yheart_shot_hit3',x:b.x,y:b.y,sc:1.2,f:0});b.dead=true;
+  snd('bomb',1.1+Math.random()*.2);S.yfx.push({kind:'hit',spr:'spr_yheart_shot_hit3',x:b.x,y:b.y,sc:1.2,f:0});b.dead=true;
  }
  function neoBombShot(b,s){if(b.timer)return;snd('damage');if(!s.big)yshotHitFx(s);b.timer=1;b.anim=1}
  function neoWallStep(b){
@@ -31165,9 +31213,10 @@ const DR=(()=>{
   if(c.special===1&&c.btimer===45){
    c.special=2;c.btimer=0;
    c.ff={kind:'fforme',neo:1,x:680,y:m.y,sp:16.75,f:0,dest:0,m,dmg:c.dmg,target:c.target,grazepoints:0,timepoints:0,grazed:0,box:FFORME,destroyable:1,onShot:neoFormeShot};
-   S.bullets.push(c.ff);snd('sneolaugh');
+   S.bullets.push(c.ff);snd('screenshake');
   }
-  if(c.special===2&&c.btimer===70){c.ff.dest=1;c.ff.f=1;c.special=3;c.dc=0}
+  if(c.special===2&&c.btimer===70){c.ff.dest=1;c.ff.f=1;c.special=3;c.dc=0;c.opT=0;c.op=sndLoop('overpower',.1)} // snd_sneo_overpower: pitch .1 -> 1 over 90 frames
+  if(c.op){c.opT++;c.op.rate(Math.min(1,.1+.9*c.opT/90));if(S.turntimer<20){stopLoop(c.op);c.op=null}}
   if(c.special===3&&c.btimer>=10){
    c.btimer=0;const [hw,hh]=boxHalf();
    const big=c.dc%5===2;c.dc++;
@@ -31188,11 +31237,334 @@ const DR=(()=>{
    if(b.x>mx-50)b.y+=Math.max(-5,Math.min(5,my-b.y));
    if(b.x<mx-10){b.dir=Math.atan2(-(my-b.y),mx-b.x)*180/Math.PI;b.fric=-.1}
    b.sc=lerpN(b.sc0,1,Math.max(0,Math.min(1,(b.x-(mx-200))/150)));
-   if(b.x>mx+50){b.dead=true;return}
+   if(b.x>mx+50){b.dead=true;snd('swallow');return}
   }
   b.sp-=b.fric;b.x+=Math.cos(b.dir*Math.PI/180)*b.sp;b.y-=Math.sin(b.dir*Math.PI/180)*b.sp;
   if(b.x>760){b.dead=true;return}
   collide(b,scaleBox(DOLLAR,b.sc),0);
+ }
+ // ====================================================================================
+ // FOOTBALL PIPIS (bulletcontroller type 1 / obj_pipis_controller variant 2 / obj_pipis_egg_bullet type 2)
+ // NEO's arm cannon lobs eggs that bounce toward the box; one that reaches it bursts into ten
+ // crew heads aimed at the SOUL. Three shots (or one BIG SHOT and a bit) break an egg first.
+ // ====================================================================================
+ const EGGBOX=[-18,-14,18,14],CONEBOX=scaleBox(CREWBOX,.5);
+ const boxEdges=()=>{const b=S.box,[hw,hh]=boxHalf();return {x:b.x,y:b.y,l:b.x-hw,r:b.x+hw,t:b.y-hh,b:b.y+hh}};
+ function neoEgg(x,y,o,c){
+  const e=Object.assign({kind:'pegg',neo:1,x,y,hs:0,vs:0,grav:.2,gdir:270,fric:0,type:2,hp:3,con:0,al:0,ang:rnd(360),f:0,shake:0,direct:0,label:0,bounce:-5-rnd(3),
+   dmg:c.dmg,target:c.target,grazepoints:2,timepoints:2,grazed:0,box:EGGBOX,destroyable:1,onShot:neoEggShot},o);
+  S.bullets.push(e);return e;
+ }
+ function neoEggShot(e,s){
+  e.shake=8;e.hp-=s.big?4:1;if(e.f<3)e.f++;snd('damage');
+  if(!s.big)yshotHitFx(s);
+  const m=neoOf();
+  if(e.hp<1){
+   S.yfx.push({kind:'hit',spr:'spr_yheart_shot_hit',x:e.x,y:e.y,sc:2,f:0});e.dead=true;
+   tensionheal(m&&m.n.diff===1?2:3);
+  }else if(e.x<500)e.hs/=1.05;
+ }
+ function neoEggBurst(e){
+  S.yfx.push({kind:'hit',spr:'spr_yheart_shot_hit',x:e.x,y:e.y,sc:2,f:0});
+  const h=S.heart;
+  for(let i=0;i<10;i++){
+   const d=(h?Math.atan2(-(h.y+10-e.y),h.x+10-e.x)*180/Math.PI:180)-25+rnd(50);
+   neoBul({x:e.x,y:e.y,dir:d,sp:15+rnd(5),spr:'spr_sneo_crew',xs:.5,ys:.5,box:CONEBOX,noRot:1,grazepoints:1,dmg:e.dmg,target:e.target},e);
+  }
+  e.dead=true;
+ }
+ function neoEggStep(e){
+  const bx=boxEdges();
+  gmMove(e);
+  if(e.shake>0)e.shake--;
+  if(e.al>0)e.al--;
+  e.ang+=45;
+  if(e.con===0&&e.y>bx.b-20&&e.vs>0)e.con=1;
+  if(e.con===1){snd('bump');e.ang=-30-rnd(30);e.grav=.24;e.vs=e.bounce;e.con=2;e.al=10}
+  // reached the box: it goes off
+  if(e.x<bx.r+10&&e.y>bx.t+10){snd('bomb');neoEggBurst(e);return}
+  if(e.y>bx.b-20&&e.vs>0&&e.con===2&&e.al<1)e.con=1;
+  if((e.con===2&&e.y<bx.t&&e.x<bx.r+80)||(e.direct&&e.y<bx.t))e.grav+=.01;
+  if(e.x<-60||e.y>540){e.dead=true;return}
+  collide(e,e.box,0);
+ }
+ // the cannon: a second NEO at the right edge, bobbing, with one arm pointed at the box
+ function neoCannon(c,m){
+  const k={kind:'pcannon',neo:1,x:0,y:0,con:0,timer:0,count:0,eggs:20,maxp:10,ang:-170,angF:-170,spr:'spr_sneo_arml_egg',xs:2,siner:rnd(100),tv:30,mc:0,mt:0,diff:c.diff,
+   dmg:c.dmg,target:c.target,xx:710,yy:250,shake:0};
+  S.bullets.push(k);return k;
+ }
+ function neoCannonStep(k){
+  k.siner+=.25;
+  let xx=630,yy=250+Math.sin(k.siner/6)*21;
+  k.shake=k.spr==='spr_sneo_arml_egg'?-4+rnd(8):0;
+  if(k.mc===0){k.mt++;xx=lerpN(710,630,k.mt/10);if(k.mt===10){k.mt=0;k.mc=1}}
+  if(S.turntimer<16)k.mc=2;
+  if(k.mc===2){k.mt++;xx=lerpN(630,710,k.mt/10);if(k.mt===10){k.dead=true;return}}
+  k.xx=xx;k.yy=yy;
+  const bx=boxEdges();
+  const out=()=>({x:xx+5+Math.cos((k.ang+270)*Math.PI/180)*50,y:yy-Math.sin((k.ang+270)*Math.PI/180)*50});
+  const eggs=()=>S.bullets.filter(b=>b.kind==='pegg'&&!b.dead).length;
+  if(k.mc===1){
+   if(k.con===0){
+    if(!S.bullets.some(b=>b.kind==='pwall'))S.bullets.push({kind:'pwall',neo:1,x:bx.x+200,y:bx.y+(bx.b-bx.t)/2,al:0,xs:2.9});
+    k.con=1;k.timer=0;
+   }
+   if(k.con===1){
+    let aa=1;k.count++;
+    if(k.count===3||k.count===5||k.count===9)aa=0;
+    if(k.count===0||k.count===4||k.count===8||k.count===11)aa=1;
+    const o=out(),rr=(eggs()<2&&S.turntimer<250)?1:0;
+    const slow=(d)=>neoEgg(o.x,o.y,Object.assign({type:2},d),k);
+    if(k.diff===0){
+     const rand=S.turntimer>380?.5:.8;
+     if(eggs()<3&&k.count<k.maxp){
+      if(aa)slow({grav:.5+rnd(10)/100,vs:-14,hs:-1.55-rr-rnd(rand)});
+      else slow({grav:.063+rnd(4)/100,vs:-4.25,hs:-4,direct:1});
+     }
+    }else if(eggs()<3){
+     if(aa){for(let i=0;i<2;i++)slow({grav:.5+rnd(10)/100,vs:-14,hs:-1.55-rr-rnd(.8)})}
+     else{slow({grav:.063+rnd(4)/100,vs:-4.25,hs:-4,direct:1});slow({grav:.5+rnd(10)/100,vs:-14,hs:-1.4-rnd(.4)})}
+    }
+    k.spr='spr_sneo_arml';k.angF=-180+rnd(50);k.con=2;
+   }
+   const reps=eggs()<1?3:1;
+   for(let r=0;r<reps;r++){
+    if(k.con!==2)break;
+    k.timer++;
+    if(k.timer<11)k.ang=lerpN(k.ang,k.angF,k.timer/10);
+    if(k.timer<k.tv-15&&k.eggs>.4)k.xs=lerpN(1.8,2.5,k.timer/(k.tv-15));
+    if(k.timer===k.tv-15&&k.eggs>.4&&k.count<k.maxp){k.spr='spr_sneo_arml_egg';k.xs=2}
+    if(k.timer>=k.tv){
+     k.eggs-=.4;k.tv=30+Math.floor(rnd(16));
+     if(k.eggs>0){k.con=0;k.timer=0}else{k.dead=true;return}
+    }
+   }
+  }
+  // it's over once the last egg is out of the way
+  if(k.count>=k.maxp&&S.turntimer>10&&!eggs())S.turntimer=10;
+ }
+ function drawNeoCannon(g,k){
+  const sh=k.shake;
+  draw(g,'spr_sneo_wingl',0,k.xx,k.yy+20,2,2,20);
+  draw(g,k.spr,1,k.xx,k.yy+11+sh/2,k.xs,2,k.ang+sh);
+  draw(g,'spr_sneo_body',0,k.xx,k.yy+20,2,2);
+  draw(g,'spr_sneo_head',1,k.xx+26,k.yy,2,2);
+ }
+ // the controller itself (bulletcontroller type 1): NEO slides off, the first egg drops
+ function neoPipis(c,m){
+  const n=m.n;c.pa=(c.pa||0)+1;
+  if(c.pa===6)neoEgg(m.x+4,m.y+60,{type:2,label:1,grav:.2+rnd(10)/100,vs:0,hs:-1.55},c);
+  if(c.pa<20){const t=c.pa/20;m.x=n.xstart+300*t*t}
+  if(c.pa===20){m.x=n.xstart+300;neoCannon(c,m)}
+  if(S.turntimer===20)n.slide={x:n.xstart,t:8};
+  if(S.turntimer===1)m.x=n.xstart;
+ }
+ // ====================================================================================
+ // PHONE CALL (bulletcontroller type 8 / obj_sneo_phonecall): a phone drops from the ceiling and
+ // rings; NEO answers, hands it to you ("... IT'S FOR YOU.") and the Football Pipis come.
+ // The last one (difficulty 3) is the short one before the finale: he takes the call himself.
+ // ====================================================================================
+ function neoPhone(c,m){
+  const n=m.n;
+  if(!c.ph){
+   const skip=c.diff===3?0:(n.phoneevent>=1?1:0);
+   if(c.diff===3)n.phoneevent=2;else n.phoneevent++;
+   c.ph={st:0,tt:-15,talking:false,ring:0,siner:0,ydrop:0,x0:m.x-10,y0:m.y+20,x:m.x-10,y:-30,skip,ang:0,pc:null,heads:0};
+   S.bullets.push({kind:'phone',neo:1,x:0,y:0,ph:c.ph,m,noHit:1});
+   if(c.diff===3)S.turntimer=100;
+  }
+  const p=c.ph;
+  if(p.st<7)S.turntimer=c.diff===3?100:430;
+  p.siner++;
+  if(p.ydrop<1)p.ydrop+=.02;
+  const e=1-Math.pow(1-Math.min(1,p.ydrop),2);
+  p.y=lerpN(-30,p.y0,e);p.x=p.x0+Math.sin(p.siner/20)*10;p.ang=Math.sin(p.siner/20)*10;
+  if(p.ring>0){p.ang+=(p.ring%2===0)?1:-1;p.ring--;if(p.ring<=6)n.mode=1}
+  const say=text=>{
+   S.bubbles=[{x:m.x-285,y:m.y+20,xs:1.75,spr:'spr_battleblcon_long',manual:1,w:new Writer([text+'/%'],m.x-285+5,m.y+25,NEOBUBBLE)}];
+   p.talking=true;p.tt=0;
+  };
+  if(p.talking){
+   p.tt++;
+   for(const b of S.bubbles)b.w.step();
+   const canSkip=!(c.diff===3&&p.st>=5);
+   if(p.tt>=45||(canSkip&&p.tt>5&&P.confirm)){S.bubbles=[];p.talking=false;p.tt=-10;p.st++;n.headShake=0}
+   return;
+  }
+  if(p.st===6){
+   // the call is over: hand the phone over and the attack starts
+   p.st=7;
+   if(c.diff!==3)p.pc={dmg:c.dmg,target:c.target,diff:c.diff,pa:0};
+   return;
+  }
+  if(p.st>=7){
+   if(p.pc)neoPipis(p.pc,m);
+   else if(c.diff===3){
+    // a stream of crew heads sprayed from his head: scenery, they can't hurt
+    const h=neoHead(m);
+    S.yfx.push({kind:'head',x:h.x-4+rnd(8),y:h.y+56+rnd(8),dir:-5+rnd(38),sp:7+rnd(13),a:1,t:0,hs:0,vs:0});
+   }
+   return;
+  }
+  if(p.tt<0){p.tt++;return}
+  if(p.st===0){p.ring=12;snd('phone');p.tt=-10;p.st=1}
+  else if(p.st===1){p.tt=-10;p.st=p.skip?5:2;n.armO={rot:-160,frame:2}}
+  else if(p.st===2){say('WHAT!?');if(c.diff!==3){n.headShake=1;n.sat=0}}
+  else if(p.st===3){if(c.diff===3)p.st=5;else{say('WHAT? ARE YOU SERIOUS!?');n.headShake=1;n.sat=0}}
+  else if(p.st===4)p.st=5;
+  else if(p.st===5){
+   n.armO={rot:-180,frame:c.diff===3?4:3};
+   if(!p.skip&&!p.asked){p.asked=1;say(c.diff===3?'IT\'S FOR&ME!?':'... IT\'S&FOR YOU.')}
+   else p.st=6;
+  }
+ }
+ function drawNeoPhone(g,b){
+  const p=b.ph,m=b.m,n=m.n;
+  if(!p)return;
+  const h=neoHead(m);
+  g.save();g.strokeStyle='#ffffff';g.lineWidth=2;
+  if(p.st===0||(p.st===1&&n.frame[1]===0)){
+   draw(g,'spr_sneo_phone',0,p.x,p.y,2,2,p.ang);
+   g.beginPath();g.moveTo(p.x,p.y);g.lineTo(m.x+n.px[5],-20);g.stroke();
+  }else{
+   // the cord runs from the end of his arm
+   const ox=m.x+n.px[1]+n.xoff[1],oy=m.y+n.py[1]+n.yoff[1],d=(n.rot[1]-93)*Math.PI/180;
+   g.beginPath();g.moveTo(ox+Math.cos(d)*72,oy-Math.sin(d)*72);g.lineTo(m.x+n.px[5],-20);g.stroke();
+  }
+  g.restore();
+ }
+ // ====================================================================================
+ // FACE ATTACK (bulletcontroller type 12 / obj_sneo_faceattack): his face smashes in with its eyes,
+ // nose and mouth firing. Each part has 16 HP: shoot them out (a BIG SHOT does 4). Break all three
+ // and the attack ends early; next time the face comes back already broken and the attack is shorter.
+ // ====================================================================================
+ const FACEPART={1:{spr:'spr_spamtonneo_faceAttack_eyes',box:[40,12,84,54],tx:62,ty:32,ex:58,ey:32},2:{spr:'spr_spamtonneo_faceAttack_nose',box:[0,46,68,76],tx:34,ty:64,ex:30,ey:64},3:{spr:'spr_spamtonneo_faceAttack_mouth',box:[18,62,82,140],tx:52,ty:102,ex:48,ey:102}};
+ const NOSEBOX=[14,31,21,35],WISPBOX=[-8,-3,0,4]; // sprite bboxes; neoBul scales them by the draw scale
+ const faceHp=(n,t)=>t===1?n.eyeshp:t===2?n.nosehp:n.mouthhp;
+ function neoFace(c,m){
+  const n=m.n;
+  c.at=(c.at||0)+1;
+  if(c.at===1){
+   if(n.facebroken===2){S.turntimer=170;n.facebroken=1}
+   else S.turntimer=300;
+  }
+  if(c.at<20)m.x=n.xstart+300*Math.pow(c.at/20,2);
+  if(c.at===20){
+   m.x=n.xstart+300;
+   const fb=n.facebroken===1,first=n.face===1,fx=424,fy=100;
+   let inc=0;for(const t of [1,2,3])if(faceHp(n,t)<=0)inc++;
+   c.parts=[];
+   for(const t of [0,1,2,3]){
+    const p={kind:'fpart',neo:1,t,x:first?730:fx,y:fy,xs0:fx,al:first?1:0,hp:t?(fb?-1:faceHp(n,t)):0,broken:t&&(fb||faceHp(n,t)<=0)?1:0,inv:0,hurt:0,shootf:0,shake:0,tm:0,first,sm:25,intro:0,
+     boxs:FACEPART[t]?FACEPART[t].box:null,box:null,destroyable:1,onShot:t?neoFacePartShot:null,boxx:S.box.x,fx0:0,exp:0,dmg:c.dmg,target:c.target,grazepoints:0,timepoints:0,grazed:0,c};
+    p.tm=t&&t!==1?(inc===1?20:(inc>=2?50:0)):(t===1?(inc>=1?20:0):0);
+    if(t)p.box=p.boxs; // broken parts still stop your shots (with a bell)
+    c.parts.push(p);S.bullets.push(p);
+   }
+  }
+  if(c.parts&&S.turntimer>80&&n.facebroken===0&&c.parts.slice(1).every(p=>p.broken))S.turntimer=80;
+  if(S.turntimer===20)n.slide={x:n.xstart,t:8};
+  if(S.turntimer<21&&S.turntimer>1&&c.parts)for(const p of c.parts){p.al-=.1;if(p.al<0)p.dead=true}
+  if(S.turntimer===1){
+   if(n.eyeshp<=0&&n.nosehp<=0&&n.mouthhp<=0){n.eyeshp=16;n.nosehp=16;n.mouthhp=16;n.facebroken=2}
+   else if(n.facebroken===1)n.facebroken=0;
+   m.x=n.xstart;
+  }
+ }
+ function neoFacePartShot(p,s){
+  const m=neoOf(),n=m.n;
+  if(p.al<.9)return;
+  if(p.broken){snd('bell');yshotHitFx(s);return}
+  if(p.inv>0&&!s.big){s.dead=true;return}
+  p.shake=6;
+  const d=s.big?4:1;
+  if(p.t===1)n.eyeshp-=d;if(p.t===2)n.nosehp-=d;if(p.t===3)n.mouthhp-=d;
+  snd('damage');p.inv=10;p.hurt=3;
+  p.hp=faceHp(n,p.t);
+  if(p.hp<=0){p.broken=1;snd('rocket');p.exp=16}
+  yshotHitFx(s);
+ }
+ function neoFacePartStep(p){
+  const c=p.c,m=neoOf();if(!m){p.dead=true;return}
+  const n=m.n,ft=c.parts[0];
+  if(p.first){
+   if(p.intro===0){
+    p.x-=p.sm;p.sm+=.5;
+    if(p.x<p.xs0){p.intro=15;if(p.t===0){S.shake={amt:6,t:0};snd('closetimpact')}}
+   }
+   if(p.intro>0){
+    p.intro--;
+    if(p.intro===0){p.first=false;p.x=p.xs0;if(p.t===0)S.box.x=p.boxx}
+    else{p.x=p.xs0-Math.sin(Math.PI*(p.intro/15))*20;if(p.t===0)S.box.x=p.boxx-Math.sin(Math.PI*(p.intro/15))*20}
+   }
+   if(p.first)return;
+  }
+  p.tm++;
+  if(p.al<1&&S.turntimer>21)p.al=Math.min(1,p.al+.1);
+  if(p.inv>0)p.inv--;
+  if(p.shake>0)p.shake--;
+  if(p.exp>0){
+   const F=FACEPART[p.t];
+   if(p.exp%2===0)S.yfx.push({kind:'hit',spr:'spr_boxing_crescent',x:p.x+F.ex-25+rnd(50),y:p.y+F.ey-25+rnd(50),sc:2,f:0});
+   p.exp--;
+  }
+  const bro=c.parts.slice(1).filter(q=>q.broken).length,h=S.heart;
+  if(p.t===1&&!p.broken){
+   if(p.tm===30||!p.lz){p.bm=bro;p.lx=p.x-10+56;p.ly=p.y+32;p.ld=h?Math.atan2(-(h.y+10-p.ly),h.x+10-p.lx)*180/Math.PI:180;p.lz=1}
+   if(p.tm>=30&&p.tm%3===0&&S.turntimer>21){
+    let a=p.ld;if(p.bm===2)a+=p.bm*(rnd(16)-8);
+    // obj_werewire_bullet_lasercircle: a short chain of laser squares along the line
+    for(let k=0;k<3;k++){
+     const back=(2-k)*7;
+     neoBul({x:p.lx+Math.cos(a*Math.PI/180)*back,y:p.ly-Math.sin(a*Math.PI/180)*back,dir:a,sp:7,fric:-(p.bm*.25),spr:k===2?'spr_bullet_laser_front_sneo':'spr_bullet_laser_square_sneo',frame:k===2?1:0,box:[-8,-1,0,1],xs:2,ys:2,grazepoints:3,dmg:p.dmg,target:p.target},p);
+    }
+    p.shootf=3;
+   }
+   if(p.tm===50)p.tm=p.bm*5;
+  }
+  if(p.t===2&&!p.broken){
+   if(p.tm>=70&&!p.ni){p.bm=bro;p.ni=1}
+   if(p.tm>=80&&p.tm%5===0){
+    const rv=rnd(4)-2;
+    for(let i=0;i<3;i++){
+     const b=neoBul({kind:'nb2',x:p.x,y:p.y,hs:-3,vs:-4+i*4.5+(p.bm===2?rv:0),grav:.6,gdir:180,fric:.4,spr:'spr_spamtonneo_faceAttack_nose_bullet',xs:2,ys:2,box:NOSEBOX,grazepoints:3,dmg:p.dmg,target:p.target,noRot:1,origin0:1},p);
+    }
+    p.shootf=3;
+   }
+   if(p.tm===90)p.tm=26+(p.bm||0)*10;
+  }
+  if(p.t===3&&!p.broken){
+   if(p.tm>=10&&!p.ei){p.ei=1;p.bm=bro}
+   if(p.tm>=42){p.mf=0;p.tm=-40+(p.bm||0)*20}
+   if(p.tm>=10&&p.tm%6===0){
+    const b=neoBul({kind:'nb2',x:p.x+30,y:p.y+98,hs:-(4+rnd(3)),vs:6-rnd(8)+(h&&S.box&&h.y>=S.box.y?1:0),grav:-.2,gdir:270,spr:'spr_spamtonneo_faceAttack_wisp',xs:2,ys:2,box:WISPBOX,grazepoints:3,dmg:p.dmg,target:p.target,noRot:1},p);
+    p.shootf=3;
+   }
+  }
+ }
+ function neoBul2Step(b){
+  gmMove(b);
+  if(b.fric&&b.fric>0){}
+  if(b.x<-80||b.x>780||b.y<-80||b.y>580){b.dead=true;return}
+  collide(b,b.box,0);
+ }
+ function drawNeoFacePart(g,p){
+  if(p.t===0){
+   const m=neoOf();
+   draw(g,'spr_spamtonneo_faceAttack_face',0,p.x,p.y,2,2,0,p.al);
+   draw(g,'spr_battlebg_0',0,p.x-3,p.y+70,2.4,2,0,p.al,{tint:mix('#00ff00','#00ff00',.5)});
+   return;
+  }
+  const F=FACEPART[p.t],hurt=p.hurt>0;if(hurt)p.hurt--;
+  let col=p.broken?null:mix('#800080','#00b9ee',Math.max(0,Math.min(1,p.hp/16)));
+  if(p.shootf>0){col='#ffff00';p.shootf--}
+  if(hurt)col='#ff0000';
+  if(p.inv>0){col='#ff0000';if([10,9,6,5,3,2].includes(p.inv))return}
+  let f=1;
+  if(p.t===3)f=p.broken?4:(p.tm>=10?3:1);else f=p.broken?2:1;
+  draw(g,F.spr,f,p.x+(p.shake?rnd(6)-3:0),p.y,2,2,0,p.al,{tint:col||undefined});
+  if(!p.broken)draw(g,'spr_boxing_crescent',0,p.x+F.tx,p.y+F.ty,.4,.4,0,Math.min(1,p.al),{tint:'#ff0000'});
  }
  function jevilTire(m){if(m.tired)return;m.tired=1;m.status=1;m.dl=2;m.mercymax=100;m.mercy=100;m.comment='(Tired)'}
  // obj_joker_body: idle / dance / tired / shadow dance, the chain-and-head wobble when hit,
@@ -31743,7 +32115,8 @@ const DR=(()=>{
   drawBack(g);
   for(const m of S.mons)if(m.def.drawBg&&!m.spared)m.def.drawBg(g,m);
   if(S.darkener){g.fillStyle='rgba(0,0,0,'+(S.darkener.amt/20)+')';g.fillRect(-40,-40,720,560)}
-  for(let i=S.party.length-1;i>=0;i--){const h=S.party[i];if(h.id==='susie'&&!h.absent&&h.hp>0&&((S.kw&&S.kw.learned)||(S.fbx&&S.fbx.uses)))drawFrostAura(g,h);drawHero(g,h)}
+  const carsOn=S.mons.some(m=>m.def.cars&&!m.spared);
+  for(let i=S.party.length-1;i>=0;i--){const h=S.party[i];if(h.id==='susie'&&!h.absent&&h.hp>0&&((S.kw&&S.kw.learned)||(S.fbx&&S.fbx.uses)))drawFrostAura(g,h);if(carsOn)drawNeoCar(g,h,0);drawHero(g,h);if(carsOn)drawNeoCar(g,h,1)}
   for(const m of S.mons)drawMonster(g,m);
   drawFx(g);
   drawJevilBehind(g);
