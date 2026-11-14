@@ -921,7 +921,7 @@ const MUSIC={
 
 const canvas=document.getElementById('game');
 const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=false;
-const W=1448,H=1086,CW=1930,OFFX=Math.floor((CW-W)/2); // CW: the 16:9 canvas; W: the stage drawn in its middle
+const W=1448,H=1086,CW=1930,OFFX=Math.floor((CW-W)/2),UISX=CW/W; // CW: the 16:9 canvas; menus stretch W to it, battles sit in the middle of it
 // UNDERTALE battles are authored in a native 640x480 coordinate space.
 // Keep gameplay placement/sizing in that space, then scale it to this 1448x1086 canvas.
 const UT_W=640,UT_H=480,UT_SCALE=W/UT_W;
@@ -5421,7 +5421,7 @@ function uiScreenProgress(now=performance.now(),duration=320){
 function drawUiScreenCurtain(now=performance.now()){
  const p=uiScreenProgress(now,260);
  if(p>=.999)return;
- ctx.save();ctx.globalAlpha=1-p;ctx.fillStyle='#000';ctx.fillRect(-OFFX,0,CW,H);ctx.restore();
+ ctx.save();ctx.globalAlpha=1-p;ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);ctx.restore();
 }
 function menuTotalOutcome(type){
  return Object.values(battleStats?.[type]||{}).reduce((a,v)=>a+(Number(v)||0),0);
@@ -6533,7 +6533,8 @@ function ui6W(t,f='text',s=2){
  return w;
 }
 // Draw one line. o: {f,s,c,a:'left'|'center'|'right',alpha}
-function ui6T(t,x,y,o={}){
+function ui6T(t,x,y,o={}){return uiUnstretch(x,()=>ui6TRaw(t,x,y,o))}
+function ui6TRaw(t,x,y,o={}){
  const f=o.f||'text',s=o.s||2,color=o.c||UI6_C.white;t=String(t??'');
  const w=ui6W(t,f,s);let left=x;
  if(o.a==='center')left=x-w/2;else if(o.a==='right')left=x-w;
@@ -6580,20 +6581,39 @@ function ui6Box(r,o={}){
 }
 function ui6Fill(r,color){ctx.fillStyle=color;CanvasRenderingContext2D.prototype.fillRect.call(ctx,Math.round(r.x),Math.round(r.y),Math.round(r.w),Math.round(r.h))}
 // The red SOUL, centred on (x,y). s=2 draws spr_heart at 32x32.
-function ui6Soul(x,y,s=2,kind='red'){
+function ui6Soul(x,y,s=2,kind='red'){return uiUnstretch(x,()=>ui6SoulRaw(x,y,s,kind))}
+function ui6SoulRaw(x,y,s=2,kind='red'){
  const im=kind==='purple'?(images.heartPurple||images.heart):(images.heart||images.heartFallback);
  const d=16*s;
  if(im){ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(im,Math.round(x-d/2),Math.round(y-d/2),d,d);ctx.restore()}
  else drawPixelHeart(x,y,Math.max(1,s),'#f00');
 }
 // A sprite scaled to fit a box, pixel-perfect when it can be.
-function ui6Sprite(im,cx,cy,maxW,maxH,o={}){
+function ui6Sprite(im,cx,cy,maxW,maxH,o={}){return uiUnstretch(cx,()=>ui6SpriteRaw(im,cx,cy,maxW,maxH,o))}
+function ui6SpriteRaw(im,cx,cy,maxW,maxH,o={}){
  if(!im)return;
  const iw=im.naturalWidth||im.width||1,ih=im.naturalHeight||im.height||1;
  let s=Math.min(maxW/iw,maxH/ih);if(s>=1&&!o.smoothScale)s=Math.floor(s);if(o.maxScale)s=Math.min(s,o.maxScale);
  const dw=Math.round(iw*s),dh=Math.round(ih*s);
  ctx.save();ctx.imageSmoothingEnabled=false;if(o.alpha!==undefined)ctx.globalAlpha*=o.alpha;if(o.gray)ctx.filter='grayscale(1) brightness(.45)';
  ctx.drawImage(im,Math.round(cx-dw/2),o.bottom?Math.round(cy-dh):Math.round(cy-dh/2),dw,dh);ctx.restore();
+}
+// widescreen menus: the layout is stretched sideways, the glyphs and sprites are drawn at their own width about their anchor
+let uiStretch=false,uiUn=0;
+function uiUnstretch(ax,fn){
+ if(!uiStretch||uiUn)return fn();
+ ctx.save();ctx.translate(ax,0);ctx.scale(1/UISX,1);ctx.translate(-ax,0);uiUn++;
+ try{return fn()}finally{uiUn--;ctx.restore()}
+}
+{
+ const _ft=ctx.fillText.bind(ctx),_st=ctx.strokeText.bind(ctx),_di=ctx.drawImage.bind(ctx);
+ ctx.fillText=(t,x,y,m)=>uiUnstretch(x,()=>_ft(t,x,y,m));
+ ctx.strokeText=(t,x,y,m)=>uiUnstretch(x,()=>_st(t,x,y,m));
+ ctx.drawImage=(im,...a)=>{
+  if(!uiStretch||uiUn)return _di(im,...a);
+  const iw=im.naturalWidth||im.width||0,dx=a.length>=8?a[4]:a[0],dw=a.length>=8?a[6]:(a.length>=4?a[2]:iw);
+  return uiUnstretch(dx+dw/2,()=>_di(im,...a));
+ };
 }
 function ui6Blink(ms=530){return Math.floor(performance.now()/ms)%2===0}
 
@@ -6615,7 +6635,7 @@ function ui6Hit(r,click,hover){if(ui6Recording)ui6Hits.push({r,click,hover})}
 function ui6WheelArea(r,fn){if(ui6Recording)ui6Wheels.push({r,fn})}
 function ui6In(r,x,y){return x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h}
 const UI6_SCREENS=new Set(['title','gamepick','enemies','variants','supportselect','drroster','drsupport','drcustom','drshop','customhub','creator','customize','kills','spares','shop','bossrush','bossrushBreak','bossrushCodex','bossrushResults','settings','mods','lvselect','tutorialPrompt','tutorial']);
-function ui6CanvasPoint(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*CW/r.width-OFFX,y:(e.clientY-r.top)*H/r.height}}
+function ui6CanvasPoint(e){const r=canvas.getBoundingClientRect(),cx=(e.clientX-r.left)*CW/r.width;return{x:uiStretchScreen()?cx/UISX:cx-OFFX,y:(e.clientY-r.top)*H/r.height}}
 function ui6FindHit(x,y){for(let i=ui6Hits.length-1;i>=0;i--)if(ui6In(ui6Hits[i].r,x,y))return ui6Hits[i];return null}
 window.addEventListener('pointermove',e=>{
  if(e.target!==canvas||!UI6_SCREENS.has(screen))return;
@@ -6741,9 +6761,9 @@ function ui6Backdrop(now){
    q.fillStyle='rgba(170,130,240,.06)';q.fillRect(46,42,4,12);q.fillRect(42,46,12,4);
    ui6LatticePattern=ctx.createPattern(t,'repeat');
  }
- ctx.drawImage(ui6BackdropCanvas,-OFFX,0);
+ {const st=uiStretch;uiStretch=false;ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(ui6BackdropCanvas,0,0);
  const off=uiReducedMotion?0:(now/80)%96;
- ctx.save();ctx.translate(off,off/2);ctx.fillStyle=ui6LatticePattern;ctx.fillRect(-OFFX-96,-96,CW+96,H+96);ctx.restore();
+ ctx.translate(off,off/2);ctx.fillStyle=ui6LatticePattern;ctx.fillRect(-96,-96,CW+96,H+96);ctx.restore();uiStretch=st}
 }
 // '#rrggbb' scaled toward black (t=0 black, 1 the colour).
 function ui6Shade(hex,t){
@@ -6751,7 +6771,8 @@ function ui6Shade(hex,t){
  return `rgb(${Math.round((n>>16&255)*t)},${Math.round((n>>8&255)*t)},${Math.round((n&255)*t)})`;
 }
 // A pixel bitmap (rows of '#' and '.') centred on (cx,cy), s screen pixels per bitmap pixel.
-function ui6Bitmap(rows,cx,cy,s,color){
+function ui6Bitmap(rows,cx,cy,s,color){return uiUnstretch(cx,()=>ui6BitmapRaw(rows,cx,cy,s,color))}
+function ui6BitmapRaw(rows,cx,cy,s,color){
  const fr=CanvasRenderingContext2D.prototype.fillRect,x0=Math.round(cx-rows[0].length*s/2),y0=Math.round(cy-rows.length*s/2);
  ctx.fillStyle=color;
  rows.forEach((row,r)=>{for(let c=0;c<row.length;c++){if(row[c]!=='#')continue;let e=c;while(row[e+1]==='#')e++;fr.call(ctx,x0+c*s,y0+r*s,(e-c+1)*s,s);c=e}});
@@ -6783,7 +6804,8 @@ function ui6Frame(r,o={}){
 // Big headline text: a bitmap-font line with a vertical gradient and a chunky dark outline, cached.
 // o: {f,s,top,bottom,shadow,a}
 const ui6BigCache=new Map();
-function ui6BigText(t,x,y,o={}){
+function ui6BigText(t,x,y,o={}){return uiUnstretch(x,()=>ui6BigTextRaw(t,x,y,o))}
+function ui6BigTextRaw(t,x,y,o={}){
  const f=o.f||'text',s=o.s||6,top=o.top||'#ffffff',bottom=o.bottom||'#c4b2ec',shadow=o.shadow||'#1d0c33';
  const key=[t,f,s,top,bottom,shadow].join('|');let c=ui6BigCache.get(key);
  if(!c){
@@ -6806,7 +6828,8 @@ function ui6BigText(t,x,y,o={}){
  return c.w;
 }
 // "CHOOSE A FIGHT": white words, then the pink one.
-function ui6ChooseTitle(cx,y,s=5,big=s){
+function ui6ChooseTitle(cx,y,s=5,big=s){return uiUnstretch(cx,()=>ui6ChooseTitleRaw(cx,y,s,big))}
+function ui6ChooseTitleRaw(cx,y,s=5,big=s){
  const a=ui6W('CHOOSE A ','text',s),b=ui6W('FIGHT','text',big),left=cx-(a+b)/2;
  ui6BigText('CHOOSE A',left,y+(big-s)*UI6F.text.cap,{s});
  ui6BigText('FIGHT',left+a,y,{s:big,top:'#ff6aa6',bottom:'#d4105e',shadow:'#33061d'});
@@ -7562,15 +7585,22 @@ function drawTutorial(){
 }
 
 let nbDrawnS=null,nbDrawnT=-1;
+// the DELTARUNE hub pages are drawn like its battles (640x480 space, centred); every other menu is stretched wide
+const UI_STAGE=new Set(['drsupport','drcustom','drshop']);
+function uiStretchScreen(){return UI6_SCREENS.has(screen)&&!UI_STAGE.has(screen)}
 function render(now){
- // widescreen: the picture is the 1448x1086 stage in the middle of a 16:9 canvas. Menus have a backdrop that runs
- // out to the edges; a battle is cropped to the stage (it is a 4:3 game inside the wide frame)
+ // widescreen: a menu is stretched sideways across the canvas (uiStretch: its text and sprites are drawn un-stretched);
+ // a battle is cropped to its 4:3 stage in the middle
  if(screen==='nb'&&NB.S&&!NB.S.mp&&newEngineFps!==60&&NB.S===nbDrawnS&&NB.S.t===nbDrawnT)return;
+ const ui=uiStretchScreen();
  ctx.setTransform(1,0,0,1,0,0);
  ctx.fillStyle='#000';ctx.fillRect(0,0,CW,H);
- ctx.save();ctx.translate(OFFX,0);
- if(['nb','dr','results','loading'].includes(screen)){ctx.beginPath();ctx.rect(0,0,W,H);ctx.clip()}
- try{renderStage(now)}finally{ctx.restore()}
+ const hub=UI6_SCREENS.has(screen)&&UI_STAGE.has(screen);
+ if(hub)ui6Backdrop(now);
+ ctx.save();
+ if(ui){ctx.scale(UISX,1);uiStretch=true}
+ else{ctx.translate(OFFX,0);if(!hub){ctx.beginPath();ctx.rect(0,0,W,H);ctx.clip()}}
+ try{renderStage(now)}finally{uiStretch=false;ctx.restore()}
 }
 function renderStage(now){
  // A battle only changes when it steps (30 times a second on the default setting), so
@@ -8100,7 +8130,7 @@ window.addEventListener('blur',()=>{
 // Desktop UI affordance: menu choices preview on hover and the pointer reflects clickability.
 // This is presentation-only; pointerdown still owns every actual action.
 canvas.addEventListener('pointermove',e=>{
- const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*CW/r.width-OFFX,y=(e.clientY-r.top)*H/r.height;
+ const r=canvas.getBoundingClientRect(),cx=(e.clientX-r.left)*CW/r.width,x=uiStretchScreen()?cx/UISX:cx-OFFX,y=(e.clientY-r.top)*H/r.height;
  let clickable=false;
  if(screen==='shop'){
    const entries=shopVisibleEntries();
@@ -8122,7 +8152,7 @@ canvas.addEventListener('pointerleave',()=>{canvas.style.cursor='default'});
 
 
 canvas.addEventListener('pointerdown',e=>{
- const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*CW/r.width-OFFX,y=(e.clientY-r.top)*H/r.height;
+ const r=canvas.getBoundingClientRect(),cx=(e.clientX-r.left)*CW/r.width,x=uiStretchScreen()?cx/UISX:cx-OFFX,y=(e.clientY-r.top)*H/r.height;
  if(screen==='loading')return;unlockAudio();
  if(screen==='results'){resultsContinue();return}
  if(screen==='tutorialPrompt'){
