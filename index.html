@@ -1392,7 +1392,7 @@ function rewardData(id){
  return {...r,killGold:kg,spareGold:sg};
 }
 function armorById(id){return SHOP_ARMOR_ENTRIES.find(a=>a.id===id)||SHOP_ARMOR_ENTRIES[0]}
-function ownsShopArmor(id){return id==='bandage'||!!progression.armors?.[id]}
+function ownsShopArmor(id){return SHOP_ARMOR_ENTRIES.some(a=>a.id===id)} // no shop: every piece of gear is unlocked
 function ownsVanillaArmor(id){const row=SHOP_ARMOR_ENTRIES.find(a=>a.id===id);return !!row&&!row.partyOnly&&ownsShopArmor(id)}
 function vanillaArmorData(){
  const id=ownsVanillaArmor(progression.equippedArmor)?progression.equippedArmor:'bandage';
@@ -1435,8 +1435,8 @@ function grantVanillaReward(type,id){
  return {exp:gainedExp,gold,oldLv,newLv};
 }
 function ownedItemCount(id){return Math.max(0,Math.floor(Number(progression.itemStock?.[id])||0))}
-function ownsShopWeapon(id){return id==='stick'||!!progression.weapons?.[id]}
-function ownsVanillaWeapon(id){const row=SHOP_WEAPON_ENTRIES.find(v=>v.id===id);return id==='stick'||(!!progression.weapons?.[id]&&!row?.partyOnly)}
+function ownsShopWeapon(id){return id==='stick'||SHOP_WEAPON_ENTRIES.some(w=>w.id===id)}
+function ownsVanillaWeapon(id){const row=SHOP_WEAPON_ENTRIES.find(v=>v.id===id);return id==='stick'||(!!row&&!row.partyOnly)}
 function vanillaWeaponData(){
  const id=ownsVanillaWeapon(progression.equippedWeapon)?progression.equippedWeapon:'stick';
  return WEAPON_OPTIONS.find(w=>w.id===id)||WEAPON_OPTIONS[0];
@@ -6950,7 +6950,6 @@ function ui6TitleLogo(y,scale=4){
 const TITLE_MENU=[
  {id:'battle',label:'BATTLE',hint:'UNDERTALE AND DELTARUNE FIGHTS',icon:'sword',text:b=>`* ${b.label} is loaded and waiting.\n* Pick UNDERTALE or DELTARUNE, then who to fight.`},
  {id:'online',label:'ONLINE',hint:'FIGHT WITH UP TO 4 FRIENDS',icon:'souls',text:()=>'* Fight the selected battle with up to 4 friends.\n* Host a room or join one with its code.'},
- {id:'shop',label:'SHOP',hint:'ITEMS, WEAPONS AND ARMOR',icon:'bag',text:()=>'* Spend the GOLD from vanilla fights on items, weapons and armor.'},
  {id:'creator',label:'CREATOR',hint:'BUILD YOUR OWN MONSTERS',icon:'pencil',text:()=>'* Build your own monsters.\n* Stats, sprites, attacks, ACTs and dialogue.'},
  {id:'records',label:'RECORDS',hint:'YOUR KILLS AND SPARES',icon:'trophy',text:()=>'* Every monster you have defeated or spared, and how many times.'},
  {id:'mods',label:'MODS',hint:'CHEATS AND CHAOS RULES',icon:'bolt',text:()=>'* Cheats and chaos rules.\n* Modded fights earn no EXP or GOLD and are not recorded.'},
@@ -7438,7 +7437,7 @@ function drawSettings(now=performance.now()){
  const rows=[
    {label:'SANS TUTORIAL',value:'',d:'* Replay the tour of every menu and the battle controls.'},
    {label:'FRAME RATE',value:`${newEngineFps} FPS`,cycle:true,d:'* 60 FPS smooths the drawing.\n* The battle itself always runs at UNDERTALE\'s 30.'},
-   {label:'AUTO LOADOUT',value:on(autoLoadout),cycle:true,d:'* ON: every fight starts with the LV, weapon, armor and items that suit that stage of the game.\n* OFF: pick them yourself. This is the only place to change it.'},
+   {label:'AUTO LOADOUT',value:on(autoLoadout),cycle:true,d:'* ON: every fight starts with the LV, weapon, armor and items that suit that stage of the game.\n* OFF: fights use the plain starting loadout. Build your own in the CUSTOM HUB.'},
    {label:'EXIT',value:'',d:'* Back to the title.'}
  ];
  const box={x:164,y:150,w:1120,h:500};
@@ -33047,7 +33046,7 @@ let drGroupCache=null;
 function drGroups(){return drGroupCache||(drGroupCache=ui6Groups(DR_GROUPS,DR.enemyIds))}
 const drCarousel={pos:0,group:''},drGroupMemory={};
 // focus: 9 the group tabs, 0 the cards, then the buttons in DR_ACTIONS order
-const DR_ACTIONS=[4,1,2,3,6,7,8,5];
+const DR_ACTIONS=[4,1,2,3,6,7,5];
 function drChoiceLabel(f){return f===1?'SUPPORT':f===2?(drParty?'NOELLE':'RALSEI'):f===3?(drSusieAuto?'WILD':'TAME'):f===4?'FIGHT':f===6?(drWeird?'WEIRD ON':'WEIRD'):f===7?(drCustom.on?'CUSTOM ON':'CUSTOM'):f===8?'SHOP':'BACK'}
 function drActivate(f){
  if(f===1){drSupSel=0;drSupFocus=0;screen='drsupport';play('select')}
@@ -33176,7 +33175,7 @@ function drawDrSupport(now=performance.now()){
 // and gear for the CUSTOM hub (unlocked things can be used as often as you like).
 function drWallet(){return Math.max(0,+(drLS('utbg.drDollars')||0)||0)}
 function drWalletAdd(n){drLS('utbg.drDollars',String(Math.max(0,drWallet()+Math.round(n||0))))}
-function drOwned(){try{const o=JSON.parse(drLS('utbg.drOwned')||'{}');o.items=o.items||{1:1};o.gear=o.gear||{};return o}catch(_){return {items:{1:1},gear:{}}}}
+function drOwned(){const items={},gear={};for(const id of Object.keys(DR.items))items[id]=99;for(const id of Object.keys(DR.gear))gear[id]=1;return {items,gear}} // no shop: everything is unlocked in the CUSTOM hub
 function drSaveOwned(o){drLS('utbg.drOwned',JSON.stringify(o))}
 const DR_HEROES=['kris','susie','ralsei','noelle'];
 function drDefaultCustom(){
