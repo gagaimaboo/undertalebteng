@@ -26868,7 +26868,10 @@ const DR=(()=>{
   12:{name:'FrostBuster',desc:'Frozen#Rude#Damage',target:2,get cost(){return frostCost()}},
   // fanmade: the fire spell Ralsei throws at a shuriken in Chapter 5 (obj_firespell, unnamed and
   // uncosted there; its damage code is IceShock's), priced like IceShock
-  13:{name:'FireShock',desc:'Damage#w/ FIRE',target:2,cost:40}
+  13:{name:'FireShock',desc:'Damage#w/ FIRE',target:2,cost:40},
+  20:{name:'Snap',desc:'',target:0,cost:0},
+  21:{name:'Supercharge',desc:'Charge#faster',target:0,cost:200},
+  22:{name:'FluffyGuard',desc:'Orbiting#shield',target:0,cost:100}
  };
  // (outside the K. Round route it's 5% plus 10% a cast)
  function frostCost(){const k=S&&S.mons&&S.mons.find(m=>m.id==='kround');if(S&&S.kw&&k)return Math.min(250,13+Math.round((k.maxhp-Math.max(0,k.hp))*.15));return Math.min(250,13+25*((S&&S.fbx&&S.fbx.uses)||0))}
@@ -27346,17 +27349,15 @@ const DR=(()=>{
    idle:'spr_sneo_example',idleSpeed:999,hurt:'spr_sneo_example',spared:'spr_sneo_example',still:'spr_sneo_example',
    intro:'* It\'s time to be a BIG SHOT!',attack:'sneo',tiredAt:()=>false,
    init(m){neoInit(m)},
-   acts:[{name:'Check',actor:1},{name:'Snap',actor:1},{name:'SnapAll',actor:2},{name:'Supercharge',actor:2,cost:200,desc:'Charge#faster'},{name:'FluffyGuard',actor:3,cost:100,desc:'Orbiting#shield'}],
+   acts:[{name:'Check',actor:1},{name:'Snap',actor:1},{name:'SnapAll',actor:1}], // Susie and Ralsei have Snap / Supercharge / FluffyGuard in their own MAGIC menus (spells 20-22)
    act(name,m,i){
     const n=m.n;
     if(name==='Check'){
      if(n.check++===0)return ['* SPAMTON NEO - YOU WON\'T FIND HIGHER ATTACK AND DEFENSE ANYWHERE ELSE!!!/','* THE SMOOTH TASTE OF NEO "WAKE UP AND TASTE THE PAIN"./','* [[note: pain is in red.]] ./%'];
      return ['* Spamton Neo - He is his own worst invention./%'];
     }
-    if(name==='Snap')return [neoSnap(m,2)>0?'* You snapped a wire!/%':'* You tried to snap a wire... but it failed!/%'];
-    if(name==='SnapAll')return [neoSnap(m,7)>0?'* Everyone snapped wires!/%':'* Everyone tried to snap wires... but it failed!/%'];
-    if(name==='Supercharge'){n.bigshot=20;snd('boost');return ['* You Super Charged! Can charge bullets faster! Lasts 20 shots./%']}
-    if(name==='FluffyGuard'){S.fluffy={hp:100,alarm:0,alpha:1,active:1};snd('boost');return ['* Ralsei\'s fluffy warmth surrounds you!/%']}
+    if(name==='Snap')return neoSnap(m,'kris');
+    if(name==='SnapAll')return neoSnap(m,'all');
     return ['* .../%'];
    },
    talk(m){return neoTalk(m)},
@@ -27948,6 +27949,7 @@ const DR=(()=>{
   const pick=(v,dflt)=>DR_HEROES.includes(v)?v:dflt;
   if(cu)opt={...opt,party:[pick(cu.s1,'kris'),d.noSusie?'susie':pick(cu.s2,'susie'),pick(cu.s3,'ralsei')]};
   const party=opt.party.map((id,i)=>{const h=HERO[id];return {id,...h,i,x:80,y:50+80*i,maxhp:h.hp,hp:h.hp,state:0,hurt:0,hurttimer:0,siner:0,attacktimer:0,acttimer:0,defendtimer:0,victoryanim:0,attacked:0,itemed:0,points:0,flash:0,fsiner:0,darken:0,alarm1:-1,alarm4:-1}});
+  if(ids.includes('sneo'))for(const h of party){const add=h.id==='susie'?[20,21]:h.id==='ralsei'?[20,22]:[];if(add.length)h.spells=[...h.spells.filter(x=>!add.includes(x)).slice(0,6-add.length),...add]}
   {const c2=ids.map(id=>ENEMY[id].ch2Stats).find(Boolean);if(c2&&!cu)for(const h of party){const o=c2[h.id];if(o){h.maxhp=o.hp;h.hp=o.hp;h.at=o.at;h.df=o.df;h.mag=o.mag}}}
   S={
    t:0,acc:0,exited:false,onExit:opt.onExit||null,
@@ -28210,6 +28212,7 @@ const DR=(()=>{
  }
  function spelltext(spell,caster){
   const h=S.party[caster],star=S.chartarget[caster],m=S.mons[star]||S.mons[0];
+  if(spell>=20&&spell<=22)return neoSpellText(spell,caster);
   if(spell===2)return ['* '+h.name+' cast HEAL PRAYER!/%'];
   if(spell===3){
    if(m.alive&&!m.status)return [m.mercy>=100?'* '+h.name+' cast PACIFY^1!&* But the foe wasn\'t \\cBTIRED\\cW... try \\cYSPARING\\cW!/%':'* '+h.name+' cast PACIFY^1!&* But the enemy wasn\'t \\cBTIRED\\cW.../%'];
@@ -28235,6 +28238,7 @@ const DR=(()=>{
  // scr_spell (alarm[4], 15 steps after the hero starts casting).
  function castSpell(spell,caster){
   const h=S.party[caster];let star=S.chartarget[caster];
+  if(spell>=20&&spell<=22){neoCast(spell,caster);return}
   if(spell===2){
    const heal=h.mag*5,t=S.party[star]||h;
    const got=healHero(t,heal);
@@ -30584,7 +30588,7 @@ const DR=(()=>{
  const CREWBOX=[10-18,14-22,29-18+1,35-22+1],CREWBUL=[6-10,8-12,13-10+1,15-12+1];
  function neoInit(m){
   const p=k=>Array.from({length:8},()=>k);
-  m.n={frame:p(0),siner:p(0),rot:p(0),px:p(0),py:p(0),vis:p(1),weak:p(0),blend:p(null),
+  m.n={frame:p(0),siner:p(0),rot:p(0),px:p(0),py:p(0),vis:p(1),weak:p(0),cut:p(0),blend:p(null),
    xoff:NEO_PARTS.map(n=>meta(n)[2]*2),yoff:NEO_PARTS.map(n=>meta(n)[3]*2),
    mode:1,shocker:0,shth:10,hit:0,hitT:0,hurt:0,weakT:0,
    phase:1,phaseturn:0,turn:0,rr:0,diff:0,face:0,final:0,
@@ -30640,7 +30644,7 @@ const DR=(()=>{
   // the wires (green, orange once weakened), from each part up past the top of the screen
   g.save();g.lineWidth=2;
   for(let i=0;i<6;i++){
-   if(!n.vis[i])continue;
+   if(!n.vis[i]||n.cut[i])continue;
    g.strokeStyle=n.weak[i]?'#ff8000':'#00ff00';g.globalAlpha=a;
    const x1=m.x+n.px[i]+n.xoff[i]/1.2+i*5+Math.sin(n.siner[i]/30)*2,y1=m.y+n.py[i]-10+n.yoff[i];
    g.beginPath();g.moveTo(x1,y1);g.lineTo(m.x+n.px[i]+n.xoff[i]/1.5+i*8,-400);g.stroke();
@@ -30997,12 +31001,47 @@ const DR=(()=>{
  }
  function drawFluffy(g){const fg=S.fluffy,h=S.heart;if(!fg||!h||S.mnfight!==2||[9,8,5,4,1].includes(fg.alarm))return;draw(g,'spr_queen_winebubble_edit2',S.t/2,h.x+10,h.y+9,2,2,0,fg.alpha)}
  // ---- ACT (Check / Snap / SnapAll / Supercharge / FluffyGuard)
- function neoSnap(m,amount){
-  const n=m.n,ok=[];for(let i=0;i<6;i++)if(n.vis[i]&&!n.weak[i])ok.push(i);
-  const set=Math.min(amount,100-m.mercy);
-  if(set>0)mercyadd(S.mons.indexOf(m),set);
-  if(ok.length&&set>0){const i=ok[Math.floor(R()*ok.length)];n.weak[i]=1;n.weakT=1;snd('weirdeffect')}
-  return set;
+ // Snap / SnapAll (obj_spamton_neo_enemy acting 2/3, actingsus 1, actingral 1): +2 mercy (+4 when the
+ // snapper is the last one standing, which also breaks 2 wires), +7 for SnapAll, clamped to 100. A weakened
+ // wire is cut first; otherwise another wire is weakened. A cut wire only stops drawing the wire.
+ function neoWire(n,times){
+  for(let t=0;t<times;t++){
+   const i0=Math.floor(R()*6);let cut=-1,weak=-1;
+   for(let k=0;k<6;k++){const i=(i0+k)%6;if(n.cut[i]||!n.vis[i])continue;if(n.weak[i]){cut=i;break}if(weak<0)weak=i}
+   if(cut>=0){n.cut[cut]=1;snd('weirdeffect',1.6)}
+   else if(weak>=0){n.weak[weak]=1;n.weakT=1;snd('weirdeffect')}
+  }
+ }
+ // The plan (text and numbers) is worked out first so the text can go up before the cast lands.
+ function neoSnapPlan(m,who,slot){
+  if(slot==null)slot=who==='susie'?actorSlot(2):who==='ralsei'?actorSlot(3):0;
+  const others=S.party.filter((h,k)=>k<3&&k!==slot&&!h.absent);
+  const desperate=who!=='all'&&others.length>0&&others.every(h=>h.hp<=0);
+  const gain=who==='all'?7:desperate?4:2,set=Math.max(0,Math.min(gain,100-m.mercy));
+  const nm=who==='susie'?'Susie':who==='ralsei'?'Ralsei':'You';
+  let pages;
+  if(who==='all')pages=[set>0?'* Everyone snapped wires!/%':'* Everyone tried to snap wires... but it failed!/%'];
+  else if(set<=0)pages=[`* ${nm} tried to snap a wire... but it failed!/%`];
+  else if(desperate)pages=[`* ${nm} snapped desperately!/`,'* Broke 2 wires!/%'];
+  else pages=[`* ${nm} snapped a wire!/%`];
+  return {set,wires:who==='all'||desperate?2:1,pages};
+ }
+ function neoSnapApply(m,p){if(p.set>0){mercyadd(S.mons.indexOf(m),p.set);neoWire(m.n,p.wires)}}
+ function neoSnap(m,who){const p=neoSnapPlan(m,who);neoSnapApply(m,p);return p.pages}
+ // Susie's and Ralsei's own MAGIC entries in this fight (spells 20 Snap, 21 Supercharge, 22 FluffyGuard)
+ const neoMon=()=>S.mons.find(x=>x.def.attack==='sneo');
+ function neoSpellText(spell,caster){
+  const m=neoMon();if(!m)return ['* .../%'];
+  if(spell===20){const c=S.party[caster].char,p=neoSnapPlan(m,c===2?'susie':c===3?'ralsei':'kris',caster);(S.neoplan=S.neoplan||{})[caster]=p;return p.pages}
+  if(spell===21)return ['* You Super Charged! Can charge bullets faster! Lasts 20 shots./%'];
+  return ['* The power Ralsei\'s fluffy warmth surrounds you!./%'];
+ }
+ function neoCast(spell,caster){
+  const m=neoMon();if(!m){S.spelldelay=15;return}
+  if(spell===20){const c=S.party[caster].char;neoSnapApply(m,(S.neoplan||{})[caster]||neoSnapPlan(m,c===2?'susie':c===3?'ralsei':'kris',caster))}
+  else if(spell===21){m.n.bigshot=20;snd('boost')}
+  else{S.fluffy={hp:100,alarm:0,alpha:1,active:1};snd('boost')}
+  S.spelldelay=20;
  }
  // ---- plain GameMaker bullets (obj_basicbullet_sneo / obj_regularbullet): speed, direction, friction
  const SOUNDBUL=[-5,-5,6,8],BUL0=[-2,-2,3,3];
