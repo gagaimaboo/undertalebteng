@@ -2456,7 +2456,7 @@ function play(name,rate=1){
    });
  }catch(_){}
 }
-const MENU_MUSIC_SCREENS=new Set(['title','gamepick','enemies','drroster','drsupport','drcustom','drshop','kills','spares','settings','creator','shop','customhub','customize','supportselect','lvselect','tutorialPrompt','tutorial']);
+const MENU_MUSIC_SCREENS=new Set(['title','gamepick','enemies','variants','drroster','drsupport','drcustom','drshop','kills','spares','settings','creator','shop','customhub','customize','supportselect','lvselect','tutorialPrompt','tutorial']);
 let menuMusicAutoplayTried=false;
 function menuMusicScreen(){return MENU_MUSIC_SCREENS.has(screen)}
 function battleMusicTracks(){
@@ -6601,7 +6601,7 @@ let ui6Hits=[],ui6Wheels=[],ui6Recording=true;
 function ui6Hit(r,click,hover){if(ui6Recording)ui6Hits.push({r,click,hover})}
 function ui6WheelArea(r,fn){if(ui6Recording)ui6Wheels.push({r,fn})}
 function ui6In(r,x,y){return x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h}
-const UI6_SCREENS=new Set(['title','gamepick','enemies','supportselect','drroster','drsupport','drcustom','drshop','customhub','creator','customize','kills','spares','shop','bossrush','bossrushBreak','bossrushCodex','bossrushResults','settings','mods','lvselect','tutorialPrompt','tutorial']);
+const UI6_SCREENS=new Set(['title','gamepick','enemies','variants','supportselect','drroster','drsupport','drcustom','drshop','customhub','creator','customize','kills','spares','shop','bossrush','bossrushBreak','bossrushCodex','bossrushResults','settings','mods','lvselect','tutorialPrompt','tutorial']);
 function ui6CanvasPoint(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height}}
 function ui6FindHit(x,y){for(let i=ui6Hits.length-1;i>=0;i--)if(ui6In(ui6Hits[i].r,x,y))return ui6Hits[i];return null}
 window.addEventListener('pointermove',e=>{
@@ -6837,7 +6837,7 @@ function ui6Pill(r,label,count,color,o={}){
 function ui6Groups(defs,keys){
  const used=new Set(),out=defs.map(d=>({...d,list:[]}));
  for(const g of out)for(const id of g.ids){const i=keys.indexOf(id);if(i>=0&&!used.has(i)){g.list.push(i);used.add(i)}}
- keys.forEach((k,i)=>{if(!used.has(i))out[out.length-1].list.push(i)});
+ keys.forEach((k,i)=>{if(!used.has(i))(out.find(g=>g.rest)||out[out.length-1]).list.push(i)});
  return out;
 }
 // LEFT / RIGHT walk the whole roster: past a group's last card comes the next group's first.
@@ -7041,14 +7041,60 @@ const ENEMY_CATEGORIES=[
 ];
 // Rebuilt when the roster changes (Sans joins it).
 let enemyCategoryCache=null,enemyCategoryCacheLen=-1;
+// ---------- Variants ----------
+// A boss with variants is one card in the roster; opening it asks which one to fight.
+const BOSS_VARIANTS=[
+ {id:'undyne',label:'UNDYNE',ids:['undyne','undyneex'],names:{undyne:'REGULAR',undyneex:'THE UNDYING'}},
+ {id:'mettaton',label:'METTATON',ids:['mettaton','mettatonex','mettatonneo'],names:{mettaton:'QUIZ SHOW',mettatonex:'EX',mettatonneo:'NEO'}}
+];
+const variantGroupOf=id=>BOSS_VARIANTS.find(v=>v.ids.includes(id))||null;
+// the card that stands for a boss's whole group (its first variant); any other boss stands for itself
+function varRep(i){const g=variantGroupOf(BOSS_OPTIONS[i]?.id);if(!g)return i;const r=BOSS_OPTIONS.findIndex(b=>b.id===g.ids[0]);return r>=0?r:i}
+let variantGroup=null,variantSel=0;
+function enemyOpen(){
+ const g=variantGroupOf(BOSS_OPTIONS[bossSelected]?.id);
+ if(g&&g.ids.filter(id=>BOSS_OPTIONS.some(b=>b.id===id)).length>1){variantGroup=g;variantSel=Math.max(0,g.ids.indexOf(BOSS_OPTIONS[bossSelected].id));screen='variants';return}
+ openLevelSelect('enemies');
+}
+function variantPick(k){
+ const g=variantGroup;if(!g)return;
+ const i=BOSS_OPTIONS.findIndex(b=>b.id===g.ids[k]);if(i<0)return;
+ bossSelected=i;play('select');openLevelSelect('enemies');
+}
+function variantKey(e,low,k){
+ const g=variantGroup;if(!g){screen='enemies';return}
+ if(low==='x'||k==='Shift'||k==='Escape'){screen='enemies';play('select');return}
+ const n=g.ids.length;
+ if(k==='ArrowLeft'||low==='a'){variantSel=(variantSel+n-1)%n;play('move');return}
+ if(k==='ArrowRight'||low==='d'){variantSel=(variantSel+1)%n;play('move');return}
+ if(low==='z'||k==='Enter')variantPick(variantSel);
+}
+function drawVariants(now=performance.now()){
+ const g=variantGroup;if(!g){screen='enemies';return}
+ const ids=g.ids.filter(id=>BOSS_OPTIONS.some(b=>b.id===id)),n=ids.length,color='#ff3355';
+ ui6Header('VARIANTS');
+ const cw=n>2?340:400,gap=40,x0=(W-(n*cw+(n-1)*gap))/2;
+ ids.forEach((id,k)=>{
+  const bo=BOSS_OPTIONS.find(b=>b.id===id),on=k===variantSel,r={x:x0+k*(cw+gap),y:190,w:cw,h:440};
+  ui6Card(r,g.names[id]||bo.label,bossImage(bo,now),color,on,true,now);
+  if(on)ui6Soul(r.x+r.w/2,r.y,2);
+  ui6Hit(r,()=>{if(variantSel===k)variantPick(k);else{variantSel=k;play('move')}});
+ });
+ const bo=BOSS_OPTIONS.find(b=>b.id===ids[variantSel]),b=effectiveBossById(bo.id)||bo;
+ ui6InfoPanel(color,g.names[bo.id]||b.label,b.area,`HP ${b.hp}   AT ${b.atk}   DF ${b.def}`,`* ${String(b.encounter||'').replace(/^\*\s*/,'').split('\n')[0]}\n* ${n} variants of ${g.label}: LEFT / RIGHT to choose.`);
+ const rect=ui6Choice('FIGHT',W/2,H-170,true,{a:'center'});
+ ui6Hit(rect,()=>variantPick(variantSel));
+ ui6Footer('LEFT / RIGHT  CHOOSE      Z  FIGHT      X  BACK');
+}
+
 function enemyCategoryLists(){
- if(!enemyCategoryCache||enemyCategoryCacheLen!==BOSS_OPTIONS.length){enemyCategoryCache=ui6Groups(ENEMY_CATEGORIES,BOSS_OPTIONS.map(b=>b.id));enemyCategoryCacheLen=BOSS_OPTIONS.length}
+ if(!enemyCategoryCache||enemyCategoryCacheLen!==BOSS_OPTIONS.length){enemyCategoryCache=ui6Groups(ENEMY_CATEGORIES,BOSS_OPTIONS.map(b=>b.id));for(const c of enemyCategoryCache)c.list=c.list.filter(i=>varRep(i)===i);enemyCategoryCacheLen=BOSS_OPTIONS.length}
  return enemyCategoryCache;
 }
-function enemyCategoryIndex(){return Math.max(0,enemyCategoryLists().findIndex(c=>c.list.includes(bossSelected)))}
-function enemyStep(dir){bossSelected=ui6GroupStep(enemyCategoryLists(),bossSelected,dir)}
+function enemyCategoryIndex(){return Math.max(0,enemyCategoryLists().findIndex(c=>c.list.includes(varRep(bossSelected))))}
+function enemyStep(dir){bossSelected=ui6GroupStep(enemyCategoryLists(),varRep(bossSelected),dir)}
 const enemyCategoryMemory={};
-function enemyPickCategory(ci){bossSelected=ui6GroupPick(enemyCategoryLists(),bossSelected,ci,enemyCategoryMemory)}
+function enemyPickCategory(ci){bossSelected=ui6GroupPick(enemyCategoryLists(),varRep(bossSelected),ci,enemyCategoryMemory)}
 const enemyCarousel={pos:0,group:''};
 // focus: 7 the group tabs, 0 the cards, then the buttons in ENEMY_ACTIONS order
 const ENEMY_ACTIONS=[5,1,2,3,4,6];
@@ -7059,7 +7105,7 @@ function enemyActivate(f){
  else if(f===2)toggleVanillaFromEnemy();
  else if(f===3){if(bossHasRoute(id))toggleBossRoute(id);else play('hurt')}
  else if(f===4){if(vanillaMode)play('hurt');else openCustomHub(0)}
- else if(f===5)openLevelSelect('enemies');
+ else if(f===5)enemyOpen();
  else if(f===6){screen='gamepick';gamePickSelected=0}
 }
 function ui6EnemyText(f,b,base){
@@ -7067,7 +7113,7 @@ function ui6EnemyText(f,b,base){
    const rp=rewardPreview(b.id),sandbox=!vanillaMode;
    const kill=sandbox?'0 EXP, 0G':`${rp.killExp} EXP, ${rp.killGold}G`,spare=sandbox?'0G':`${rp.spareGold}G`;
    const enc=String((vanillaMode?b.encounter:base.encounter)||'').replace(/^\*\s*/,'').split('\n')[0];
-   return `* ${enc}\n* KILL ${kill}.  SPARE ${spare}.\n* Supports: ${partySummary(3)}.${sandbox?'\n* (CUSTOM rules give no rewards.)':''}`;
+   return `* ${enc}\n* KILL ${kill}.  SPARE ${spare}.\n* Supports: ${partySummary(3)}.${variantGroupOf(base.id)?'\n* VARIANTS: Z to choose one.':''}${sandbox?'\n* (CUSTOM rules give no rewards.)':''}`;
  }
  if(f===1)return `* Support party: ${partySummary(4)}.\n* Add monsters to fight alongside ${b.label}.`;
  if(f===2)return vanillaMode?'* VANILLA rules: the real game\'s stats.\n* Switch to CUSTOM to edit stats, roles and loadout.':'* CUSTOM rules: your own stats and loadout.\n* Fights on CUSTOM rules give no EXP or GOLD.';
@@ -7084,9 +7130,9 @@ function drawEnemySelect(now=performance.now()){
  const cats=enemyCategoryLists(),ci=enemyCategoryIndex(),cat=cats[ci];
  ui6ChooseTitle(W/2,22,5);
  ui6GroupTabs(cats,ci,enemySelectFocus===7,i=>{if(i!==ci){enemyPickCategory(i);play('move')}enemySelectFocus=0});
- ui6Carousel(enemyCarousel,cat.id,cat.list.length,cat.list.indexOf(bossSelected),cat.color,{
-   label:k=>BOSS_OPTIONS[cat.list[k]].label,image:k=>bossImage(BOSS_OPTIONS[cat.list[k]],now),focus:enemySelectFocus===0,
-   onPick:k=>{bossSelected=cat.list[k];enemySelectFocus=0;play('move')},onConfirm:()=>{play('select');openLevelSelect('enemies')}
+ ui6Carousel(enemyCarousel,cat.id,cat.list.length,cat.list.indexOf(varRep(bossSelected)),cat.color,{
+   label:k=>{const g=variantGroupOf(BOSS_OPTIONS[cat.list[k]].id);return g?g.label:BOSS_OPTIONS[cat.list[k]].label},image:k=>bossImage(BOSS_OPTIONS[cat.list[k]],now),focus:enemySelectFocus===0,
+   onPick:k=>{bossSelected=cat.list[k];enemySelectFocus=0;play('move')},onConfirm:()=>{play('select');enemyOpen()}
  },now);
  ui6Marks.enemyGrid={x:80,y:196,w:W-160,h:440};
  const base=BOSS_OPTIONS[bossSelected]||BOSS_OPTIONS[0];
@@ -7519,6 +7565,7 @@ function render(now){
  if(screen==='title'){withMenuSkin(()=>drawTitle(now));drawUiScreenCurtain(now);return}
  if(screen==='gamepick'){withMenuSkin(()=>drawGamePick(now));drawUiScreenCurtain(now);return}
  if(screen==='enemies'){withMenuSkin(()=>drawEnemySelect(now));drawUiScreenCurtain(now);return}
+ if(screen==='variants'){withMenuSkin(()=>drawVariants(now));drawUiScreenCurtain(now);return}
  if(screen==='supportselect'){withMenuSkin(()=>drawSupportSelect(now));drawUiScreenCurtain(now);return}
  if(screen==='drroster'){withMenuSkin(()=>drawDrRoster(now));drawUiScreenCurtain(now);return}
  if(screen==='drcustom'){withMenuSkin(()=>drawDrHub(now));drawUiScreenCurtain(now);return}
@@ -7854,6 +7901,7 @@ function keyDown(e){
    return;
  }
 
+ if(screen==='variants'){if(e.repeat)return;variantKey(e,low,k);return}
  if(screen==='enemies'){
    if(e.repeat)return;
    if(low==='x'||k==='Shift'||k==='Escape'){screen='gamepick';gamePickSelected=0;play('select');return}
@@ -7866,7 +7914,7 @@ function keyDown(e){
      if(left||right){enemyStep(left?-1:1);play('move')}
      else if(up){enemySelectFocus=7;play('move')}
      else if(down){enemySelectFocus=5;play('move')}
-     else if(ok){play('select');openLevelSelect('enemies')}
+     else if(ok){play('select');enemyOpen()}
    }else{
      const i=Math.max(0,ENEMY_ACTIONS.indexOf(enemySelectFocus)),n=ENEMY_ACTIONS.length;
      if(left||right){enemySelectFocus=ENEMY_ACTIONS[(i+(left?n-1:1))%n];play('move')}
@@ -28209,7 +28257,8 @@ const DR=(()=>{
   const pick=(v,dflt)=>DR_HEROES.includes(v)?v:dflt;
   if(cu)opt={...opt,party:[pick(cu.s1,'kris'),d.noSusie?'susie':pick(cu.s2,'susie'),pick(cu.s3,'ralsei')]};
   const party=opt.party.map((id,i)=>{const h=HERO[id];return {id,...h,i,x:80,y:50+80*i,maxhp:h.hp,hp:h.hp,state:0,hurt:0,hurttimer:0,siner:0,attacktimer:0,acttimer:0,defendtimer:0,victoryanim:0,attacked:0,itemed:0,points:0,flash:0,fsiner:0,darken:0,alarm1:-1,alarm4:-1}});
-  {const c2=ids.map(id=>ENEMY[id].ch2Stats).find(Boolean);if(c2&&!cu)for(const h of party){const o=c2[h.id];if(o){h.maxhp=o.hp;h.hp=o.hp;h.at=o.at;h.df=o.df;h.mag=o.mag}}}
+  const ch2s=ids.map(id=>ENEMY[id].ch2Stats).find(Boolean),useCh2=!!ch2s&&!(cu&&cu.edited); // the Chapter 2 party, unless the CUSTOM hub's stats were edited
+  if(useCh2)for(const h of party){const o=ch2s[h.id];if(o){h.maxhp=o.hp;h.hp=o.hp;h.at=o.at;h.df=o.df;h.mag=o.mag}}
   S={
    t:0,acc:0,exited:false,onExit:opt.onExit||null,
    party,mons:ids.map((id,i)=>{const e=ENEMY[id];return {id,def:e,name:e.name,hp:e.hp,maxhp:e.hp,at:e.at,df:e.df,mercy:0,mercymax:e.mercymax||100,status:0,comment:' ',x:ids.length>1&&!d.pair?Math.min(spots[i][0],630-e.mx*2):spots[i][0],y:ids.length>1&&!d.pair?Math.min(spots[i][1],310-e.my*2):spots[i][1],state:0,siner:0,fsiner:0,flash:0,shakex:0,hurttimer:0,hurtshake:0,alive:true,acting:0,alpha:1,blendFx:0,
@@ -28230,7 +28279,7 @@ const DR=(()=>{
   if(cu){
    for(const h of party){
     const st=cu.stats&&cu.stats[h.id],gw=DRGEAR[cu.weapon&&cu.weapon[h.id]],ga=DRGEAR[cu.armor&&cu.armor[h.id]],b=k=>((gw&&gw[k])||0)+((ga&&ga[k])||0);
-    if(st){h.maxhp=st.hp;h.at=st.at;h.df=st.df;h.mag=st.mag}
+    if(st&&!useCh2){h.maxhp=st.hp;h.at=st.at;h.df=st.df;h.mag=st.mag}
     h.at+=b('at');h.df+=b('df');h.mag+=b('mag');h.maxhp+=b('hp');
     if(gw&&gw.ut){h.ut=gw.ut;h.utw=cu.weapon[h.id];try{loadWeaponSpriteAtlas().catch(()=>{})}catch(_){}}
     if(cu.modes&&cu.modes.glass)h.maxhp=Math.max(1,Math.ceil(h.maxhp/2));
@@ -32900,8 +32949,8 @@ function drCheckText(id){
 }
 // The roster page is the same CHOOSE A FIGHT page as UNDERTALE's, on DELTARUNE's battle grid.
 const DR_GROUPS=[
- {id:'bosses',label:'BOSSES',color:'#ff3355',ids:['kround','lancersolo','susie','king','jevil','sneo']},
- {id:'enemies',label:'ENEMIES',color:'#36d6f0',ids:[]}
+ {id:'ch1',label:'CHAPTER 1',color:'#ff3355',ids:['kround','lancersolo','susie','king','jevil'],rest:1},
+ {id:'ch2',label:'CHAPTER 2',color:'#36d6f0',ids:['sneo']}
 ];
 let drGroupCache=null;
 function drGroups(){return drGroupCache||(drGroupCache=ui6Groups(DR_GROUPS,DR.enemyIds))}
@@ -33048,7 +33097,7 @@ let drCustom=(()=>{try{return JSON.parse(localStorage.getItem('utbg.drCustom'))|
 function drCustomReady(){if(!drCustom||!drCustom.stats){drCustom=drDefaultCustom()}for(const id of DR_HEROES){if(!drCustom.stats[id])drCustom.stats[id]=drDefaultCustom().stats[id];if(!drCustom.spells[id])drCustom.spells[id]=[...DR.heroes[id].spells]}}
 if(!drCustom)drCustom={on:false};
 function drSaveCustom(){drLS('utbg.drCustom',JSON.stringify(drCustom))}
-function drCustomCfg(){drCustomReady();return JSON.parse(JSON.stringify(drCustom))}
+function drCustomCfg(){drCustomReady();const c=JSON.parse(JSON.stringify(drCustom));c.edited=JSON.stringify(drCustom.stats)!==JSON.stringify(drDefaultCustom().stats);return c}
 const drHub={tab:0,focus:0,row:0,hero:0,top:0},drShop={tab:0,row:0,top:0,msg:''};
 const DR_HUB_TABS=['PARTY','STATS','SPELLS','ITEMS','GEAR','MODES'];
 const DR_SPELL_LIST=[2,3,4,8,9,10,11,12,13];
