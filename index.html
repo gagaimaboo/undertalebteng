@@ -27339,7 +27339,10 @@ const DR=(()=>{
   // the turn order, ACTs and attacks follow obj_joker Step_0 / Other_15.
   // obj_spamton_neo_enemy (monstertype 50): the puppet body is drawn part by part (neoDraw),
   // the SOUL turns yellow on his turn, and mercy comes from shooting him and snapping wires.
-  sneo:{name:'Spamton NEO',music:'neo',hp:4809,at:13,df:0,gold:0,x:460,y:80,mx:70,my:90,boss:1,noSupport:1,customBox:1,mercymax:100,
+  // The party as it is at the end of Chapter 2 (scr_gamestart chapter-2 stats + scr_levelup up to its
+  // caps: Kris 160 HP, Susie 190, Ralsei 140; +1 AT/MAG every 10 levels; Amber Cards on). Noelle joins
+  // with her Chapter 2 numbers and a few levels on.
+  sneo:{name:'Spamton NEO',music:'neo',ch2Stats:{kris:{hp:160,at:14,df:4,mag:0},susie:{hp:190,at:18,df:4,mag:3},ralsei:{hp:140,at:12,df:4,mag:11},noelle:{hp:130,at:5,df:3,mag:13}},hp:4809,at:13,df:0,gold:0,x:460,y:80,mx:70,my:90,boss:1,noSupport:1,customBox:1,mercymax:100,
    idle:'spr_sneo_example',idleSpeed:999,hurt:'spr_sneo_example',spared:'spr_sneo_example',still:'spr_sneo_example',
    intro:'* It\'s time to be a BIG SHOT!',attack:'sneo',tiredAt:()=>false,
    init(m){neoInit(m)},
@@ -27945,6 +27948,7 @@ const DR=(()=>{
   const pick=(v,dflt)=>DR_HEROES.includes(v)?v:dflt;
   if(cu)opt={...opt,party:[pick(cu.s1,'kris'),d.noSusie?'susie':pick(cu.s2,'susie'),pick(cu.s3,'ralsei')]};
   const party=opt.party.map((id,i)=>{const h=HERO[id];return {id,...h,i,x:80,y:50+80*i,maxhp:h.hp,hp:h.hp,state:0,hurt:0,hurttimer:0,siner:0,attacktimer:0,acttimer:0,defendtimer:0,victoryanim:0,attacked:0,itemed:0,points:0,flash:0,fsiner:0,darken:0,alarm1:-1,alarm4:-1}});
+  {const c2=ids.map(id=>ENEMY[id].ch2Stats).find(Boolean);if(c2&&!cu)for(const h of party){const o=c2[h.id];if(o){h.maxhp=o.hp;h.hp=o.hp;h.at=o.at;h.df=o.df;h.mag=o.mag}}}
   S={
    t:0,acc:0,exited:false,onExit:opt.onExit||null,
    party,mons:ids.map((id,i)=>{const e=ENEMY[id];return {id,def:e,name:e.name,hp:e.hp,maxhp:e.hp,at:e.at,df:e.df,mercy:0,mercymax:e.mercymax||100,status:0,comment:' ',x:ids.length>1&&!d.pair?Math.min(spots[i][0],630-e.mx*2):spots[i][0],y:ids.length>1&&!d.pair?Math.min(spots[i][1],310-e.my*2):spots[i][1],state:0,siner:0,fsiner:0,flash:0,shakex:0,hurttimer:0,hurtshake:0,alive:true,acting:0,alpha:1,blendFx:0,
