@@ -1,0 +1,18 @@
+{
+  "name": "undertale-deltarune-battle-engine",
+  "version": "1.0.0",
+  "description": "Undertale and Deltarune Battle Engine (desktop build)",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "pack:win": "node build.js win32",
+    "pack:linux": "node build.js linux",
+    "pack:mac": "node build.js darwin"
+  },
+  "devDependencies": {
+    "@electron/packager": "^18.3.6",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  }
+}
