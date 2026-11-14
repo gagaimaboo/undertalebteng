@@ -1362,6 +1362,7 @@ function levelSelectCap(){
  return bossCap;
 }
 function openLevelSelect(returnScreen=screen){
+ if(autoLoadout){autoStartFight();return}
  const cur=progressionLevel()>=20&&Number(progression.overLv)>20?Number(progression.overLv):progressionLevel();
  levelSelectValue=Math.min(cur,levelSelectCap());
  levelSelectReturnScreen=['title','enemies','customhub'].includes(returnScreen)?returnScreen:'title';
@@ -1461,6 +1462,7 @@ function buyOrEquipShopWeapon(id){
    shopNotice=`BOUGHT ${weaponById(id).label.toUpperCase()} // PARTY WEAPON UNLOCKED`;shopNoticeUntil=performance.now()+2300;play('item');return true;
  }
  if(ownsVanillaWeapon(id)){
+   if(autoLoadout){shopNotice='AUTO LOADOUT IS ON // CHANGE IT IN SETTINGS';shopNoticeUntil=performance.now()+2200;play('move');return false}
    progression.equippedWeapon=id;saveProgression();shopNotice=`EQUIPPED ${weaponById(id).label.toUpperCase()}`;shopNoticeUntil=performance.now()+1800;play('select');return true;
  }
  if(progression.gold<row.price){shopNotice=`NOT ENOUGH G // NEED ${row.price-progression.gold} MORE`;shopNoticeUntil=performance.now()+1800;play('move');return false}
@@ -1477,6 +1479,7 @@ function buyOrEquipShopArmor(id){
    shopNotice=`BOUGHT ${row.label.toUpperCase()} // PARTY GEAR UNLOCKED`;shopNoticeUntil=performance.now()+2300;play('item');return true;
  }
  if(ownsVanillaArmor(id)){
+   if(autoLoadout){shopNotice='AUTO LOADOUT IS ON // CHANGE IT IN SETTINGS';shopNoticeUntil=performance.now()+2200;play('move');return false}
    if(lv>cap){shopNotice=`LV TOO HIGH // ${row.label.toUpperCase()} MAX LV ${cap}`;shopNoticeUntil=performance.now()+2200;play('move');return false}
    progression.equippedArmor=id;saveProgression();shopNotice=`EQUIPPED ${row.label.toUpperCase()} // +${row.def} DF${cap<20?` // LV CAP ${cap}`:''}`;shopNoticeUntil=performance.now()+2100;play('select');return true;
  }
@@ -7426,6 +7429,7 @@ function settingsRowRect(i){return ui6Marks['set'+i]||{x:0,y:0,w:0,h:0}}
 function settingsActivate(i,dir=1){
  if(i===0)startTutorial(true);
  else if(i===1)cycleFpsSetting(dir);
+ else if(i===2)toggleAutoLoadout();
  else backToTitle('settings');
 }
 function drawSettings(now=performance.now()){
@@ -7434,6 +7438,7 @@ function drawSettings(now=performance.now()){
  const rows=[
    {label:'SANS TUTORIAL',value:'',d:'* Replay the tour of every menu and the battle controls.'},
    {label:'FRAME RATE',value:`${newEngineFps} FPS`,cycle:true,d:'* 60 FPS smooths the drawing.\n* The battle itself always runs at UNDERTALE\'s 30.'},
+   {label:'AUTO LOADOUT',value:on(autoLoadout),cycle:true,d:'* ON: every fight starts with the LV, weapon, armor and items that suit that stage of the game.\n* OFF: pick them yourself. This is the only place to change it.'},
    {label:'EXIT',value:'',d:'* Back to the title.'}
  ];
  const box={x:164,y:150,w:1120,h:500};
@@ -8059,10 +8064,11 @@ function keyDown(e){
  }
 
  if(screen==='settings'){
-   if(!e.repeat&&(k==='ArrowUp'||low==='w')){settingsSelected=(settingsSelected+2)%3;play('move');return}
-   if(!e.repeat&&(k==='ArrowDown'||low==='s')){settingsSelected=(settingsSelected+1)%3;play('move');return}
+   if(!e.repeat&&(k==='ArrowUp'||low==='w')){settingsSelected=(settingsSelected+3)%4;play('move');return}
+   if(!e.repeat&&(k==='ArrowDown'||low==='s')){settingsSelected=(settingsSelected+1)%4;play('move');return}
    if(!e.repeat&&(k==='ArrowLeft'||k==='ArrowRight'||low==='a'||low==='d')){
      if(settingsSelected===1){cycleFpsSetting(k==='ArrowLeft'||low==='a'?-1:1);play('move')}
+     else if(settingsSelected===2)toggleAutoLoadout();
      return;
    }
    if(!e.repeat&&(low==='z'||k==='Enter')){play('select');settingsActivate(settingsSelected);return}
@@ -8095,7 +8101,7 @@ canvas.addEventListener('pointermove',e=>{
    for(let i=0;i<MOD_DEFS.length;i++){const q=modCardRect(i);if(x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h){clickable=true;modSelected=i;break}}
    for(const [idx,q] of [[MOD_DEFS.length,modResetRect()],[MOD_DEFS.length+1,modBackRect()]])if(x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h){clickable=true;modSelected=idx;break}
  }else if(screen==='settings'){
-   for(let i=0;i<3;i++){const q=settingsRowRect(i);if(x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h){clickable=true;if(settingsSelected!==i)settingsSelected=i;break}}
+   for(let i=0;i<4;i++){const q=settingsRowRect(i);if(x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h){clickable=true;if(settingsSelected!==i)settingsSelected=i;break}}
  }else if(screen==='kills'&&genocideArchiveUnlocked()){
    const q=genocideArchiveMeterRect();if(x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h)clickable=true;
  }
@@ -8279,7 +8285,7 @@ canvas.addEventListener('pointerdown',e=>{
    return;
  }
  if(screen==='settings'){
-   for(let i=0;i<3;i++){const q=settingsRowRect(i);if(x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h){settingsSelected=i;play('select');settingsActivate(i);return}}
+   for(let i=0;i<4;i++){const q=settingsRowRect(i);if(x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h){settingsSelected=i;play('select');settingsActivate(i);return}}
    return;
  }
 });
@@ -19728,6 +19734,76 @@ NB.mdWaves=function(v,I,CW,DB,ALL,T,ATK,rnd){
 // The new engine is the only battle engine; the setting left is its drawing rate.
 let newEngineFps=(()=>{try{return localStorage.getItem('utbg.newEngineFps')==='60'?60:30}catch(_){return 30}})();
 function cycleFpsSetting(){newEngineFps=newEngineFps===60?30:60;try{localStorage.setItem('utbg.newEngineFps',String(newEngineFps))}catch(_){}}
+// ---------- AUTO LOADOUT (SETTINGS) ----------
+// On by default: a fight starts with the LV, weapon, armor and items that suit that stage of the game.
+// The only place to change it is SETTINGS. (CUSTOM rules keep their own hand-built loadouts.)
+let autoLoadout=(()=>{try{return localStorage.getItem('utbg.autoLoadout')!=='0'}catch(_){return true}})();
+const UT_STAGES={
+ tutorial:{lv:1,weapon:'stick',armor:'bandage',items:{monster_candy:2}},
+ ruins:{lv:3,weapon:'toyknife',armor:'fadedribbon',items:{monster_candy:3,spider_donut:1}},
+ snowdin:{lv:5,weapon:'toughglove',armor:'manlybandanna',items:{monster_candy:2,nice_cream:2,cinnamon_bunny:2}},
+ waterfall:{lv:9,weapon:'balletshoes',armor:'oldtutu',items:{crab_apple:2,sea_tea:2,nice_cream:2,spider_donut:1}},
+ hotland:{lv:12,weapon:'burntpan',armor:'stainedapron',items:{hot_dog:2,hot_cat:2,spider_donut:2,starfait:1}},
+ core:{lv:15,weapon:'emptygun',armor:'cowboyhat',items:{starfait:2,glamburger:2,legendary_hero:2,hot_cat:1}},
+ newhome:{lv:19,weapon:'worndagger',armor:'heartlocket',items:{legendary_hero:3,glamburger:2,butterscotch_pie:1,snail_pie:1}}
+};
+const UT_STAGE_OF={
+ dummy:'tutorial',
+ froggit:'ruins',vegetoid:'ruins',parsnik:'ruins',loox:'ruins',moldsmal:'ruins',moldessa:'ruins',whimsun:'ruins',toriel:'ruins',napstablook:'ruins',
+ doggo:'snowdin',lesserdog:'snowdin',greaterdog:'snowdin',dogi:'snowdin',papyrus:'snowdin',snowdrake:'snowdin',icecap:'snowdin',gyftrot:'snowdin',glyde:'snowdin',
+ aaron:'waterfall',shyren:'waterfall',moldbygg:'waterfall',temmie:'waterfall',woshua:'waterfall',undyne:'waterfall',maddummy:'waterfall',
+ royalguards:'hotland',tsunderplane:'hotland',muffet:'hotland',pyrope:'hotland',vulkin:'hotland',mettaton:'hotland',
+ finalfroggit:'core',madjick:'core',knightknight:'core',astigmatism:'core',mettatonex:'core',undyneex:'core',mettatonneo:'core',
+ asgore:'newhome',sans:'newhome'
+};
+// where an exact LV differs from its stage's
+const UT_LV_OF={toriel:3,papyrus:5,glyde:7,undyne:9,mettaton:11,muffet:11,royalguards:12,mettatonex:15,undyneex:14,mettatonneo:18,asgore:19,sans:19,finalfroggit:14};
+function utRecommended(id){
+ const st=UT_STAGES[UT_STAGE_OF[id]||'hotland'];
+ return {...st,lv:UT_LV_OF[id]||st.lv};
+}
+const autoBackupKey='utbg.autoBackup';
+// the vanilla loadout the shop built is put aside, then restored if AUTO LOADOUT is switched off
+function autoStash(){
+ try{if(localStorage.getItem(autoBackupKey))return;localStorage.setItem(autoBackupKey,JSON.stringify({w:progression.equippedWeapon,a:progression.equippedArmor,i:progression.itemStock}))}catch(_){}
+}
+function autoRestore(){
+ try{
+  const raw=localStorage.getItem(autoBackupKey);if(!raw)return;localStorage.removeItem(autoBackupKey);
+  const b=JSON.parse(raw);
+  if(b.w&&ownsVanillaWeapon(b.w))progression.equippedWeapon=b.w;
+  if(b.a&&ownsVanillaArmor(b.a))progression.equippedArmor=b.a;
+  if(b.i)progression.itemStock=b.i;
+  saveProgression();
+ }catch(_){}
+}
+function toggleAutoLoadout(){
+ autoLoadout=!autoLoadout;
+ try{localStorage.setItem('utbg.autoLoadout',autoLoadout?'1':'0')}catch(_){}
+ if(!autoLoadout)autoRestore();
+ play('select');
+}
+// UNDERTALE: called instead of the LV screen
+function autoStartFight(){
+ const id=levelSelectBossId(),rec=utRecommended(id);
+ levelSelectValue=Math.min(rec.lv,levelSelectCap());
+ if(vanillaMode){
+  autoStash();
+  progression.weapons=progression.weapons||{stick:true};progression.weapons[rec.weapon]=true;
+  progression.armors=progression.armors||{bandage:true};progression.armors[rec.armor]=true;
+  progression.equippedWeapon=rec.weapon;progression.equippedArmor=rec.armor;
+  progression.itemStock={...rec.items};
+ }
+ confirmLevelSelect();
+}
+// DELTARUNE: gear and items by how hard the fight is
+function drRecommended(eid){
+ const hard=['jevil','sneo','king'].includes(eid),mid=['kround','lancersolo','susie'].includes(eid);
+ if(hard)return {weapon:{kris:'mechasaber',susie:'devilsknife',ralsei:'daintyscarf',noelle:'thornring'},armor:{kris:'jevilstail',susie:'jevilstail',ralsei:'glowwrist',noelle:'jevilstail'},items:[9,7,8,6,5,2]};
+ if(mid)return {weapon:{kris:'mechasaber',susie:'braveax',ralsei:'daintyscarf',noelle:'snowring'},armor:{kris:'ironshackle',susie:'ironshackle',ralsei:'whiteribbon',noelle:'whiteribbon'},items:[3,5,6,8,2]};
+ return {weapon:{kris:'spookysword',susie:'braveax',ralsei:'ragger',noelle:'snowring'},armor:{kris:'dicebrace',susie:'dicebrace',ralsei:'pinkribbon',noelle:'dicebrace'},items:[1,1,3,4]};
+}
+
 NB.undText={"taunt":"Urahhh!!","cause":{"1":"\\E1  You're strong...&  But not strong&  enough!","2":"\\E4  You're a pain in&  the neck, huh?","3":"\\E5  DIE ALREADY, YOU&  LITTLE BRAT!"},"o1":["  \\XAs long as you're&  \\GGREEN\\X you \\RCAN'T&  ESCAPE\\X!/","  \\XUnless you learn&  to \\Rface danger&  head-on\\X.../","  You won't last&  a SECOND against&  ME!/%%"],"o2":"  Not bad^1!&  Then how about&  THIS!?/%%","hit3":["\\E0  I wanted this to&  be a fair fight./","\\E1  I thought if I&  beat you like&  this.../","  It'd truly show&  how strong&  monsters can be./","\\E4  BUT NOW???/","\\E5  I DON'T CARE!/","  I'M NOT YOUR&  FREAKING&  KINDERGARTEN&  TEACHER!/","\\E1  Unless your&  kindergarten&  teacher.../","\\E5  DOES THIS!/%%"],"hit2":["\\E5  WHAT ARE YOU&  DOING?/","  JUST FACE&  UPWARDS!!!/","  IT'S NOT HARD!/","\\E0 %%"],"hit1":["\\E4  Look./","\\E4  I gave you a&  spear to block&  the bullets with./","\\E4  Do I have to&  explain this&  any more&  clearly?/","\\E0 %%"],"hit0":["\\E1  \\XWhen I said&  \\Rface towards&  danger\\X.../","\\E4  I meant face&  towards the&  bullets!/","\\E0 %%"],"o3":"  For years,&  we've dreamed&  of a happy&  ending...","o4":"  And now,&  sunlight is&  just within&  our reach!","o5":"  I won't let&  you snatch it&  away from&  us!","o6":"\\E1  NGAHHH!&  Enough warming&  up!/%%","o7":"  Heh...&  You're tough!","o7m":["  Mercy^1!&  Ha!/","  I still can't&  believe YOU&  want to spare&  ME!/%%"],"o8":"  But even if&  you could&  beat me...","o8m":"  But even if&  I spared&  YOU...","o9":"\\X  No human has&  EVER made it&  past&  \\RASGORE\\X!","o10":"  Honestly^1,&  killing you&  now is an act&  of mercy...!","o11":"  ...","r9":"  Honestly, I'm&  doing you&  a favor...","r10":"\\X  No human has&  EVER made it&  past&  \\RASGORE\\X!","r11":"\\E1  Killing you&  now is an act&  of mercy!","o12":"\\E4  So STOP being&  so damn&  resilient!/%%","o13":"  What the&  hell are&  humans made&  out of!?","o14":"  Anyone else&  would be DEAD&  by now!","o15":"  Alphys told me&  humans were&  determined...","o16":"  I see now what&  she meant by&  that!","o17":"  But I'm&  determined,&  too!","o18":"  Determined to&  end this&  RIGHT NOW!","o19":"  ... RIGHT NOW!","o20":"  ... RIGHT...&  ...&  ... NOW!!","o21":"  Ha...&  Ha...","o22":"\\E5  NGAHHH!!!&  DIE ALREADY, YOU&  LITTLE BRAT!/%%","o23":"  YOU'RE GETTING&  IN MY WAY!","o23m":"  I WILL NEVER&  TAKE MERCY FROM&  THE LIKES OF YOU!","o24":"  I WILL NOT&  BE DEFEATED!","o24m":"  YOU! WILL!&  NEVER! SPARE! ME!","oX":"  ...","n40":["  Come on^1, is that&  all you've got!?/%%"],"n39":["  ... pathetic./","  You're going to&  have to try&  harder than that!/%%"],"n38":["  S-see how strong&  we are when we&  believe in&  ourselves?/%%"],"n37":["  H... heh.../","  Had enough yet?/%%"],"n36":["\\E7  .../","  ... I won't..^1.&  ... give up.../%%"],"flavHurt":["* The wind is howling...","* Undyne flips her spear&  impatiently.","* Flower pollen drifts in&  front of you.","* Water rushes around you.","* The spears pause for a&  moment."],"flavHigh":["* Undyne points heroically&  towards the sky.","* Undyne flips her spear&  impatiently.","* Undyne suplexes a huge&  boulder^1, just because&  she can.","* Undyne bounces impatiently.","* Undyne flashes a menacing&  smile.","* Undyne draws her finger&  across her neck.","* Undyne holds her fist in&  front of her and shakes&  her head.","* Undyne towers threateningly.","* Undyne thinks of her friends&  and pounds the ground&  with her fists.","* Smells like sushi."],"flavLate":["* Undyne's eye is twitching&  involuntarily.","* Undyne is smashing spears&  on the ground.","* Undyne's eyes dart around&  to see if this is&  a prank.","* Undyne is hyperventilating.","* Smells like angry fish."],"flavDead":{"-40":"* Undyne is smiling as if&  nothing is wrong.","-39":"* Undyne's body is wavering.","-38":"* Undyne's body is losing&  its shape.","-37":"* Undyne's body...","-36":"* ..."},"check":"* UNDYNE - ATK 50 DEF 20&* The heroine that NEVER gives&  up./^","chalNo":"* You tell UNDYNE her attacks&  are too easy^1.&* She doesn't care./^","chalYes":"* You tell UNDYNE her attacks&  are too easy^1.&* The bullets get faster./^","chalUnfair":"* You tell UNDYNE her attacks&  are too easy^1.&* The bullets get unfair./^","noWork":"* Didn't work./^","pleadNo":"* You told Undyne you didn't&  want to fight^1.&* But nothing happened./^","pleadYes":["* You told Undyne you just&  want to be friends.&* She remembers someone.../","* Her attacks became a little&  less extreme./^"],"intro":{"1":"En guarde!/%%","2":"\\E1  You won't get&  away from me&  this time!/%%","3":"\\E4  You've escaped&  from me for&  the LAST time!/%%","4":"\\E5  STOP RUNNING&  AWAY!!!/%%","5":"\\E5  COME BACK HERE^1,&  YOU LITTLE&  PUNK!!/%%"},"attacks":"* Undyne attacks!","d50":["Ngahhh.../","You were stronger...&Than I thought.../","So then..^1.&... this is where..^1.&... it ends.../",".../%%"],"d51":["  No.../%%"],"d52":["NO!/","I won't die!/","Alphys..^1.&Asgore..^1.&Papyrus.../","Everyone is counting&on me to protect&them!/","NNNNGAH!/%%"],"d55":["Human!/","In the name of&everybody's hopes&and dreams.../","I WILL DEFEAT YOU!/%%"],"determined":"* Undyne looks determined.","d60":[".../","Ha..^1. ha.../","... Alphys.../","This is what I&  was afraid of.../","This is why I&  never told you.../",".../%%"],"d61":["No..^1.&No!/","Not yet!/","I won't die!/%%"],"d62":["NGAHHHHHHHH!!^2! %%"],"d63":[" I WON'T DIE^3! %%"],"d65":[" I WON'T DIE^3! %%"],"d67":[" I WON'T DIE^3! %%"],"d69":[" I^2 WON'T^2 %%"]};
 // obj_spearblocker User Event 1, transpiled: sr() is scr_sr.
 NB.undLessons=(c,sr)=>{
@@ -28312,7 +28388,14 @@ const DR=(()=>{
   // since its attacks are laid out from there
   if(S.utStyle)for(const m of S.mons)m.ut=UTSPR[m.id];
   if(S.utStyle&&S.mons.length===1){const m=S.mons[0];m.hx=m.x;m.hy=m.y;m.x=m.utx=m.ut.x;m.y=m.uty=m.ut.y;S.uts=m.ut.s}
-  if(cu&&cu.items){S.items=cu.items.filter(id=>ITEM[id]).slice(0,6);S.tempitem=[[...S.items],[...S.items],[...S.items]]}S.iceTries=0;S.weirdEnding=null;S.weirdDone=0;
+  if(cu&&cu.items){S.items=cu.items.filter(id=>ITEM[id]).slice(0,6);S.tempitem=[[...S.items],[...S.items],[...S.items]]}
+  else if(autoLoadout&&!cu){
+   // AUTO LOADOUT: the gear and items that suit this fight (SETTINGS turns it off)
+   const rec=drRecommended(eid);
+   for(const h of party){const gw=DRGEAR[rec.weapon[h.id]],ga=DRGEAR[rec.armor[h.id]],b=k=>((gw&&gw[k])||0)+((ga&&ga[k])||0);h.at+=b('at');h.df+=b('df');h.mag+=b('mag');h.maxhp+=b('hp');h.hp=h.maxhp}
+   S.items=rec.items.filter(id=>ITEM[id]);S.tempitem=[[...S.items],[...S.items],[...S.items]];
+  }
+  S.iceTries=0;S.weirdEnding=null;S.weirdDone=0;
   for(const h of party)h.spells=[...h.spells];
   // Susie's and Ralsei's own NEO magic (after the CUSTOM hub has set everyone's spells)
   if(ids.includes('sneo'))for(const h of party){const add=h.id==='susie'?[20,21]:h.id==='ralsei'?[20,22]:[];if(add.length)h.spells=[...h.spells.filter(x=>!add.includes(x)).slice(0,6-add.length),...add]}
