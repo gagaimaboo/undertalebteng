@@ -532,6 +532,7 @@ const IMG={
  // Official UNDERTALE Flowey assets. spr_flowey is his real overworld flower;
  // spr_gigavine is the thorny vine used by Flowey's powered-up form.
  floweyPlayer:RAW+'sprites/images/spr_flowey_0.png',
+ friskIdle:[0,1,2,3].map(i=>RAW+`sprites/images/spr_maincharad_${i}.png`),
  floweyVine:RAW+'sprites/images/spr_gigavine_0.png',
  toriel:RAW+'sprites/images/spr_torielboss_0.png',
  torielHurt:RAW+'sprites/images/spr_torielboss_hurt_0.png',
@@ -721,6 +722,7 @@ const SFX={
  glydeBreak:RAW+'sound/audio/snd_shakerbreaker.ogg',
  rgGrab:RAW+'sound/audio/snd_grab.wav',
  impact:RAW+'sound/audio/snd_impact.wav',
+ rsDrum:RAW+'sound/audio/snd_drumroll.wav',rsLevelUp:RAW+'sound/audio/snd_levelup.wav',rsSave:RAW+'sound/audio/snd_save.wav',rsSparkle:RAW+'sound/audio/snd_sparkle1.wav',rsSparkles:RAW+'sound/audio/mus_sfx_sparkles.ogg',rsBell:RAW+'sound/audio/snd_tempbell.wav',
  bombTick:RAW+'sound/audio/snd_bomb.wav',
  mexShoot:RAW+'sound/audio/snd_heartshot.wav',
  mexBurst:RAW+'sound/audio/snd_mtt_burst.wav',
@@ -8496,6 +8498,7 @@ async function boot(){
  IMG.aaronArmL.forEach((u,i)=>add(`Aaron left muscle frame ${i+1}`,async()=>{images.aaronArmL=images.aaronArmL||[];images.aaronArmL[i]=await needImage(u)}));
  IMG.aaronArmR.forEach((u,i)=>add(`Aaron right muscle frame ${i+1}`,async()=>{images.aaronArmR=images.aaronArmR||[];images.aaronArmR[i]=await needImage(u)}));
  add('Flowey official player sprite',async()=>images.floweyPlayer=await needImage(IMG.floweyPlayer));
+ IMG.friskIdle.forEach((u,i)=>add(`Frisk frame ${i+1}`,async()=>{images.friskIdle=images.friskIdle||[];images.friskIdle[i]=await needImage(u)}));
  add('Flowey official thorn vine',async()=>images.floweyVine=await needImage(IMG.floweyVine));
  add('Toriel battle sprite',async()=>images.toriel=await needImage(IMG.toriel));
  add('Toriel hurt sprite (supplied exact)',async()=>images.torielHurt=await needImage(IMG.torielHurt));
@@ -9733,7 +9736,7 @@ const NB=(()=>{
   const i=S.mp?S.mp.me:0,s={...statOf(i)},p=S.mp?S.mp.players[i]:null;
   if(s.minHp==null)s.minHp=myHpNow();
   return {...s,maxhp:p?p.maxhp:S.maxhp,hp:myHpNow(),alive:p?!!p.alive:S.hp>0,turns:S.turn,time:Math.round(S.t/30),
-   name:p?p.name:S.name,mods:[...S.mods]};
+   name:p?p.name:S.name,mods:[...S.mods],lv:S.lv,at:S.at,df:S.df,wat:S.wstrength,weapon:S.weapon,items:S.itemsUsed||0,acts:S.actsUsed||0};
  };
  function hurtMonster(){
   const m=S.mons[S.target];
@@ -9795,6 +9798,7 @@ const NB=(()=>{
 
  // --------------------------------------------------------------- ACT -----
  function doAct(m,i){
+  S.actsUsed=(S.actsUsed||0)+1;
   S.myfight=2;S.heart.visible=false;
   if(hasBones(m)&&i===actsOf(m).length-1){bonesAct(m);return}
   const name=actsOf(m)[i];let text;
@@ -9814,6 +9818,7 @@ const NB=(()=>{
  // ------------------------------------------------------------- ITEM ------
  function useItem(idx){
   const it=S.items[idx];if(!it)return;
+  S.itemsUsed=(S.itemsUsed||0)+1;
   S.myfight=4;S.heart.visible=false;S.talked=91;
   S.items.splice(idx,1);
   const before=S.hp;S.hp=Math.min(S.maxhp,S.hp+(Number(it.heal)||0));
@@ -26880,49 +26885,15 @@ function rankOf(st,o){
  if((st.mods||[]).includes('godMode'))k=Math.max(k,RANK_ORDER.indexOf('C'));
  return {score:sc,...RANKS[k],god:(st.mods||[]).includes('godMode')};
 }
-// ---- the stings: square/triangle chip voices, one tune per rank
+// ---- the stings: UNDERTALE's own jingles (LV UP, SAVE, the drum roll...), not synthesised ones
 function rankSting(rank){
- if(!audioUnlocked)return;
- const c=sfxContext();if(!c)return;
- try{if(c.state!=='running')c.resume()}catch(_){}
- const t0=c.currentTime+.03,out=c.createGain();out.gain.value=.22;out.connect(c.destination);
- const note=(f,at,len,type='square',vol=1,slide=0)=>{
-  const o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f,t0+at);
-  if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(20,f*slide),t0+at+len);
-  g.gain.setValueAtTime(0,t0+at);g.gain.linearRampToValueAtTime(vol,t0+at+.01);g.gain.exponentialRampToValueAtTime(.001,t0+at+len);
-  o.connect(g);g.connect(out);o.start(t0+at);o.stop(t0+at+len+.02);
- };
- const N=m=>440*Math.pow(2,(m-69)/12);
- const thump=(at,vol=1)=>note(150,at,.18,'triangle',vol,.25);
- if(rank==='SS'){ // a run up two octaves, a held chord, sparkles
-  [60,64,67,72,76,79,84,88].forEach((m,i)=>note(N(m),i*.055,.18,'square',.7));
-  for(const m of [72,76,79,84])note(N(m),.48,1.1,'square',.45);
-  note(N(48),.48,1.1,'triangle',.9);
-  [96,100,103,108,103,108].forEach((m,i)=>note(N(m),.62+i*.09,.12,'square',.25));
-  thump(.48,1);
- }else if(rank==='S'){ // a fanfare: three pickups and a big major chord
-  [67,67,67].forEach((m,i)=>note(N(m),i*.09,.08,'square',.7));
-  for(const m of [72,76,79])note(N(m),.3,.8,'square',.5);
-  note(N(48),.3,.8,'triangle',.9);thump(.3);
- }else if(rank==='A'){ // bright up-arpeggio, landing high
-  [64,67,72,76].forEach((m,i)=>note(N(m),i*.08,.2,'square',.6));
-  note(N(79),.34,.5,'square',.55);note(N(52),.34,.5,'triangle',.8);thump(.34,.8);
- }else if(rank==='B'){ // two friendly notes up
-  note(N(67),0,.18,'square',.6);note(N(72),.16,.45,'square',.6);note(N(48),.16,.45,'triangle',.7);thump(.16,.7);
- }else if(rank==='C'){ // a plain blip and a flat answer
-  note(N(64),0,.15,'square',.55);note(N(64),.17,.35,'triangle',.6);thump(.17,.6);
- }else if(rank==='D'){ // stepping down, minor
-  [67,63,60].forEach((m,i)=>note(N(m),i*.16,.22,'square',.55));note(N(55),.5,.45,'triangle',.7);
- }else{ // F: the sad trombone, wah-wah-wah-waaah
-  [[58,0],[57,.32],[56,.64]].forEach(([m,at])=>note(N(m),at,.28,'sawtooth',.4,.97));
-  note(N(55),.96,1.0,'sawtooth',.4,.94);
-  for(let i=0;i<8;i++)note(N(55)*(i%2?1.02:.98),.96+i*.12,.12,'triangle',.15);
- }
+ const seq={SS:['rsLevelUp','rsSparkles','cymbal'],S:['rsLevelUp','cymbal'],A:['rsSave','rsSparkle'],B:['rsSave'],C:['rsBell'],D:['hlWrongVictory'],F:['hurt']}[rank]||['select'];
+ for(const n of seq)play(n);
 }
 let resultsData=null;
-// data: {title,boss,reason,rows:()=>[{name,me,st|null}],then}
+// data: {title,boss,reason,roles,rows:()=>[{name,me,st|null}],then}
 function showResults(data){
- resultsData={...data,t0:performance.now(),stung:{},done:false};
+ resultsData={...data,t0:performance.now(),stung:{},done:false,music:false,drummed:false,blip:0};
  screen='results';
 }
 function resultsRows(){
@@ -26931,46 +26902,142 @@ function resultsRows(){
  if(scored.length>1){const best=scored.reduce((a,b)=>b.rk.score>a.rk.score?b:a);best.mvp=true}
  return rows;
 }
+// when each part of the board turns up (seconds): the counts, a drum roll, the rank, TIME, STATS, then the music
+const RS={line:.12,drum:1.5,rank:3.4,time:3.9,stats:4.4,music:4.9,prompt:5.3};
 function resultsContinue(){
  const R=resultsData;if(!R)return;
- const el=performance.now()-R.t0;
+ const el=(performance.now()-R.t0)/1000;
  // the first press only skips the counting up
- if(el<2200&&!R.skipped){R.skipped=true;R.t0=performance.now()-2400;return}
+ if(el<RS.prompt&&!R.skipped){R.skipped=true;R.t0=performance.now()-(RS.prompt+.1)*1000;return}
  resultsData=null;play('select');
+ try{stopMusic()}catch(_){}
  try{R.then&&R.then()}catch(e){console.error(e);screen='title'}
+}
+// the music once the counting is done: the menu theme, or "Determination" for an F
+function resultsMusic(R,rows){
+ R.music=true;
+ const f=rows.find(r=>r.me&&r.rk)||rows.find(r=>r.rk),bad=f&&f.rk.r==='F';
+ try{
+  if(bad){
+   ensureMusicTrack('gameover').then(a=>{if(a&&resultsData===R){a.loop=true;a.volume=.5;a.currentTime=0;playMusicElement(a)}});
+  }else{
+   ensureMusicTrack('menu').then(a=>{if(a&&resultsData===R){stopBattleMusicTracks();a.loop=true;a.volume=.36;a.currentTime=0;playMusicElement(a)}});
+  }
+ }catch(_){}
+}
+const RS_FONT='UndertaleFont';
+function rsPortrait(R,x,y,role,t,n=1){
+ const sc=ctx,tight=n>1;
+ let im=null,s=tight?1.8:3;
+ if(role==='flowey'){im=images.floweyPlayer;s=tight?1.8:3}
+ else if(role==='classic'){const f=images.friskIdle;im=f&&f[Math.floor(t*5)%f.length]}
+ else{
+  const n={kris:'spr_krisb_idle',susie:'spr_susieb_idle',noelle:'spr_noelleb_idle',ralsei:'spr_ralsei_idle'}[role];
+  if(n&&typeof DR!=='undefined'&&DR.ready&&DR.gfx){im=DR.gfx.frame(n,t*6);s=tight?.62:1.1}
+ }
+ // the ring they stand in
+ sc.save();sc.fillStyle='#202020';sc.strokeStyle='#fff';sc.lineWidth=3;
+ sc.beginPath();sc.ellipse(x,y,tight?26:64,tight?8:16,0,0,Math.PI*2);sc.fill();sc.stroke();sc.restore();
+ if(im){const w=im.width*s,h=im.height*s;sc.save();sc.imageSmoothingEnabled=false;sc.drawImage(im,Math.round(x-w/2),Math.round(y-h+2),Math.round(w),Math.round(h));sc.restore()}
+ else{const h=images.heart||images.heartFallback;if(h)sc.drawImage(h,x-12,y-34,24,24)}
+}
+function rsSparkle(x,y,r,col){
+ ctx.save();ctx.fillStyle=col;ctx.beginPath();
+ ctx.moveTo(x,y-r);ctx.lineTo(x+r*.28,y-r*.28);ctx.lineTo(x+r,y);ctx.lineTo(x+r*.28,y+r*.28);
+ ctx.lineTo(x,y+r);ctx.lineTo(x-r*.28,y+r*.28);ctx.lineTo(x-r,y);ctx.lineTo(x-r*.28,y-r*.28);ctx.closePath();ctx.fill();ctx.restore();
 }
 function drawResults(now){
  const R=resultsData;if(!R){screen='title';return}
- let el=(now-R.t0)/1000;
+ const el=(now-R.t0)/1000;
  const rows=resultsRows(),solo=rows.length===1;
  ctx.save();ctx.setTransform(UT_SCALE,0,0,UT_SCALE,0,0);ctx.imageSmoothingEnabled=false;
  ctx.fillStyle='#000';ctx.fillRect(0,0,640,480);
- const txt=(t,x,y,size,col,align='left',font='UndertaleFont')=>{ctx.font=`${size}px ${font}, monospace`;ctx.textAlign=align;ctx.textBaseline='alphabetic';ctx.fillStyle=col;ctx.fillText(t,x,y)};
+ const txt=(t,x,y,size,col,align='left')=>{ctx.font=`${size}px ${RS_FONT}, monospace`;ctx.textAlign=align;ctx.textBaseline='alphabetic';ctx.fillStyle=col;ctx.fillText(t,x,y)};
+ // the counts tick up with UNDERTALE's text blip
+ const ticking=[];
+ const count=(v,at,len=.6)=>{const k=Math.max(0,Math.min(1,(el-at)/len));if(k>0&&k<1)ticking.push(1);return Math.round(v*k)};
  const titleCol={win:'#ffff00',spare:'#ffff00',flee:'#ffffff',gameover:'#ff3030'}[R.reason]||'#ffffff';
- txt(R.title,320,58,40,titleCol,'center','UndertaleFont');
- if(R.boss)txt(R.boss,320,84,16,'#808080','center');
- const count=(v,at)=>Math.round(v*Math.max(0,Math.min(1,(el-at)/.6)));
+ txt(R.title,320,38,30,titleCol,'center');
+ if(R.boss)txt(R.boss,320,58,14,'#808080','center');
  if(solo){
-  const r=rows[0],st=r.st;
+  const r=rows[0],st=r.st,mm=Math.floor(st.time/60),ss=String(st.time%60).padStart(2,'0');
+  // ---- left: every count
   const lines=[
    ['DAMAGE DEALT',count(st.dmg,.2)],
-   ['HITS LANDED',`${count(st.attacks,.3)} / ${st.attacks+st.misses}`],
+   ['HITS LANDED',`${count(st.attacks,.3)}/${st.attacks+st.misses}`],
    ['CRITICAL HITS',count(st.crits,.4)],
    ['HITS TAKEN',count(st.hits,.5)],
    ['HP LOST',count(st.hpLost,.6)],
-   ['CLOSEST CALL',`${st.minHp??st.maxhp} / ${st.maxhp} HP`],
-   ['TURNS',count(st.turns,.8)],
-   ['TIME',`${Math.floor(st.time/60)}:${String(st.time%60).padStart(2,'0')}`]];
+   ['HP HEALED',count(st.healed||0,.7)],
+   ['ITEMS USED',count(st.items||0,.8)],
+   ['ACTS USED',count(st.acts||0,.9)],
+   ['TURNS',count(st.turns,1.0)],
+   ['CLOSEST CALL',`${st.minHp??st.maxhp}/${st.maxhp}`]];
   lines.forEach(([k,v],i)=>{
-   if(el<.15+i*.1)return;
-   txt('* '+k,40,140+i*30,18,'#ffffff');txt(String(v),372,140+i*30,18,'#ffffff','right');
+   if(el<.1+i*RS.line)return;
+   const y=112+i*30;
+   txt(k,24,y,15,'#ffffff');txt(String(v),226,y,15,'#ffff00','right');
+   ctx.fillStyle='#404040';ctx.fillRect(24,y+6,202,2);
   });
-  drawRankStamp(r,505,240,el-1.5,1.6);
+  // ---- middle: who fought
+  const roles=(R.roles&&R.roles.length?R.roles:['classic']).slice(0,3);
+  if(el>.4){
+   const cx=326,gap=roles.length>1?58:0;
+   roles.forEach((role,i)=>{
+    const x=cx+(i-(roles.length-1)/2)*gap;
+    rsPortrait(R,x,372,role,el,roles.length);
+   });
+   const nm=(String(r.name||'FRISK').toUpperCase()==='CHARA'?'FRISK':String(r.name||'FRISK').toUpperCase());
+   txt(roles.length>1?'PARTY':nm,326,236,24,'#ffffff','center');
+   ctx.fillStyle='#fff';ctx.fillRect(322,246,8,2);ctx.fillRect(324,250,4,2);ctx.fillRect(325,254,2,2); // a small arrow down to them
+  }
+  // ---- the drum roll, then the rank
+  if(el>=RS.drum&&!R.drummed){R.drummed=true;play('rsDrum')}
+  if(r.rk&&el>=RS.rank){
+   const t=el-RS.rank;
+   if(!R.stung.me){R.stung.me=true;rankSting(r.rk.r)}
+   // sparkles and hearts round it
+   const rk=r.rk,col=rk.r==='SS'?`hsl(${(now/6)%360},100%,65%)`:rk.col;
+   const sparks=[[-96,-62,10],[100,-44,8],[-90,40,7],[100,58,10],[-14,-112,6],[44,-104,5]];
+   sparks.forEach(([dx,dy,sz],i)=>{const tw=.5+.5*Math.sin(now/260+i*1.7);if(t>.25)rsSparkle(512+dx,172+dy,sz*(.6+tw*.6),i%2?'#ffffff':'#ffff80')});
+   if(t>.3){
+    const h=images.heart||images.heartFallback;
+    if(h)[[-94,-6,.9],[92,8,.8],[-62,74,.7]].forEach(([dx,dy,sz],i)=>{ctx.save();ctx.globalAlpha=.5+.5*Math.sin(now/340+i*2);ctx.drawImage(h,512+dx-9*sz,172+dy-9*sz+Math.sin(now/500+i)*3,18*sz,18*sz);ctx.restore()});
+   }
+   const sc=t<.18?3-2*(t/.18):1,shake=t<.4?(1-t/.4)*8:0;
+   ctx.save();ctx.translate(512+(Math.random()-.5)*shake,172+(Math.random()-.5)*shake);ctx.scale(sc,sc);
+   ctx.font=`150px ${RS_FONT}, monospace`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.globalAlpha=Math.min(1,t/.1);
+   ctx.lineJoin='round';ctx.lineWidth=14;ctx.strokeStyle='#fff';ctx.strokeText(rk.r,0,0);
+   ctx.lineWidth=6;ctx.strokeStyle='#000';ctx.strokeText(rk.r,0,0);
+   ctx.fillStyle=col;ctx.fillText(rk.r,0,0);
+   ctx.restore();
+   if(t>.3){txt(rk.sub,512,256,13,rk.col,'center');txt('SCORE '+rk.score+(rk.god?' (GOD MODE)':''),512,272,11,'#808080','center')}
+  }
+  // ---- TIME and STATS
+  if(el>=RS.time){
+   if(!R.stung.time){R.stung.time=true;play('select')}
+   txt('TIME',512,302,13,'#808080','center');
+   txt(`${mm}:${ss}`,512,336,34,'#ffffff','center');
+   ctx.fillStyle='#fff';ctx.fillRect(404,346,216,3);
+  }
+  if(el>=RS.stats){
+   if(!R.stung.stats){R.stung.stats=true;play('select')}
+   txt('STATS',512,376,26,'#ffff00','center');
+   const wname=(typeof weaponById==='function'&&st.weapon?weaponById(st.weapon)?.label:'')||'';
+   const rowsS=[
+    ['WEAPON',String(wname||'-').toUpperCase()],
+    ['ATK',st.at!=null?`${st.at+(st.wat||0)}${st.wat?` (+${st.wat})`:''}`:'-'],
+    ['DEF',st.df!=null?String(st.df):'-'],
+    ['HP',`${st.hp??0}/${st.maxhp}`],
+    ['LV',st.lv!=null?String(st.lv):'-']];
+   rowsS.forEach(([k,v],i)=>{const y=398+i*17;if(el<RS.stats+.12*i)return;txt(k,408,y,13,'#808080');txt(v,620,y,13,'#ffffff','right')});
+  }
  }else{
-  txt('PLAYER',30,128,14,'#808080');txt('DMG',300,128,14,'#808080','right');txt('HITS',372,128,14,'#808080','right');
-  txt('CLOSEST',470,128,14,'#808080','right');txt('RANK',565,128,14,'#808080','center');
+  txt('PLAYER',30,108,14,'#808080');txt('DMG',300,108,14,'#808080','right');txt('HITS',372,108,14,'#808080','right');
+  txt('CLOSEST',470,108,14,'#808080','right');txt('RANK',565,108,14,'#808080','center');
+  if(el>=RS.drum&&!R.drummed){R.drummed=true;play('rsDrum')}
   rows.forEach((r,i)=>{
-   const y=170+i*56;if(el<.2+i*.15)return;
+   const y=150+i*56;if(el<.2+i*.15)return;
    const col=r.me?'#ffff00':'#ffffff';
    txt(r.name+(r.me?' (YOU)':''),30,y,18,col);
    if(!r.st){txt('...',470,y,18,'#808080','right');return}
@@ -26978,22 +27045,21 @@ function drawResults(now){
    txt(String(count(st.dmg,.3+i*.15)),300,y,18,col,'right');
    txt(String(count(st.hits,.3+i*.15)),372,y,18,col,'right');
    txt(`${st.minHp??st.maxhp}/${st.maxhp}`,470,y,18,col,'right');
-   if(r.mvp&&el>1.6+rows.length*.35)txt('MVP',30,y+20,14,'#ffd700');
-   drawRankStamp(r,565,y-8,el-1.4-i*.35,.62);
+   if(r.mvp&&el>RS.rank+rows.length*.35)txt('MVP',30,y+20,14,'#ffd700');
+   if(r.rk&&el>=RS.rank+i*.3)drawRankStamp(r,565,y-8,el-RS.rank-i*.3,.62);
   });
  }
- if(el>2.2&&Math.floor(el*2)%2===0)txt('Z / TAP  CONTINUE',320,456,16,'#808080','center');
+ // counts blip like text
+ if(ticking.length&&now-R.blip>70){R.blip=now;play('text')}
+ // then the music
+ if(el>=RS.music&&!R.music)resultsMusic(R,rows);
+ if(el>RS.prompt&&Math.floor(el*2)%2===0)txt('Z / TAP  CONTINUE',320,468,14,'#808080','center');
  ctx.restore();
 }
 function drawRankStamp(r,x,y,t,size){
  if(!r.rk||t<0)return;
- const rk=r.rk;
- const key=r.name+'|'+rk.r;
- if(!resultsData.stung[key]){
-  resultsData.stung[key]=true;
-  // online only your own rank plays its sting (one tune at a time); the rest just thud
-  if(r.me)rankSting(rk.r);else play('impact');
- }
+ const rk=r.rk,key=r.name+'|'+rk.r;
+ if(!resultsData.stung[key]){resultsData.stung[key]=true;if(r.me)rankSting(rk.r);else play('impact')}
  const sc=t<.18?3-2*(t/.18):1,shake=t<.4?(1-t/.4)*6*size:0;
  ctx.save();
  ctx.translate(x+(Math.random()-.5)*shake,y+(Math.random()-.5)*shake);ctx.scale(sc*size,sc*size);
@@ -27004,11 +27070,6 @@ function drawRankStamp(r,x,y,t,size){
  ctx.fillStyle='#000';ctx.fillText(rk.r,4,4);
  ctx.fillStyle=col;ctx.fillText(rk.r,0,0);
  ctx.restore();
- if(size>1&&t>.3){
-  ctx.save();ctx.font='16px UndertaleFont, monospace';ctx.textAlign='center';ctx.fillStyle=rk.col;
-  ctx.fillText(rk.sub,x,y+90);ctx.fillStyle='#808080';ctx.fillText('SCORE '+rk.score+(rk.god?'  (GOD MODE)':''),x,y+114);
-  ctx.restore();
- }
 }
 function nbResultsTitle(reason){return {win:'VICTORY',spare:'SPARED',flee:'ESCAPED',gameover:'GAME OVER'}[reason]||'FIGHT OVER'}
 function nbStartBattle(){withFightAssets(nbStartBattleNow)}
@@ -27028,7 +27089,7 @@ function nbStartBattleNow(){
    const mine=NB.statsMine();
    if(mine&&['win','spare','flee','gameover'].includes(reason)){
     const boss=(BOSS_OPTIONS.find(b=>b.id===currentBoss)?.label)||'';
-    showResults({title:nbResultsTitle(reason),boss,reason,rows:()=>[{name:mine.name,me:true,st:mine}],then:after});
+    showResults({title:nbResultsTitle(reason),boss,reason,roles:(!vanillaMode&&typeof sandboxPartyRoles==='function'?sandboxPartyRoles():['classic']),rows:()=>[{name:mine.name,me:true,st:mine}],then:after});
     return;
    }
    after();
@@ -33909,7 +33970,7 @@ const NBO=(()=>{
   }else openPanel();
  }
  // a scoreboard line travels as a short row of numbers (presence is capped at 4 KiB)
- const SB_KEYS=['dmg','attacks','misses','crits','hits','hpLost','healed','minHp','maxhp','hp','alive','turns','time'];
+ const SB_KEYS=['dmg','attacks','misses','crits','hits','hpLost','healed','minHp','maxhp','hp','alive','turns','time','lv','at','df','wat','items','acts'];
  const SB_MODS=['godMode','glassSoul','noBulletCooldown','perfectHits','doubleDamage','mirrorMove'];
  function packSb(v){if(!v)return null;const a=SB_KEYS.map(k=>k==='alive'?(v.alive?1:0):Math.round(Number(v[k])||0));let m=0;SB_MODS.forEach((k,i)=>{if((v.mods||[]).includes(k))m|=1<<i});a.push(m);return a}
  // a scoreboard line from someone else's copy: numbers only
@@ -33918,7 +33979,7 @@ const NBO=(()=>{
   if(!v||typeof v!=='object')return null;
   const n=k=>{const x=Number(v[k]);return Number.isFinite(x)?Math.max(0,Math.min(1e7,Math.round(x))):0};
   return {dmg:n('dmg'),attacks:n('attacks'),misses:n('misses'),crits:n('crits'),hits:n('hits'),hpLost:n('hpLost'),healed:n('healed'),
-   minHp:n('minHp'),maxhp:Math.max(1,n('maxhp')),hp:n('hp'),alive:!!v.alive,turns:n('turns'),time:n('time'),name:clean(v.name),
+   minHp:n('minHp'),maxhp:Math.max(1,n('maxhp')),hp:n('hp'),alive:!!v.alive,turns:n('turns'),time:n('time'),lv:n('lv'),at:n('at'),df:n('df'),wat:n('wat'),items:n('items'),acts:n('acts'),name:clean(v.name),
    mods:Array.isArray(v.mods)?v.mods.filter(x=>typeof x==='string').map(x=>x.slice(0,24)).slice(0,12):[]};
  }
  function tick(E,dt){
