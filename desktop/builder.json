@@ -1,0 +1,10 @@
+{
+  "appId": "com.undertalebteng.battleengine",
+  "productName": "UndertaleDeltaruneBattleEngine",
+  "directories": {"output": "dist-portable"},
+  "files": ["main.js", "package.json", "app/**/*"],
+  "asar": true,
+  "win": {"target": [{"target": "portable", "arch": ["x64"]}], "signAndEditExecutable": false},
+  "portable": {"artifactName": "UndertaleDeltaruneBattleEngine.exe"},
+  "electronVersion": "33.4.11"
+}

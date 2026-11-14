@@ -176,8 +176,8 @@ def main():
         sys.exit(f'build: @font-face rules changed (matched {n1},{n2}); update tools/artifact/build.py')
     css = css.replace('<style>', '<style>\n:root{color-scheme:dark;background:#000}', 1)
     # the page sits inside the phone's safe-area padding: size the game to what is left
-    css = patch(css, '#wrap{position:relative;width:min(100vw,calc(100vh * 1448 / 1086));',
-                '#wrap{position:relative;width:min(100vw,calc((100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)) * 1448 / 1086));',
+    css = patch(css, '#wrap{position:relative;width:min(100vw,calc(100vh * 1930 / 1086));',
+                '#wrap{position:relative;width:min(100vw,calc((100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)) * 1930 / 1086));',
                 '#wrap width rule')
     anchor = "const DR_RAW_FALLBACK='https://raw.githubusercontent.com/TeamBlossomDevs/DeltaruneDecomp/chapter2/';\n"
     body = patch(body, anchor, anchor + SHIM, 'DR_RAW_FALLBACK line')
