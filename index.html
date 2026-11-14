@@ -9,7 +9,7 @@
 @font-face{font-family:"UndertaleFont";src:local("Determination Mono"),local("DTM-Mono"),url("https://cdn.jsdelivr.net/gh/ThetaApps/font-undertale@master/Determination/Determination%20Mono.woff2") format("woff2"),url("https://raw.githubusercontent.com/ThetaApps/font-undertale/master/Determination/Determination%20Mono.woff") format("woff");font-weight:400;font-style:normal;font-display:swap}
 html,body{margin:0;width:100%;height:100%;background:#000;overflow:hidden;overscroll-behavior:none;-webkit-text-size-adjust:100%;-webkit-touch-callout:none}
 body{display:grid;place-items:center}
-#wrap{position:relative;width:min(100vw,calc(100vh * 1448 / 1086));aspect-ratio:1448/1086;background:#000;image-rendering:pixelated}
+#wrap{position:relative;width:min(100vw,calc(100vh * 1930 / 1086));aspect-ratio:1930/1086;background:#000;image-rendering:pixelated}
 canvas{display:block;width:100%;height:100%;outline:0;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none}
 #hint{display:none}
 
@@ -62,7 +62,7 @@ html.splitSoul #mobileJoystick2{border-color:#ff3030}
 <!-- PC DAMAGE SHAKE FIX: all damaged main/support enemies recoil horizontally; IceShock locked poses included. -->
 <body>
 <div id="wrap">
-<canvas id="game" width="1448" height="1086" tabindex="0"></canvas>
+<canvas id="game" width="1930" height="1086" tabindex="0"></canvas>
 <div id="hint">PC + MOBILE + CONTROLLER · keyboard, gamepad or virtual joystick · X/Z touch controls</div>
 
 <div id="mobileControls" aria-label="Mobile controls">
@@ -921,7 +921,7 @@ const MUSIC={
 
 const canvas=document.getElementById('game');
 const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=false;
-const W=1448,H=1086;
+const W=1448,H=1086,CW=1930,OFFX=Math.floor((CW-W)/2); // CW: the 16:9 canvas; W: the stage drawn in its middle
 // UNDERTALE battles are authored in a native 640x480 coordinate space.
 // Keep gameplay placement/sizing in that space, then scale it to this 1448x1086 canvas.
 const UT_W=640,UT_H=480,UT_SCALE=W/UT_W;
@@ -5421,7 +5421,7 @@ function uiScreenProgress(now=performance.now(),duration=320){
 function drawUiScreenCurtain(now=performance.now()){
  const p=uiScreenProgress(now,260);
  if(p>=.999)return;
- ctx.save();ctx.globalAlpha=1-p;ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);ctx.restore();
+ ctx.save();ctx.globalAlpha=1-p;ctx.fillStyle='#000';ctx.fillRect(-OFFX,0,CW,H);ctx.restore();
 }
 function menuTotalOutcome(type){
  return Object.values(battleStats?.[type]||{}).reduce((a,v)=>a+(Number(v)||0),0);
@@ -6615,7 +6615,7 @@ function ui6Hit(r,click,hover){if(ui6Recording)ui6Hits.push({r,click,hover})}
 function ui6WheelArea(r,fn){if(ui6Recording)ui6Wheels.push({r,fn})}
 function ui6In(r,x,y){return x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h}
 const UI6_SCREENS=new Set(['title','gamepick','enemies','variants','supportselect','drroster','drsupport','drcustom','drshop','customhub','creator','customize','kills','spares','shop','bossrush','bossrushBreak','bossrushCodex','bossrushResults','settings','mods','lvselect','tutorialPrompt','tutorial']);
-function ui6CanvasPoint(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height}}
+function ui6CanvasPoint(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*CW/r.width-OFFX,y:(e.clientY-r.top)*H/r.height}}
 function ui6FindHit(x,y){for(let i=ui6Hits.length-1;i>=0;i--)if(ui6In(ui6Hits[i].r,x,y))return ui6Hits[i];return null}
 window.addEventListener('pointermove',e=>{
  if(e.target!==canvas||!UI6_SCREENS.has(screen))return;
@@ -6731,19 +6731,19 @@ function withMenuSkin(fn){
 let ui6BackdropCanvas=null,ui6LatticePattern=null;
 function ui6Backdrop(now){
  if(!ui6BackdropCanvas){
-   const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+   const c=document.createElement('canvas');c.width=CW;c.height=H;const g=c.getContext('2d');
    const lg=g.createLinearGradient(0,0,0,H);lg.addColorStop(0,'#05030b');lg.addColorStop(.6,'#0c0819');lg.addColorStop(1,'#170d2d');
-   g.fillStyle=lg;g.fillRect(0,0,W,H);
-   const rg=g.createRadialGradient(W/2,H*.45,H*.25,W/2,H*.45,H*.9);rg.addColorStop(0,'rgba(0,0,0,0)');rg.addColorStop(1,'rgba(0,0,0,.65)');
-   g.fillStyle=rg;g.fillRect(0,0,W,H);ui6BackdropCanvas=c;
+   g.fillStyle=lg;g.fillRect(0,0,CW,H);
+   const rg=g.createRadialGradient(CW/2,H*.45,H*.25,CW/2,H*.45,H*.9);rg.addColorStop(0,'rgba(0,0,0,0)');rg.addColorStop(1,'rgba(0,0,0,.65)');
+   g.fillStyle=rg;g.fillRect(0,0,CW,H);ui6BackdropCanvas=c;
    const t=document.createElement('canvas');t.width=t.height=96;const q=t.getContext('2d');
    q.fillStyle='rgba(150,110,230,.04)';q.fillRect(0,0,96,2);q.fillRect(0,0,2,96);
    q.fillStyle='rgba(170,130,240,.06)';q.fillRect(46,42,4,12);q.fillRect(42,46,12,4);
    ui6LatticePattern=ctx.createPattern(t,'repeat');
  }
- ctx.drawImage(ui6BackdropCanvas,0,0);
+ ctx.drawImage(ui6BackdropCanvas,-OFFX,0);
  const off=uiReducedMotion?0:(now/80)%96;
- ctx.save();ctx.translate(off,off/2);ctx.fillStyle=ui6LatticePattern;ctx.fillRect(-96,-96,W+96,H+96);ctx.restore();
+ ctx.save();ctx.translate(off,off/2);ctx.fillStyle=ui6LatticePattern;ctx.fillRect(-OFFX-96,-96,CW+96,H+96);ctx.restore();
 }
 // '#rrggbb' scaled toward black (t=0 black, 1 the colour).
 function ui6Shade(hex,t){
@@ -7563,6 +7563,16 @@ function drawTutorial(){
 
 let nbDrawnS=null,nbDrawnT=-1;
 function render(now){
+ // widescreen: the picture is the 1448x1086 stage in the middle of a 16:9 canvas. Menus have a backdrop that runs
+ // out to the edges; a battle is cropped to the stage (it is a 4:3 game inside the wide frame)
+ if(screen==='nb'&&NB.S&&!NB.S.mp&&newEngineFps!==60&&NB.S===nbDrawnS&&NB.S.t===nbDrawnT)return;
+ ctx.setTransform(1,0,0,1,0,0);
+ ctx.fillStyle='#000';ctx.fillRect(0,0,CW,H);
+ ctx.save();ctx.translate(OFFX,0);
+ if(['nb','dr','results','loading'].includes(screen)){ctx.beginPath();ctx.rect(0,0,W,H);ctx.clip()}
+ try{renderStage(now)}finally{ctx.restore()}
+}
+function renderStage(now){
  // A battle only changes when it steps (30 times a second on the default setting), so
  // a frame in between would just redraw the same picture: leave the last one up.
  // (Online battles always draw: the WAITING FOR HOST notice runs on the wall clock.)
@@ -8090,7 +8100,7 @@ window.addEventListener('blur',()=>{
 // Desktop UI affordance: menu choices preview on hover and the pointer reflects clickability.
 // This is presentation-only; pointerdown still owns every actual action.
 canvas.addEventListener('pointermove',e=>{
- const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;
+ const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*CW/r.width-OFFX,y=(e.clientY-r.top)*H/r.height;
  let clickable=false;
  if(screen==='shop'){
    const entries=shopVisibleEntries();
@@ -8112,7 +8122,7 @@ canvas.addEventListener('pointerleave',()=>{canvas.style.cursor='default'});
 
 
 canvas.addEventListener('pointerdown',e=>{
- const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;
+ const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*CW/r.width-OFFX,y=(e.clientY-r.top)*H/r.height;
  if(screen==='loading')return;unlockAudio();
  if(screen==='results'){resultsContinue();return}
  if(screen==='tutorialPrompt'){
@@ -11811,7 +11821,7 @@ const NB=(()=>{
     // (same frames, correct offsets) at obj_slice's image_speed.
     const U=UT_SCALE,S2=NB.S,frames=typeof weaponSpriteAtlas!=='undefined'?weaponSpriteAtlas?.knife:null;
     if(frames&&typeof drawWeaponSequence==='function'){
-     g.save();g.setTransform(1,0,0,1,0,0);g.translate(-S2.view.x*U,-S2.view.y*U);
+     g.save();g.setTransform(1,0,0,1,OFFX,0);g.translate(-S2.view.x*U,-S2.view.y*U);
      drawWeaponSequence(frames,e.t*NB.STEP_MS,e.cx*U,e.cy*U,{stepsPerFrame:1/e.isp,scale:Math.max(.5,e.sc)});
      g.restore();
     }else{
@@ -11864,7 +11874,7 @@ const NB=(()=>{
   const S=NB.S;if(!S)return;
   const U=UT_SCALE;
   ctx.save();
-  ctx.setTransform(U,0,0,U,0,0);ctx.imageSmoothingEnabled=false;
+  ctx.setTransform(U,0,0,U,OFFX,0);ctx.imageSmoothingEnabled=false;
   ctx.fillStyle='#000';ctx.fillRect(0,0,640,480);
   if(S.gameover){drawGameOver(ctx,S);ctx.restore();return}
   ctx.translate(-S.view.x,-S.view.y);
@@ -26951,7 +26961,7 @@ function drawResults(now){
  const R=resultsData;if(!R){screen='title';return}
  const el=(now-R.t0)/1000;
  const rows=resultsRows(),solo=rows.length===1;
- ctx.save();ctx.setTransform(UT_SCALE,0,0,UT_SCALE,0,0);ctx.imageSmoothingEnabled=false;
+ ctx.save();ctx.setTransform(UT_SCALE,0,0,UT_SCALE,OFFX,0);ctx.imageSmoothingEnabled=false;
  ctx.fillStyle='#000';ctx.fillRect(0,0,640,480);
  const txt=(t,x,y,size,col,align='left')=>{ctx.font=`${size}px ${RS_FONT}, monospace`;ctx.textAlign=align;ctx.textBaseline='alphabetic';ctx.fillStyle=col;ctx.fillText(t,x,y)};
  // the counts tick up with UNDERTALE's text blip
@@ -33015,7 +33025,7 @@ const DR=(()=>{
  function render(){
   if(!S)return;
   const U=UT_SCALE;const g=ctx;
-  g.save();g.setTransform(U,0,0,U,0,0);g.imageSmoothingEnabled=false;
+  g.save();g.setTransform(U,0,0,U,OFFX,0);g.imageSmoothingEnabled=false;
   if(!ready){g.fillStyle='#000';g.fillRect(0,0,640,480);text(g,'fnt_mainbig','',0,0);g.fillStyle='#fff';g.font='20px monospace';g.fillText('Loading DELTARUNE assets...',190,240);g.restore();return}
   if(S.picking){drawPick(g);g.restore();return}
   if(S.gameover){
@@ -33124,7 +33134,7 @@ function drActivate(f){
 // the red SOUL as the cursor. Drawn at 640x480 and scaled like the battles.
 const DRM={t:0};
 function drMenuBegin(now){
- const g=ctx;g.save();g.setTransform(UT_SCALE,0,0,UT_SCALE,0,0);g.imageSmoothingEnabled=false;
+ const g=ctx;g.save();g.setTransform(UT_SCALE,0,0,UT_SCALE,OFFX,0);g.imageSmoothingEnabled=false;
  DRM.t=Math.floor(now/(1000/30));DR.gfx.gridBack(g,DRM.t);return g;
 }
 function drHit(x,y,w,h,click,hover){ui6Hit({x:x*UT_SCALE,y:y*UT_SCALE,w:w*UT_SCALE,h:h*UT_SCALE},click,hover)}
@@ -34034,14 +34044,14 @@ const NBO=(()=>{
  NB.draw=function(now){
   baseDraw(now);
   if(!game||!game.running||isHost||starve<700)return;
-  const U=UT_SCALE;ctx.save();ctx.setTransform(U,0,0,U,0,0);ctx.font='16px UT8Bit, monospace';ctx.textAlign='center';
+  const U=UT_SCALE;ctx.save();ctx.setTransform(U,0,0,U,OFFX,0);ctx.font='16px UT8Bit, monospace';ctx.textAlign='center';
   ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(200,200,240,28);ctx.fillStyle='#ffff00';ctx.fillText('WAITING FOR HOST...',320,219);ctx.restore();
  };
  const baseDrRender=DR.render;
  DR.render=function(){
   baseDrRender();
   if(!game||!game.running||!game.dr||isHost||starve<700)return;
-  const U=UT_SCALE;ctx.save();ctx.setTransform(U,0,0,U,0,0);ctx.font='16px UT8Bit, monospace';ctx.textAlign='center';
+  const U=UT_SCALE;ctx.save();ctx.setTransform(U,0,0,U,OFFX,0);ctx.font='16px UT8Bit, monospace';ctx.textAlign='center';
   ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(200,200,240,28);ctx.fillStyle='#ffff00';ctx.fillText('WAITING FOR HOST...',320,219);ctx.restore();
  };
  function quitBattle(){
