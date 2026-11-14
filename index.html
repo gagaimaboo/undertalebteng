@@ -30676,9 +30676,7 @@ const DR=(()=>{
  const NEO_CARX=[-15,-5,-10],NEO_CARY=[101,182,260];
  function drawNeoCar(g,h,front){
   if(h.absent||h.i>2)return;
-  // the car sits at the same height under every hero's feet (Kris's is 101)
-  if(h.cary==null||h.state===0)h.cary=h.y; // (the heroes hop around in their actions, the cars stay put)
-  draw(g,front?'spr_sneo_car_front':'spr_sneo_car_back',0,h.x+NEO_CARX[h.i],h.cary+h.myheight-23,2,2);
+  draw(g,front?'spr_sneo_car_front':'spr_sneo_car_back',0,h.x+NEO_CARX[h.i],NEO_CARY[h.i],2,2);
  }
  // the white-out when the giant blast lands (obj_fadein, white)
  function drawNeoFlash(g){
@@ -32290,7 +32288,7 @@ const DR=(()=>{
   for(const m of S.mons)if(m.def.drawBg&&!m.spared)m.def.drawBg(g,m);
   if(S.darkener){g.fillStyle='rgba(0,0,0,'+(S.darkener.amt/20)+')';g.fillRect(-40,-40,720,560)}
   const carsOn=S.mons.some(m=>m.def.cars&&!m.spared);
-  for(let i=S.party.length-1;i>=0;i--){const h=S.party[i];if(h.id==='susie'&&!h.absent&&h.hp>0&&((S.kw&&S.kw.learned)||(S.fbx&&S.fbx.uses)))drawFrostAura(g,h);if(carsOn)drawNeoCar(g,h,0);drawHero(g,h);if(carsOn)drawNeoCar(g,h,1)}
+  for(let ii=0;ii<S.party.length;ii++){const i=carsOn?ii:S.party.length-1-ii;const h=S.party[i];if(h.id==='susie'&&!h.absent&&h.hp>0&&((S.kw&&S.kw.learned)||(S.fbx&&S.fbx.uses)))drawFrostAura(g,h);if(carsOn)drawNeoCar(g,h,0);drawHero(g,h);if(carsOn)drawNeoCar(g,h,1)}
   for(const m of S.mons)drawMonster(g,m);
   drawFx(g);
   drawJevilBehind(g);
