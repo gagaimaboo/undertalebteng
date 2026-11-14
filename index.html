@@ -1381,7 +1381,15 @@ function confirmLevelSelect(){
 }
 function progressionInventoryCount(){return Object.values(progression.itemStock||{}).reduce((a,v)=>a+Math.max(0,Number(v)||0),0)}
 function progressionRewardEligible(){return screen==='nb'&&vanillaMode&&practiceMode==='classic'&&currentBoss!==SECRET_SANS_BOSS.id}
-function rewardData(id){return VANILLA_REWARDS[id]||{exp:0,killGold:0,spareGold:0}}
+// canon pays 0 G for a lot of fights (most bosses, some spares): here everything pays something
+const GOLD_FLOOR={dummy:5,toriel:150,papyrus:200,napstablook:50,maddummy:50,undyne:500,undyneex:1500,mettaton:300,mettatonex:800,mettatonneo:2000,asgore:1000,sans:1000,madmewmew:500,roaringknight:2000,custom:10};
+function rewardData(id){
+ const r=VANILLA_REWARDS[id]||{exp:0,killGold:0,spareGold:0};
+ let kg=r.killGold||0,sg=r.spareGold||0;
+ if(!kg)kg=GOLD_FLOOR[id]??Math.max(2,Math.round((r.exp||2)/2));
+ if(!sg)sg=Math.max(1,Math.round(kg*.6));
+ return {...r,killGold:kg,spareGold:sg};
+}
 function armorById(id){return SHOP_ARMOR_ENTRIES.find(a=>a.id===id)||SHOP_ARMOR_ENTRIES[0]}
 function ownsShopArmor(id){return id==='bandage'||!!progression.armors?.[id]}
 function ownsVanillaArmor(id){const row=SHOP_ARMOR_ENTRIES.find(a=>a.id===id);return !!row&&!row.partyOnly&&ownsShopArmor(id)}
