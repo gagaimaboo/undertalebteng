@@ -46,6 +46,13 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
   -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o publish/win-x64
 ```
 
+Installer (per user, no admin prompt, Start menu + desktop shortcuts, shows up in Add/Remove Programs):
+
+```
+# after the publish step above; needs NSIS (apt install nsis)
+cd port/installer && makensis UTBattle.nsi    # -> UTBattle-CSharp-Setup.exe
+```
+
 `UTBattle --autotest DIR` plays a scripted Froggit fight and saves screenshots to DIR.
 
 ## Next
