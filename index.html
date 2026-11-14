@@ -27349,7 +27349,7 @@ const DR=(()=>{
    idle:'spr_sneo_example',idleSpeed:999,hurt:'spr_sneo_example',spared:'spr_sneo_example',still:'spr_sneo_example',
    intro:'* It\'s time to be a BIG SHOT!',attack:'sneo',tiredAt:()=>false,
    init(m){neoInit(m)},
-   acts:[{name:'Check',actor:1},{name:'Snap',actor:1},{name:'SnapAll',actor:1}], // Susie and Ralsei have Snap / Supercharge / FluffyGuard in their own MAGIC menus (spells 20-22)
+   acts:[{name:'Check',actor:1},{name:'Snap',actor:1},{name:'SnapAll',actor:1,all:1}], // Susie and Ralsei have Snap / Supercharge / FluffyGuard in their own MAGIC menus (spells 20-22)
    act(name,m,i){
     const n=m.n;
     if(name==='Check'){
@@ -30166,6 +30166,7 @@ const DR=(()=>{
     S.actingchoice[c]=k;S.actingtarget[c]=coord(11);
     m.acting=k+1;S.acting[0]=1;S.actingsingle[0]=1;
     if(slot>0)S.acting[slot]=1;
+    if(acts[k].all)for(let i=1;i<3;i++)if(S.party[i]&&!S.party[i].absent&&S.party[i].hp>0)S.acting[i]=1;
     for(let i=0;i<3;i++)if(S.acting[i]){S.faceaction[i]=6;S.charaction[i]=9}
     setCoord(9,0);nexthero();
    }
