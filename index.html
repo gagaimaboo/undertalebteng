@@ -30671,7 +30671,7 @@ const DR=(()=>{
   row('bg_dw_mansion_basement_cityscape_foreground',b.cs*1.2);
   for(const y of [70,150,230]) // tracky0..2 lerp from 180/240/300 to these when the fight starts
    for(let k=-1;k<=1;k++)draw(g,'spr_sneo_track',0,b.tx+k*640,y,2,2,0,a);
-  const w=S.nwt;if(w&&S.t-w.on<4)for(const x of w.x)draw(g,'spr_sneo_wall_track',0,x,290,1,1,0,a);
+  const w=S.nwt;if(w&&S.t-w.on<4)for(const x of w.x)draw(g,'spr_sneo_wall_track',0,x,284,1,1,0,a);
  }
  const NEO_CARX=[-15,-5,-10],NEO_CARY=[101,182,260];
  function drawNeoCar(g,h,front){
@@ -31162,7 +31162,7 @@ const DR=(()=>{
   const cells=c.walls[c.wi][0],wn=c.wi;c.wt=0;c.wi++;
   const cell=(i,o)=>S.bullets.push(Object.assign({kind:'wall',neo:1,wn,x:640,y:68+i*34,dmg:c.dmg,target:c.target,grazepoints:2,timepoints:2,grazed:0,t:0,f:0},o));
   cell(0,{spr:'spr_sneo_bullet_box',xs:1.25,ys:1.6,box:null,deco:1});
-  cell(6,{spr:'spr_sneo_wall_car',xs:1.25,ys:1.6,x:595,y:254,box:null,deco:1}); // the column is centred between the car's two wheels
+  cell(6,{spr:'spr_sneo_wall_car',xs:1.25,ys:1.6,x:595,y:248,box:null,deco:1}); // the column is centred between the car's two wheels
   for(let i=1;i<=5;i++){
    const k=cells[i-1];
    if(k===1)continue;
