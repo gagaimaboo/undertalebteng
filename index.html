@@ -26934,11 +26934,11 @@ function rsPortrait(R,x,y,role,t,n=1){
  else if(role==='classic'){const f=images.friskIdle;im=f&&f[Math.floor(t*5)%f.length]}
  else{
   const n={kris:'spr_krisb_idle',susie:'spr_susieb_idle',noelle:'spr_noelleb_idle',ralsei:'spr_ralsei_idle'}[role];
-  if(n&&typeof DR!=='undefined'&&DR.ready&&DR.gfx){im=DR.gfx.frame(n,t*6);s=tight?.85:1.1}
+  if(n&&typeof DR!=='undefined'&&DR.ready&&DR.gfx){im=DR.gfx.frame(n,t*6);s=tight?1.6:3}
  }
  // the ring they stand in
  sc.save();sc.fillStyle='#202020';sc.strokeStyle='#fff';sc.lineWidth=3;
- sc.beginPath();sc.ellipse(x,y,tight?30:64,tight?9:16,0,0,Math.PI*2);sc.fill();sc.stroke();sc.restore();
+ sc.beginPath();sc.ellipse(x,y,tight?24:64,tight?7:16,0,0,Math.PI*2);sc.fill();sc.stroke();sc.restore();
  if(im){const w=im.width*s,h=im.height*s;sc.save();sc.imageSmoothingEnabled=false;sc.drawImage(im,Math.round(x-w/2),Math.round(y-h+2),Math.round(w),Math.round(h));sc.restore()}
  else{const h=images.heart||images.heartFallback;if(h)sc.drawImage(h,x-12,y-34,24,24)}
 }
@@ -26983,12 +26983,12 @@ function drawResults(now){
   // ---- middle: who fought
   const roles=(R.roles&&R.roles.length?R.roles:['classic']).slice(0,3);
   if(el>.4){
-   const cx=326,gap=roles.length>1?56:0;
+   const cx=roles.length>1?318:326,gap=roles.length>1?52:0;
    roles.forEach((role,i)=>{
     const x=cx+(i-(roles.length-1)/2)*gap;
     rsPortrait(R,x,372,role,el,roles.length);
    });
-   const nm=(String(r.name||'FRISK').toUpperCase()==='CHARA'?'FRISK':String(r.name||'FRISK').toUpperCase());
+   const nm=({kris:'KRIS',susie:'SUSIE',noelle:'NOELLE',ralsei:'RALSEI',flowey:'FLOWEY'})[roles[0]]||(String(r.name||'FRISK').toUpperCase()==='CHARA'?'FRISK':String(r.name||'FRISK').toUpperCase());
    txt(roles.length>1?'PARTY':nm,326,236,24,'#ffffff','center');
    ctx.fillStyle='#fff';ctx.fillRect(322,246,8,2);ctx.fillRect(324,250,4,2);ctx.fillRect(325,254,2,2); // a small arrow down to them
   }
