@@ -4,7 +4,7 @@ using UTBattle.Engine;
 namespace UTBattle.Battle;
 
 // SCR_TEXTTYPE typers
-public record Typer(string Font, Color Color, int Dx, int Dy, Func<double, double> Wrap, int Speed, string[]? Sound, int Spacing, int VSpacing);
+public record Typer(string Font, Color Color, int Dx, int Dy, Func<double, double> Wrap, int Speed, string[]? Sound, int Spacing, int VSpacing, double Shake = 0);
 
 // OBJ_WRITER: types a page one character a step. UNDERTALE's codes:
 //  &  new line      ^n  pause n*10 steps     /  wait for Z     %  end of message
@@ -15,7 +15,12 @@ public class Writer
     {
         [1] = new("main", Color.White, 20, 20, x => x + 602 - 55, 1, new[] { "text" }, 16, 32),
         [2] = new("plain", Color.Black, 0, 0, x => x + 190, 1, new[] { "txt2" }, 9, 20),
+        // Undyne (39-45; her melting speech slows down line by line) and Undyne the Undying (94-96)
+        [39] = Und(1, "txtUnd"), [40] = Und(1, "txtUnd", 1), [41] = Und(1, "txtUnd"),
+        [42] = Und(2, "txtUnd", 2), [43] = Und(2, "txtUnd2", 2), [44] = Und(3, "txtUnd3", 2), [45] = Und(4, "txtUnd4", 2),
+        [94] = Und(1, "txtUnd", 1), [95] = Und(2, "txtUnd", 2), [96] = Und(2, "txtUnd", 3),
     };
+    static Typer Und(int speed, string snd, double shake = 0) => new("plain", Color.Black, 16, 0, x => x + 190, speed, new[] { snd }, 9, 20, shake);
     public static readonly Dictionary<char, string> TextColors = new()
     {
         ['R'] = "#ff0000", ['G'] = "#00ff00", ['W'] = "#ffffff", ['Y'] = "#ffff00", ['X'] = "#000000", ['B'] = "#0000ff",
@@ -133,7 +138,8 @@ public class Writer
             }
             if (c == '/' || c == '%') break;
             if (x > wrap) { x = x0; y += t.VSpacing; }
-            Gfx.Glyph(t.Font, c, x, y, color);
+            if (t.Shake > 0) { double k = t.Shake; Gfx.Glyph(t.Font, c, x + Random.Shared.NextDouble() * k - k / 2, y + Random.Shared.NextDouble() * k - k / 2, color); }
+            else Gfx.Glyph(t.Font, c, x, y, color);
             x += t.Spacing;
         }
     }

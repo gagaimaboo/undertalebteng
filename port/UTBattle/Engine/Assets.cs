@@ -59,6 +59,8 @@ public static class Assets
         // no sound card (or it failed to open): run silent instead of crashing
         if (!Raylib.IsAudioDeviceReady()) return;
         foreach (var (name, bytes) in data)
+            if (name.StartsWith("mus/")) Music.Add(Path.GetFileNameWithoutExtension(name), bytes);
+        foreach (var (name, bytes) in data)
         {
             if (!name.StartsWith("snd/")) continue;
             var wave = Raylib.LoadWaveFromMemory(Path.GetExtension(name), bytes);

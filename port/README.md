@@ -10,8 +10,16 @@ game's own objects), function by function, so it plays the same.
   the text writer with UNDERTALE's codes (`&` `^n` `/` `%` `\Y` ...), the knife FIGHT bar and
   its damage maths, damage numbers and HP bar, monster speech bubbles, the enemy's turn,
   bullets and hits, spare (dust), death (vaporize), flee, items, game over, YOU WON
-- Monsters: **Froggit**, **Dummy**
-- A fight-select menu with LV 1-20
+- Monsters: **Froggit**, **Dummy**, **Toriel**, **Undyne**, **Undyne the Undying**
+  - Toriel: all five fire patterns, the 25-turn talk to her goodbye (spare), the kneeling death
+    speech, her SOUL cracking and shattering
+  - Undyne: the green SOUL and its shield, every spear lesson (generated from the web build's
+    table into `UndLessons.cs`), follow/rising spears on red, ACTs and ratings, her
+    "I won't die" death and melting finale; HP and encounters carry over when you flee, like the game
+  - Undyne the Undying: the green lessons, the red attack order (follow, rising, spear rings,
+    the six-spear circles), FIGHT x21, her melting death
+- Battle music (Enemy Approaching, Heartache, Spear of Justice, Battle Against a True Hero)
+- A fight-select menu; each fight starts with that stage's LV, weapon, armor and items (LV changeable)
 - 16:9 window, the 640x480 picture scaled into the middle; F11 / Alt+Enter fullscreen
 
 ## Layout
@@ -25,7 +33,9 @@ port/
     Battle/Fight.cs        the battle controller (NB core)
     Battle/Writer.cs       OBJ_WRITER
     Battle/Monster.cs      Monster, Bullet, MonsterDef (what a monster script overrides)
-    Battle/Monsters/       one class per monster (Ruins.cs: Froggit, Dummy)
+    Battle/Monsters/       one class per monster (Ruins.cs: Froggit, Dummy; Toriel.cs;
+                           Undyne.cs, UndyneEx.cs, UndyneCommon.cs: what the two Undynes share)
+    Engine/Music.cs        streams the battle music (assets/mus)
 ```
 
 Adding a monster: write a `MonsterDef` subclass (the JS `NB.defs.set('id', {...})` entry maps
@@ -53,7 +63,8 @@ Installer (per user, no admin prompt, Start menu + desktop shortcuts, shows up i
 cd port/installer && makensis UTBattle.nsi    # -> UTBattle-CSharp-Setup.exe
 ```
 
-`UTBattle --autotest DIR` plays a scripted Froggit fight and saves screenshots to DIR.
+`UTBattle --autotest DIR [--fight ID] [--steps N] [--mon-hp N] [--player-hp N]` plays a scripted
+fight (Froggit, or a boss with the keys mashed) and saves screenshots to DIR.
 
 ## Next
 
