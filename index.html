@@ -1583,6 +1583,384 @@ function creatorActAt(index=creatorEditAct,c=sandboxConfig.customCharacter){
  return acts[i]||acts[0];
 }
 const CREATOR_MAX_PATTERNS=8;
+/* ==========================================================================
+   CREATOR // ATTACK BUILDER. A pattern layer can now be built from scratch instead of only
+   copying a boss attack: where the bullets come from, where they aim, how many per shot and
+   in what shape, how often, how they move (speed, acceleration, curve, gravity, wave, homing,
+   bounces), what they look like (a sprite from the game or your own image, at a size in
+   pixels), their hitbox, colour (white / blue / orange) and damage. Each pattern also sets
+   its box size, SOUL mode and length. The same code runs the battle and the creator's
+   live preview. Old saves keep their layers as COPY layers.
+   ========================================================================== */
+var CRB_SPRITES=[
+ {id:'pellet',label:'PELLET',src:'sprites/images/spr_circlebulletsm_0.png',n:16},
+ {id:'tiny',label:'TINY PELLET',src:'sprites/images/spr_bulletsm_0.png',n:6},
+ {id:'fire',label:'FIRE',src:'sprites/images/spr_firebullet_0.png',n:16},
+ {id:'fly',label:'FLY',src:'sprites/images/spr_flybullet_0.png',n:12},
+ {id:'tear',label:'TEAR',src:'sprites/images/spr_teardrop_0.png',n:13},
+ {id:'star',label:'STAR',src:'sprites/images/spr_stardrop_0.png',n:15},
+ {id:'heart',label:'HEART',src:'sprites/images/spr_smheartbullet_0.png',n:16},
+ {id:'note',label:'MUSIC NOTE',src:'sprites/images/spr_musbul_1_0.png',n:24},
+ {id:'spider',label:'SPIDER',src:'sprites/images/spr_spiderbullet1_0.png',n:24},
+ {id:'orb',label:'MAGIC ORB',src:'sprites/images/spr_wizard_orb2_0.png',n:28},
+ {id:'bigorb',label:'BIG ORB',src:'sprites/images/spr_skyorb_0.png',n:36},
+ {id:'spear',label:'SPEAR',src:'sprites/images/spr_whitespear_0.png',n:90,dir:-90},
+ {id:'arrow',label:'ARROW SPEAR',src:'sprites/images/spr_undynespear_r_0.png',n:53,dir:0},
+ {id:'knife',label:'KNIFE',src:'sprites/images/spr_dummyknife_0.png',n:60,dir:0},
+ {id:'icicle',label:'ICICLE',src:'sprites/images/spr_iciclebullet_0.png',n:40,dir:-90},
+ {id:'carrot',label:'CARROT',src:'sprites/images/spr_carrotbullet_0.png',n:24,dir:90},
+ {id:'kiss',label:'KISS',src:'sprites/images/spr_kissbullet_0.png',n:24},
+ {id:'sun',label:'SUN',src:'sprites/images/spr_sunbullet_0.png',n:12},
+ {id:'donut',label:'DONUT',src:'sprites/images/spr_donutbullet_0.png',n:24},
+ {id:'cupcake',label:'CUPCAKE',src:'sprites/images/spr_cupcakebullet_0.png',n:24},
+ {id:'worm',label:'WORM',src:'sprites/images/spr_wormbul_0.png',n:24},
+ {id:'spinner',label:'SPINNER',src:'sprites/images/spr_spinbullet_0.png',n:12},
+ {id:'claw',label:'CLAW',src:'sprites/images/spr_rotclawbullet_0.png',n:24},
+ {id:'soap',label:'SOAP BUBBLE',src:'sprites/images/spr_soapbul_0.png',n:40},
+ {id:'frog',label:'FROG',src:'sprites/images/spr_frogbullet_go_0.png',n:40},
+ {id:'bark',label:'BARK',src:'sprites/images/spr_barkbullet_0.png',n:60},
+ {id:'cloud',label:'STORM CLOUD',src:'sprites/images/spr_vulkincloudbul_0.png',n:60},
+ {id:'dog',label:'ANNOYING DOG',src:'sprites/images/spr_tobdogl_0.png',n:22},
+ {id:'bone',label:'BONE',draw:'bone',n:40},
+ {id:'block',label:'BLOCK',draw:'block',n:16},
+ {id:'custom',label:'YOUR OWN IMAGE',n:24}
+];
+var CRB_SPRITE_BY={};CRB_SPRITES.forEach(s=>CRB_SPRITE_BY[s.id]=s);
+var CRB_LISTS={
+ from:[['top','TOP OF THE BOX'],['bottom','BOTTOM OF THE BOX'],['left','LEFT SIDE'],['right','RIGHT SIDE'],['sides','LEFT + RIGHT'],['edges','ANY EDGE'],['monster','THE MONSTER'],['center','BOX CENTER'],['soul','AROUND THE SOUL']],
+ spot:[['random','RANDOM'],['soul','LINED UP WITH SOUL'],['sweep','SWEEPS ACROSS'],['middle','MIDDLE']],
+ aim:[['straight','STRAIGHT IN'],['soul','AT THE SOUL'],['random','RANDOM'],['spiral','SPIRAL']],
+ shape:[['single','ONE BULLET'],['fan','FAN'],['line','LINE'],['burst','RING BURST']],
+ color:[['white','WHITE'],['blue','BLUE  (STAND STILL)'],['orange','ORANGE  (KEEP MOVING)']]
+};
+var CRB_DEF={from:'top',spot:'random',aim:'straight',shape:'single',shots:5,fan:60,spacing:24,volleys:16,gap:220,delay:0,
+ vel:150,accel:0,bend:0,grav:0,wave:0,waveSpeed:10,homing:0,bounce:0,sprite:'pellet',px:16,hit:70,spin:0,face:false,color:'white',dmg:4,img:''};
+var CRB_NUM={shots:[1,40],fan:[0,360],spacing:[4,200],volleys:[1,99],gap:[30,5000],delay:[0,20000],vel:[0,900],accel:[-900,900],
+ bend:[-720,720],grav:[-900,900],wave:[0,120],waveSpeed:[1,60],homing:[0,100],bounce:[0,9],px:[2,160],hit:[10,150],spin:[-1440,1440],dmg:[0,99]};
+
+// ------------------------------------------------------------ the data --
+function crbDefaultLayer(base,i){return Object.assign(base,{mode:'build'},CRB_DEF,{enabled:i===0})}
+function crbNormLayer(raw,base,i){
+ const r=raw&&typeof raw==='object'?raw:null;
+ base.mode=r?(r.mode==='build'||r.mode==='copy'?r.mode:'copy'):'build';
+ for(const k in CRB_DEF){
+  const d=CRB_DEF[k],v=r?r[k]:undefined;
+  if(CRB_LISTS[k])base[k]=CRB_LISTS[k].some(o=>o[0]===v)?v:d;
+  else if(k==='sprite')base[k]=CRB_SPRITE_BY[v]?v:d;
+  else if(k==='face')base[k]=v===undefined?d:!!v;
+  else if(k==='img')base[k]=typeof v==='string'?v:'';
+  else{const n=Number(v),[a,b]=CRB_NUM[k];base[k]=Number.isFinite(n)&&v!==''&&v!==null&&v!==undefined?Math.max(a,Math.min(b,Math.round(n))):d}
+ }
+ return base;
+}
+function crbNormPattern(raw,layers,fresh){
+ const r=raw&&typeof raw==='object'?raw:{};
+ const dim=(v,d,max)=>{const n=Number(v);if(!Number.isFinite(n)||v===undefined)return d;const k=Math.round(n);return k<=0?0:Math.max(40,Math.min(max,k))};
+ return {layers,boxW:dim(r.boxW,fresh?165:0,560),boxH:dim(r.boxH,fresh?140:0,300),soul:r.soul==='blue'?'blue':'red',
+  len:Math.max(0,Math.min(30000,Math.round(Number(r.len)||0)))};
+}
+function crbBuildLayers(p){return (p&&p.layers||[]).filter(l=>l&&l.enabled&&l.mode==='build')}
+function crbHasBuild(p){return crbBuildLayers(p).length>0}
+// how long the turn lasts when LENGTH is AUTO: the last shot, plus time for it to cross
+function crbAutoMs(p){
+ let end=0;for(const l of crbBuildLayers(p))end=Math.max(end,l.delay+(l.volleys-1)*l.gap);
+ return Math.max(1500,Math.min(30000,end+2200));
+}
+function crbLengthMs(p){return p&&p.len>0?p.len:crbAutoMs(p)}
+function crbBoxOf(p){return {w:p&&p.boxW||165,h:p&&p.boxH||140}}
+
+// ----------------------------------------------------------- the looks --
+var crbImgs={};
+function crbImage(id){
+ const s=CRB_SPRITE_BY[id];if(!s||!s.src)return null;
+ let e=crbImgs[id];
+ if(!e){e=crbImgs[id]={im:null};try{loadImage(RAW+s.src).then(im=>{if(im)e.im=im}).catch(()=>{})}catch(_){}}
+ return e.im&&(e.im.naturalWidth||e.im.width)?e.im:null;
+}
+function crbPreload(p){for(const l of crbBuildLayers(p))crbImage(l.sprite);crbImage('pellet')}
+var crbTintCache=new WeakMap();
+var CRB_TINT={blue:'#14a9ff',orange:'#ffa040'};
+function crbTint(im,col){
+ if(!CRB_TINT[col]||!im)return im;
+ let m=crbTintCache.get(im);if(!m){m={};crbTintCache.set(im,m)}
+ if(m[col])return m[col];
+ const w=im.naturalWidth||im.width,h=im.naturalHeight||im.height;if(!w||!h)return im;
+ const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');
+ g.drawImage(im,0,0);g.globalCompositeOperation='source-atop';g.fillStyle=CRB_TINT[col];g.fillRect(0,0,w,h);
+ return m[col]=c;
+}
+// what a layer's bullet looks like, sized so its longest side is `size` pixels
+function crbLook(l){
+ const s=CRB_SPRITE_BY[l.sprite]||CRB_SPRITES[0];
+ if(s.draw==='bone')return {kind:'bone',w:10,h:l.px,dir:0};
+ if(s.draw==='block')return {kind:'block',w:l.px,h:l.px,dir:0};
+ let im=s.id==='custom'?creatorDataImage(l.img):crbImage(s.id);
+ if(!im)im=crbImage('pellet');
+ if(!im)return {kind:'block',w:l.px,h:l.px,dir:0};
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height,k=l.px/Math.max(iw,ih);
+ return {kind:'img',im,w:iw*k,h:ih*k,dir:s.dir||0};
+}
+function crbDraw(g,b){
+ const l=b.l,d=crbLook(l),col=CRB_TINT[l.color]||'#ffffff';
+ g.save();g.imageSmoothingEnabled=false;g.translate(b.x,b.y);if(b.rot)g.rotate(b.rot*Math.PI/180);
+ if(d.kind==='img'){const im=crbTint(d.im,l.color);g.drawImage(im,-d.w/2,-d.h/2,d.w,d.h)}
+ else if(d.kind==='bone'){const L=Math.max(12,d.h),R=Math.round;g.fillStyle=col;g.fillRect(-3,R(-L/2+3),6,R(L-6));g.fillRect(-5,R(-L/2),4,5);g.fillRect(1,R(-L/2),4,5);g.fillRect(-5,R(L/2-5),4,5);g.fillRect(1,R(L/2-5),4,5)}
+ else{g.fillStyle=col;g.fillRect(-d.w/2,-d.h/2,d.w,d.h)}
+ g.restore();
+}
+// half-width / half-height of the hitbox, turned with the sprite
+function crbHalf(b){
+ const d=crbLook(b.l),k=b.l.hit/100,a=(b.rot||0)*Math.PI/180,c=Math.abs(Math.cos(a)),s=Math.abs(Math.sin(a));
+ return {hw:Math.max(1,(c*d.w+s*d.h)/2*k),hh:Math.max(1,(s*d.w+c*d.h)/2*k)};
+}
+
+// ------------------------------------------------------------ the sim --
+// W: {L,R,T,B, soul()->{x,y}, mon()->{x,y}, rnd()->[0,1), fire(b)}
+function crbRun(p){
+ crbPreload(p);
+ return {t:0,ls:crbBuildLayers(p).map(l=>({l,next:Math.round(l.delay*.03),left:l.volleys,k:0}))};
+}
+function crbRunDone(run){return run.ls.every(s=>s.left<=0)}
+function crbTick(run,W){
+ for(const s of run.ls){
+  let guard=0;
+  while(s.left>0&&run.t>=s.next&&guard++<20){crbVolley(s,W);s.left--;s.k++;s.next+=Math.max(1,Math.round(s.l.gap*.03))}
+ }
+ run.t++;
+}
+function crbVolley(s,W){
+ const l=s.l,so=W.soul(),L=W.L,R=W.R,T=W.T,B=W.B,cx=(L+R)/2,cy=(T+B)/2;
+ const d=crbLook(l),m=Math.max(d.w,d.h)/2+3,n=l.shape==='single'?1:l.shots;
+ let from=l.from;
+ if(from==='sides')from=s.k%2?'right':'left';
+ if(from==='edges')from=['top','bottom','left','right'][Math.floor(W.rnd()*4)];
+ const along=(lo,hi,soulV)=>{
+  let f=.5;
+  if(l.spot==='random')f=W.rnd();
+  else if(l.spot==='soul')f=(soulV-lo)/Math.max(1,hi-lo);
+  else if(l.spot==='sweep')f=l.volleys>1?(s.k%l.volleys)/(l.volleys-1):.5;
+  return lo+(hi-lo)*Math.max(0,Math.min(1,f));
+ };
+ const shots=[];
+ if(from==='soul'){
+  const r=Math.max(50,Math.min(260,Math.max(R-L,B-T)*.6+m)),k=Math.max(1,n);
+  const p0=l.aim==='spiral'?s.k*23:W.rnd()*360;
+  for(let i=0;i<k;i++){const a=(p0+i*360/k)*Math.PI/180,x=so.x+Math.cos(a)*r,y=so.y+Math.sin(a)*r;shots.push({x,y,ang:Math.atan2(so.y-y,so.x-x)*180/Math.PI})}
+ }else{
+  let P,inward;
+  if(from==='top'){P={x:along(L+8,R-8,so.x),y:T-m};inward=90}
+  else if(from==='bottom'){P={x:along(L+8,R-8,so.x),y:B+m};inward=-90}
+  else if(from==='left'){P={x:L-m,y:along(T+8,B-8,so.y)};inward=0}
+  else if(from==='right'){P={x:R+m,y:along(T+8,B-8,so.y)};inward=180}
+  else if(from==='monster'){P=W.mon();inward=Math.atan2(cy-P.y,cx-P.x)*180/Math.PI}
+  else{P={x:cx,y:cy};inward=90}
+  let base=inward;
+  if(l.aim==='soul')base=Math.atan2(so.y-P.y,so.x-P.x)*180/Math.PI;
+  else if(l.aim==='random')base=W.rnd()*360;
+  else if(l.aim==='spiral')base=inward+s.k*23;
+  if(l.shape==='fan'&&n>1){for(let i=0;i<n;i++)shots.push({x:P.x,y:P.y,ang:base+(i-(n-1)/2)*(l.fan/(n-1))})}
+  else if(l.shape==='burst'){for(let i=0;i<n;i++)shots.push({x:P.x,y:P.y,ang:base+i*360/n})}
+  else if(l.shape==='line'&&n>1){const pa=(base+90)*Math.PI/180;for(let i=0;i<n;i++){const o=(i-(n-1)/2)*l.spacing;shots.push({x:P.x+Math.cos(pa)*o,y:P.y+Math.sin(pa)*o,ang:base})}}
+  else shots.push({x:P.x,y:P.y,ang:base});
+ }
+ for(const q of shots)W.fire({l,x:q.x,y:q.y,bx:q.x,by:q.y,ang:q.ang,sp:l.vel/30,gv:0,t:0,bounces:l.bounce,inside:false,
+  rot:l.face?q.ang-(d.dir||0):0,dead:false});
+}
+function crbMove(b,W){
+ const l=b.l;
+ b.sp+=l.accel/900;
+ if(l.bend)b.ang+=l.bend/30;
+ if(l.homing){const so=W.soul(),want=Math.atan2(so.y-b.by,so.x-b.bx)*180/Math.PI;let dd=((want-b.ang)%360+540)%360-180;const mx=l.homing/10;b.ang+=Math.max(-mx,Math.min(mx,dd))}
+ const a=b.ang*Math.PI/180;let vx=Math.cos(a)*b.sp,vy=Math.sin(a)*b.sp+b.gv;
+ b.gv+=l.grav/900;b.bx+=vx;b.by+=vy;
+ const {hw,hh}=crbHalf(b);
+ if(!b.inside&&b.bx-hw>=W.L&&b.bx+hw<=W.R&&b.by-hh>=W.T&&b.by+hh<=W.B)b.inside=true;
+ if(b.inside&&b.bounces>0){
+  let hit=false;
+  if((b.bx-hw<W.L&&vx<0)||(b.bx+hw>W.R&&vx>0)){vx=-vx;hit=true}
+  if((b.by-hh<W.T&&vy<0)||(b.by+hh>W.B&&vy>0)){vy=-vy;hit=true}
+  if(hit){b.bounces--;b.sp=Math.hypot(vx,vy);b.ang=Math.atan2(vy,vx)*180/Math.PI;b.gv=0}
+ }
+ let ox=0,oy=0;
+ if(l.wave){const w=l.wave*Math.sin(b.t*(l.waveSpeed/10)*2*Math.PI/30),pa=a+Math.PI/2;ox=Math.cos(pa)*w;oy=Math.sin(pa)*w}
+ b.x=b.bx+ox;b.y=b.by+oy;
+ if(l.face){if(vx||vy)b.rot=Math.atan2(vy,vx)*180/Math.PI-(crbLook(l).dir||0)}
+ else if(l.spin)b.rot=(b.rot||0)+l.spin/30;
+ b.t++;
+ if(b.x<-160||b.x>800||b.y<-160||b.y>640||b.t>1800)b.dead=true;
+}
+
+// --------------------------------------------------------- in battle --
+function crbBattleBox(api,p){const {w,h}=crbBoxOf(p);api.borderRect(Math.round(320-w/2),Math.round(320+w/2),385-h,385)}
+function crbBattleWorld(api,m){
+ const W={
+  get L(){return api.S.ideal[0]},get R(){return api.S.ideal[1]},get T(){return api.S.ideal[2]},get B(){return api.S.ideal[3]},
+  soul:()=>{const h=api.heart;return {x:h.x+8,y:h.y+8}},
+  mon:()=>({x:m.x+m.w/2,y:m.y+m.h*.6}),
+  rnd:()=>NB.rnd(1),
+  fire:b=>{
+   const box=()=>{const {hw,hh}=crbHalf(b);return [-hw,-hh,hw*2,hh*2]};
+   api.spawn({x:b.x,y:b.y,manual:true,wallKill:false,kill:false,dmg:b.l.dmg,box:box(),
+    step(nb){crbMove(b,W);nb.x=b.x;nb.y=b.y;nb.box=box();if(b.dead)nb.alive=false},
+    draw(g){crbDraw(g,b)},
+    onHit(){
+     const l=b.l;if(!(l.dmg>0))return false;
+     if(l.color==='blue'&&!api.moving())return false;
+     if(l.color==='orange'&&api.moving())return false;
+     return api.damage(l.dmg);
+    }});
+  }
+ };
+ return W;
+}
+
+// ------------------------------------------------ the creator's rows --
+function crbListValue(k,v){const o=CRB_LISTS[k].find(o=>o[0]===v);return o?o[1]:String(v).toUpperCase()}
+function crbCycleList(k,obj,dir){const ids=CRB_LISTS[k].map(o=>o[0]);obj[k]=creatorCycle(ids,obj[k],dir)}
+function crbPatternRows(c){
+ const patterns=creatorPatternList(c);
+ creatorEditPattern=clamp(creatorEditPattern,0,Math.max(0,patterns.length-1));
+ creatorEditLayer=clamp(creatorEditLayer,0,3);
+ const pi=creatorEditPattern,p=patterns[pi],li=creatorEditLayer,l=p.layers[li];
+ const save=()=>{syncCustomBossFromConfig()};
+ const patNum=(key,label,min,max,step,fmt)=>({kind:'creatorLayerNumber',label,value:fmt(p[key]),rawValue:p[key],min,max,step,set:v=>{if((key==='boxW'||key==='boxH')&&v>0&&v<40)v=v<p[key]?0:40;p[key]=v;Object.assign(p,crbNormPattern(p,p.layers));save()}});
+ const list=(k,label,obj=l,after)=>({kind:'crbList',label,value:crbListValue(k,obj[k]),cycle:dir=>{crbCycleList(k,obj,dir);if(after)after()}});
+ const num=(key,label,min,max,step,fmt)=>({kind:'creatorLayerNumber',pattern:pi,layer:li,key,label,value:fmt?fmt(l[key]):l[key],rawValue:l[key],min,max,step});
+ const rows=[
+  {kind:'creatorPatternSelect',label:'ATTACK PATTERN',value:`PATTERN ${pi+1} OF ${patterns.length}`},
+  {kind:'creatorPatternAdd',label:'ADD NEW PATTERN',value:patterns.length>=CREATOR_MAX_PATTERNS?'MAX 8':'ENTER'},
+  {kind:'creatorPatternDelete',label:'DELETE THIS PATTERN',value:patterns.length<=1?'KEEP AT LEAST 1':'ENTER'},
+  patNum('boxW','BOX WIDTH',0,560,5,v=>v?`${v} px`:'AUTO'),
+  patNum('boxH','BOX HEIGHT',0,300,5,v=>v?`${v} px`:'AUTO'),
+  {kind:'crbList',label:'SOUL MODE',value:p.soul==='blue'?'BLUE  (GRAVITY)':'RED',cycle:()=>{p.soul=p.soul==='blue'?'red':'blue'}},
+  patNum('len','TURN LENGTH',0,30000,250,v=>v?`${(v/1000).toFixed(2)} s`:`AUTO  (${(crbAutoMs(p)/1000).toFixed(1)} s)`),
+  {kind:'creatorLayerSelect',label:'EDITING LAYER',value:`LAYER ${li+1} OF 4${l.enabled?'':'  (OFF)'}`},
+  {kind:'creatorToggle',pattern:pi,layer:li,key:'enabled',label:'LAYER',value:l.enabled?'ON':'OFF'},
+  {kind:'crbList',label:'LAYER TYPE',value:l.mode==='build'?'BUILD YOUR OWN':'COPY A BOSS ATTACK',cycle:()=>{l.mode=l.mode==='build'?'copy':'build'}}
+ ];
+ if(l.mode!=='build'){
+  creatorEditSpriteSlot=clamp(creatorEditSpriteSlot,0,2);
+  const vsi=creatorEditSpriteSlot,visual=creatorLayerVisualSlot(l,vsi);
+  rows.push(
+   {kind:'creatorPreset',pattern:pi,layer:li,label:'BOSS ATTACK',value:CREATOR_PATTERN_PRESETS.find(v=>v.id===l.preset)?.label||l.preset},
+   {kind:'creatorVisualSlotSelect',pattern:pi,layer:li,label:'EDITING ATTACK SPRITE',value:`${vsi+1}/3  // ${creatorVisualSlotLabel(l.preset,vsi)}`},
+   {kind:'creatorBulletStyle',pattern:pi,layer:li,slot:vsi,label:'SPRITE STYLE',value:CREATOR_BULLET_STYLES.find(v=>v.id===visual.style)?.label||visual.style},
+   {kind:'creatorUpload',upload:'bullet',slot:vsi,label:'UPLOAD THIS SPRITE',value:visual.data?'CUSTOM IMAGE LOADED':'CHOOSE IMAGE'},
+   num('speed','SPEED',10,400,5,v=>`${v}%`),
+   num('count','ATTACK LENGTH',1,60,1),
+   num('interval','SPAWN GAP',60,9999,20,v=>`${v} ms`),
+   num('curve','CURVE',-720,720,10,v=>`${v}°/s`),
+   num('gravity','GRAVITY',-500,500,10),
+   num('spread','SPREAD',0,180,5,v=>`${v}°`),
+   num('size','BULLET SIZE',25,300,5,v=>`${v}%`),
+   num('damage','BASE DAMAGE',0,99,1)
+  );
+  return rows;
+ }
+ const edge=['top','bottom','left','right','sides','edges'].includes(l.from);
+ rows.push(
+  num('delay','START AFTER',0,20000,50,v=>`${v} ms`),
+  list('from','COMES FROM')
+ );
+ if(edge)rows.push(list('spot','POSITION'));
+ rows.push(list('aim','AIM'),list('shape','SHAPE'));
+ if(l.shape!=='single'||l.from==='soul')rows.push(num('shots','BULLETS PER SHOT',1,40,1));
+ if(l.shape==='fan')rows.push(num('fan','FAN WIDTH',0,360,5,v=>`${v}°`));
+ if(l.shape==='line')rows.push(num('spacing','LINE SPACING',4,200,2,v=>`${v} px`));
+ rows.push(
+  num('volleys','SHOTS',1,99,1),
+  num('gap','TIME BETWEEN SHOTS',30,5000,10,v=>`${v} ms`),
+  num('vel','SPEED',0,900,10,v=>`${v} px/s`),
+  num('accel','ACCELERATION',-900,900,10,v=>`${v} px/s²`),
+  num('bend','CURVE',-720,720,10,v=>`${v}°/s`),
+  num('grav','GRAVITY',-900,900,10,v=>`${v} px/s²`),
+  num('wave','WAVE SIZE',0,120,2,v=>v?`${v} px`:'OFF')
+ );
+ if(l.wave)rows.push(num('waveSpeed','WAVE SPEED',1,60,1,v=>`${(v/10).toFixed(1)} /s`));
+ rows.push(
+  num('homing','HOMING',0,100,5,v=>v?`${v}`:'OFF'),
+  num('bounce','BOUNCES OFF THE BOX',0,9,1,v=>v?`${v}`:'NO'),
+  {kind:'crbList',label:'BULLET SPRITE',value:(CRB_SPRITE_BY[l.sprite]||{}).label||l.sprite,cycle:dir=>{
+   const ids=CRB_SPRITES.map(s=>s.id).filter(id=>id!=='custom'||l.img);l.sprite=creatorCycle(ids,l.sprite,dir);
+   const s=CRB_SPRITE_BY[l.sprite];if(s&&s.id!=='custom')l.px=s.n;crbImage(l.sprite)}},
+  {kind:'creatorUpload',upload:'bullet',label:'UPLOAD YOUR OWN',value:l.img?(l.sprite==='custom'?'IN USE':'LOADED  (PICK IT ABOVE)'):'CHOOSE IMAGE'},
+  num('px','BULLET SIZE',2,160,1,v=>`${v} px`),
+  num('hit','HITBOX',10,150,5,v=>`${v}%`),
+  num('spin','SPIN',-1440,1440,30,v=>v?`${v}°/s`:'OFF'),
+  {kind:'crbList',label:'POINTS WHERE IT GOES',value:l.face?'YES':'NO',cycle:()=>{l.face=!l.face}},
+  list('color','COLOR'),
+  num('dmg','DAMAGE',0,99,1)
+ );
+ return rows;
+}
+// what the selected row does, under the preview
+var CRB_HELP={
+ 'BOX WIDTH':'The bullet box. AUTO uses the copied attack\'s box, or 165 x 140.','BOX HEIGHT':'The bullet box. AUTO uses the copied attack\'s box, or 165 x 140.',
+ 'SOUL MODE':'BLUE: gravity, UP to jump, like Papyrus and Sans.','TURN LENGTH':'How long you dodge. AUTO waits for the last shot to cross.',
+ 'LAYER TYPE':'BUILD: make it from scratch. COPY: reuse a boss attack.','START AFTER':'Wait this long before the layer starts.',
+ 'COMES FROM':'Where the bullets appear.','POSITION':'Where along that edge.','AIM':'Which way they fly. SPIRAL turns a bit each shot.',
+ 'SHAPE':'One bullet, a fan, a row side by side, or a full ring.','SHOTS':'How many times the layer fires.',
+ 'SPEED':'30 px/s is 1 pixel per frame.','ACCELERATION':'Negative slows them down, then sends them back.','CURVE':'Bends the path while they fly.',
+ 'GRAVITY':'Pulls them down (negative: up).','WAVE SIZE':'Wiggles them side to side.','HOMING':'How hard they turn toward the SOUL.',
+ 'BOUNCES OFF THE BOX':'They bounce off the box walls this many times.','BULLET SPRITE':'A sprite from the game, or your own upload.',
+ 'UPLOAD YOUR OWN':'Any image. It gets fitted to BULLET SIZE.','BULLET SIZE':'Longest side, in pixels. Uploads fit to it.',
+ 'HITBOX':'How much of the sprite hurts.','COLOR':'BLUE only hurts if you move. ORANGE only if you stand still.',
+ 'POINTS WHERE IT GOES':'Turns the sprite to face where it moves.'
+};
+
+// ---------------------------------------------------------- preview --
+var crbPv=null;
+function crbPvKey(p){return JSON.stringify(p,(k,v)=>k==='img'||k==='data'?(v?v.length:0):v)+'|'+creatorEditPattern+'|'+creatorMonsterIndex()}
+function crbPvReset(p){
+ const {w,h}=crbBoxOf(p);
+ crbPv.box={L:Math.round(320-w/2),R:Math.round(320+w/2),T:385-h,B:385};
+ crbPv.run=crbRun(p);crbPv.bullets=[];crbPv.hits=0;crbPv.inv=0;crbPv.wait=0;crbPv.st=0;
+ crbPv.soul={x:320,y:385-h/2};
+}
+function crbPvStep(p){
+ const pv=crbPv,bx=pv.box,W={L:bx.L,R:bx.R,T:bx.T,B:bx.B,soul:()=>pv.soul,mon:()=>({x:320,y:205}),rnd:Math.random,fire:b=>pv.bullets.push(b)};
+ // the SOUL wanders around the box so aimed and homing shots have something to chase
+ const t=pv.st++,cx=(bx.L+bx.R)/2,cy=(bx.T+bx.B)/2,rx=Math.max(0,(bx.R-bx.L)/2-14),ry=Math.max(0,(bx.B-bx.T)/2-14);
+ pv.soul={x:cx+rx*Math.sin(t*.045),y:p.soul==='blue'?bx.B-10-Math.abs(Math.sin(t*.06))*Math.min(60,ry*1.6):cy+ry*Math.sin(t*.031+1)};
+ crbTick(pv.run,W);
+ for(const b of pv.bullets)crbMove(b,W);
+ pv.bullets=pv.bullets.filter(b=>!b.dead);
+ if(pv.inv>0)pv.inv--;
+ else for(const b of pv.bullets){
+  if(!(b.l.dmg>0))continue;
+  const {hw,hh}=crbHalf(b);
+  if(Math.abs(b.x-pv.soul.x)<hw+6&&Math.abs(b.y-pv.soul.y)<hh+6){pv.hits++;pv.inv=20;break}
+ }
+ const len=Math.round(crbLengthMs(p)*.03);
+ if((crbRunDone(pv.run)&&!pv.bullets.length)||pv.run.t>len+30){if(++pv.wait>18)crbPvReset(p)}
+}
+function crbPvRender(p,now){
+ const pv=crbPv,g=pv.g,bx=pv.box;
+ g.setTransform(1,0,0,1,0,0);g.fillStyle='#000';g.fillRect(0,0,640,480);g.imageSmoothingEnabled=false;
+ const mon=creatorEnemyImage(false,now);
+ if(mon){const iw=mon.naturalWidth||mon.width,ih=mon.naturalHeight||mon.height,k=Math.min(1,170/iw,Math.max(40,bx.T-18-120)/ih);if(iw&&ih)g.drawImage(mon,Math.round(320-iw*k/2),Math.round(bx.T-14-ih*k),Math.round(iw*k),Math.round(ih*k))}
+ g.fillStyle='#fff';g.fillRect(bx.L-5,bx.T-5,bx.R-bx.L+10,bx.B-bx.T+10);g.fillStyle='#000';g.fillRect(bx.L,bx.T,bx.R-bx.L,bx.B-bx.T);
+ for(const b of pv.bullets)crbDraw(g,b);
+ const heart=images.heart||images.heartFallback;
+ if(heart&&!(pv.inv>0&&Math.floor(pv.inv/3)%2)){const im=p.soul==='blue'?crbTint(heart,'blue'):heart;g.drawImage(im,Math.round(pv.soul.x-8),Math.round(pv.soul.y-8),16,16)}
+}
+function crbDrawPreview(r,now){
+ const c=sandboxConfig.customCharacter,p=creatorPatternAt(creatorEditPattern,c);
+ if(!crbPv){const cv=document.createElement('canvas');cv.width=640;cv.height=480;crbPv={cv,g:cv.getContext('2d'),key:'',last:now,acc:0}}
+ const key=crbPvKey(p);
+ if(key!==crbPv.key){crbPv.key=key;crbPvReset(p)}
+ crbPv.acc+=Math.min(200,Math.max(0,now-crbPv.last));crbPv.last=now;
+ let n=0;while(crbPv.acc>=1000/30&&n++<6){crbPv.acc-=1000/30;crbPvStep(p)}
+ crbPvRender(p,now);
+ // the room around the box (and the monster above it), zoomed to fill the panel
+ const bx=crbPv.box,dw=r.w-40,dh=360,dx=r.x+20,dy=r.y+20;
+ const k=Math.min(3,dw/(bx.R-bx.L+70),dh/(bx.B-bx.T+130)),sw=dw/k,sh=dh/k,sx=320-sw/2,sy=Math.min(480-sh,bx.B+30-sh);
+ uiUnstretch(r.x+r.w/2,()=>{ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(crbPv.cv,sx,sy,sw,sh,dx,dy,dw,dh);ctx.restore()});
+ ui6T('PREVIEW',dx+10,dy+10,{f:'small',s:2,c:UI6_C.gray});
+ ui6T(`HITS ${crbPv.hits}`,dx+dw-10,dy+10,{f:'small',s:2,c:crbPv.hits?UI6_C.red:UI6_C.gray,a:'right'});
+ return dy+dh;
+}
+
 function creatorPresetData(id){return CREATOR_PATTERN_PRESETS.find(v=>v.id===id)||CREATOR_PATTERN_PRESETS[0]}
 function defaultCreatorVisualSlot(style='source'){
  return {style:CREATOR_BULLET_STYLES.some(v=>v.id===style)?style:'source',data:''};
@@ -1592,13 +1970,15 @@ function normalizeCreatorVisualSlot(raw,fallbackStyle='source'){
  const style=CREATOR_BULLET_STYLES.some(v=>v.id===r.style)?r.style:(CREATOR_BULLET_STYLES.some(v=>v.id===fallbackStyle)?fallbackStyle:'source');
  return {style,data:typeof r.data==='string'?r.data:''};
 }
-function defaultCreatorLayer(i=0){
+function defaultCreatorLayer(i=0){return crbDefaultLayer(defaultCreatorLayerBase(i),i)}
+function defaultCreatorLayerBase(i=0){
  const presets=['froggit_flies','toriel_helix','napsta_curve'];
  const preset=presets[i]||'froggit_flies',pd=creatorPresetData(preset);
  const visualSlots=[defaultCreatorVisualSlot(),defaultCreatorVisualSlot(),defaultCreatorVisualSlot()];
  return {enabled:i===0,preset,bulletStyle:'source',visualSlots,speed:100,count:pd.count||1,interval:pd.interval||400,curve:0,gravity:0,spread:0,size:100,damage:4};
 }
-function normalizeCreatorLayer(raw,i=0){
+function normalizeCreatorLayer(raw,i=0){return crbNormLayer(raw,normalizeCreatorLayerBase(raw,i),i)}
+function normalizeCreatorLayerBase(raw,i=0){
  const a=defaultCreatorLayer(i),b=raw&&typeof raw==='object'?raw:{};
  const legacy=CREATOR_LEGACY_PRESET_MAP[b.preset]||b.preset;
  const preset=CREATOR_PATTERN_PRESETS.some(v=>v.id===legacy)?legacy:a.preset;
@@ -1627,7 +2007,7 @@ function applyCreatorPresetDefaults(layer,presetId){
  layer.visualSlots=[defaultCreatorVisualSlot(),defaultCreatorVisualSlot(),defaultCreatorVisualSlot()];layer.bulletStyle='source';creatorEditSpriteSlot=0;return layer;
 }
 function defaultCreatorPattern(i=0){
- return {layers:[defaultCreatorLayer(0),defaultCreatorLayer(1),defaultCreatorLayer(2)]};
+ return crbNormPattern({},[0,1,2,3].map(i=>defaultCreatorLayer(i)),true);
 }
 function defaultCustomCharacter(){
  const patterns=[defaultCreatorPattern(0)];
@@ -1647,7 +2027,7 @@ function normalizeCustomCharacter(raw){
  if(!rawPatterns)rawPatterns=[{layers:Array.isArray(r.layers)?r.layers:d.patterns[0].layers}];
  const patterns=rawPatterns.map((pat,pi)=>{
    const source=Array.isArray(pat?.layers)?pat.layers:[];
-   return {layers:[0,1,2].map(i=>normalizeCreatorLayer(source[i],i))};
+   return crbNormPattern(pat,[0,1,2,3].map(i=>normalizeCreatorLayer(source[i],i)));
  });
  if(!patterns.length)patterns.push(defaultCreatorPattern(0));
  // Older creator builds had one shared uploaded bullet image. Preserve it as
@@ -5854,7 +6234,9 @@ async function creatorHandleFile(kind,file){
    if(kind==='sprite'){c.spriteData=data;c.spriteSource='custom'}
    else if(kind==='hurt'){c.hurtData=data;c.hurtSource='custom'}
    else{
-     const li=clamp(creatorEditLayer,0,2),layer=creatorPatternAt(creatorEditPattern,c).layers[li],slot=creatorLayerVisualSlot(layer,creatorEditSpriteSlot);
+     const li=clamp(creatorEditLayer,0,3),layer=creatorPatternAt(creatorEditPattern,c).layers[li];
+     if(layer.mode==='build'){layer.img=data;layer.sprite='custom';layer.px=Math.min(layer.px||24,40);reloadCreatorRuntimeImages();saveSandboxConfig();play('heal');return}
+     const slot=creatorLayerVisualSlot(layer,creatorEditSpriteSlot);
      slot.data=data;slot.style='custom';layer.bulletStyle=creatorLayerVisualSlot(layer,0).style;
      // Legacy field only mirrors slot 1 so old builds can still recover something.
      if(creatorEditSpriteSlot===0)c.bulletData=data;
@@ -6004,7 +6386,7 @@ const CREATOR_SCREEN_TABS=['BASICS','SPRITES','PATTERN','ACTS','DIALOGUE','MONST
 function openCharacterCreator(tab=5){
  creatorScreenTab=clamp(Math.floor(tab)||0,0,CREATOR_SCREEN_TABS.length-1);
  creatorScreenRow=0;
- creatorEditLayer=clamp(creatorEditLayer,0,2);
+ creatorEditLayer=clamp(creatorEditLayer,0,3);
  const normalized=syncCreatorActiveToRoster();
  creatorEditPattern=clamp(creatorEditPattern,0,Math.max(0,creatorPatternList(normalized).length-1));
  creatorEditAct=clamp(creatorEditAct,0,Math.max(0,creatorActList(normalized).length-1));
@@ -6029,7 +6411,8 @@ function creatorScreenRows(){
    {kind:'creatorUpload',upload:'hurt',label:'UPLOAD HURT SPRITE',value:c.hurtData?'CUSTOM IMAGE LOADED':'CHOOSE IMAGE'},
    {kind:'creatorNumber',key:'spriteScale',label:'SPRITE SIZE',value:`${c.spriteScale}%`,rawValue:c.spriteScale,min:25,max:250,step:5}
  ];
- if(creatorScreenTab===2){
+ if(creatorScreenTab===2)return crbPatternRows(c);
+ if(false){
    const patterns=creatorPatternList(c);
    creatorEditPattern=clamp(creatorEditPattern,0,Math.max(0,patterns.length-1));
    const pi=creatorEditPattern,p=patterns[pi],li=clamp(creatorEditLayer,0,2),l=p.layers[li];
@@ -6117,7 +6500,7 @@ function commitCreatorNumberTyping(){
    let value=Number.parseInt(raw,10);
    if(!Number.isFinite(value))value=creatorNumericRaw(row);
    value=clamp(value,row.min??0,row.max??9999);
-   if(row.kind==='creatorNumber')sandboxConfig.customCharacter[row.key]=value;
+   if(row.set)row.set(value);else if(row.kind==='creatorNumber')sandboxConfig.customCharacter[row.key]=value;
    else if(row.kind==='creatorLayerNumber')creatorPatternAt(row.pattern??creatorEditPattern).layers[row.layer][row.key]=value;
    else creatorActAt(row.act??creatorEditAct)[row.key]=value;
    syncCustomBossFromConfig();saveSandboxConfig();
@@ -6141,7 +6524,7 @@ function adjustCreatorScreenRow(dir){
  const c=sandboxConfig.customCharacter;
  if(['creatorNumber','creatorLayerNumber','creatorActNumber'].includes(row.kind)){
    const cur=creatorNumericRaw(row),value=clamp(cur+dir*(row.step||1),row.min??0,row.max??9999);
-   if(row.kind==='creatorNumber')c[row.key]=value;
+   if(row.set)row.set(value);else if(row.kind==='creatorNumber')c[row.key]=value;
    else if(row.kind==='creatorLayerNumber')creatorPatternAt(row.pattern??creatorEditPattern,c).layers[row.layer][row.key]=value;
    else creatorActAt(row.act??creatorEditAct,c)[row.key]=value;
    syncCustomBossFromConfig();
@@ -6150,7 +6533,7 @@ function adjustCreatorScreenRow(dir){
  }else if(row.kind==='creatorPatternSelect'){
    const n=creatorPatternList(c).length;creatorEditPattern=(creatorEditPattern+dir+n)%n;creatorEditLayer=0;creatorEditSpriteSlot=0;
  }else if(row.kind==='creatorLayerSelect'){
-   creatorEditLayer=(creatorEditLayer+dir+3)%3;creatorEditSpriteSlot=0;
+   creatorEditLayer=(creatorEditLayer+dir+4)%4;creatorEditSpriteSlot=0;
  }else if(row.kind==='creatorVisualSlotSelect'){
    creatorEditSpriteSlot=(creatorEditSpriteSlot+dir+3)%3;
  }else if(row.kind==='creatorActSelect'){
@@ -6167,6 +6550,8 @@ function adjustCreatorScreenRow(dir){
    slot.style=creatorCycle(ids,slot.style,dir);l.bulletStyle=creatorLayerVisualSlot(l,0).style;
  }else if(row.kind==='creatorMonsterSelect'){
    selectCreatorMonster(row.monster,false);
+ }else if(row.kind==='crbList'){
+   row.cycle(dir);syncCustomBossFromConfig();
  }else return false;
  saveSandboxConfig();return true;
 }
@@ -7650,7 +8035,7 @@ function drawSupportSelect(now=performance.now()){
 
 // ---------- shared editor pieces (config hub, creator, advanced editor) ----------
 const UI6_NUMBER_KINDS=['number','creatorNumber','creatorLayerNumber','creatorActNumber'];
-const UI6_CYCLE_KINDS=['weapon','item','enemy','role','partyRole','partyLoadoutSlot','partyWeapon','partyArmor','partyItem','supportEdit','insane','creatorPage','creatorSprite','creatorToggle','creatorPreset','creatorBulletStyle','creatorPatternSelect','creatorLayerSelect','creatorVisualSlotSelect','creatorActSelect','creatorActToggle','creatorMonsterSelect','papyrusRoute','jayzeeRoute'];
+const UI6_CYCLE_KINDS=['weapon','item','enemy','role','partyRole','partyLoadoutSlot','partyWeapon','partyArmor','partyItem','supportEdit','insane','creatorPage','creatorSprite','creatorToggle','creatorPreset','creatorBulletStyle','creatorPatternSelect','creatorLayerSelect','creatorVisualSlotSelect','creatorActSelect','creatorActToggle','creatorMonsterSelect','crbList','papyrusRoute','jayzeeRoute'];
 function ui6EditorHint(row){
  if(!row)return 'ARROWS  MOVE      Z  CONFIRM      X  BACK';
  if(UI6_NUMBER_KINDS.includes(row.kind))return 'LEFT / RIGHT  NUDGE      Z OR A DIGIT  TYPE A VALUE      X  BACK';
@@ -7744,11 +8129,14 @@ function drawCharacterCreator(now){
  const left={x:64,y:190,w:420,h:720},right={x:512,y:190,w:872,h:720};
  ui6Box(left);ui6Box(right);
  const cx=left.x+left.w/2;
+ if(creatorScreenTab===2)crbDrawPreview(left,now);
+ else{
  ui6Sprite(creatorEnemyImage(false,now),cx,left.y+300,left.w-80,250,{bottom:true});
  ui6T(ui6Fit(String(c.name).toUpperCase(),left.w-40,'text',3),cx,left.y+326,{s:3,a:'center'});
  ui6T(`HP ${c.hp}   AT ${c.atk}   DF ${c.def}`,cx,left.y+382,{f:'small',s:3,c:UI6_C.gray,a:'center'});
+ }
  let info='';
- if(creatorScreenTab===2){const ps=creatorPatternList(c),p=creatorPatternAt(creatorEditPattern,c),on=(p.layers||[]).filter(l=>l.enabled).length;info=`* ${ps.length} pattern${ps.length===1?'':'s'}. One is picked at random each turn.\n* This one runs ${on} layer${on===1?'':'s'}.`}
+ if(creatorScreenTab===2){const ps=creatorPatternList(c),p=creatorPatternAt(creatorEditPattern,c),on=(p.layers||[]).filter(l=>l.enabled).length,cp=(p.layers||[]).some(l=>l.enabled&&l.mode!=='build'),row=creatorScreenRows()[creatorScreenRow],help=row&&CRB_HELP[row.label];info=`* ${ps.length} pattern${ps.length===1?'':'s'}, one picked each turn. This one runs ${on} layer${on===1?'':'s'}.`+(cp?'\n* COPY layers only show in battle.':'')+(help?`\n* ${help}`:'')}
  else if(creatorScreenTab===3){const acts=creatorActList(c),req=acts.filter(a=>a.required).length;info=`* ${acts.length} ACT${acts.length===1?'':'S'}. ${req?`${req} must be finished to SPARE.`:'Any finished ACT allows SPARE.'}`}
  else info=['* Name, stats and CHECK text.\n* Everything saves on its own.','* Pick a sprite from the game or upload your own PNG.','',' ','* What it says to each player role.\n* Type | to start a new bubble.','* Up to eight separate monsters.\n* Z on one to edit it.'][creatorScreenTab]||'';
  const lines=ui6Wrap(info.trim(),left.w-60,'main',1);
@@ -21865,8 +22253,11 @@ if(c.lesson > 20) {
   if(style!=='source'){
    const im=creatorBulletImage(style,0,slot.data||'');
    if(im){
-    b.img=im;b.ox=(im.naturalWidth||im.width)/2;b.oy=(im.naturalHeight||im.height)/2;b.angle=0;
-    if(b.draw){const d0=b.draw;b.draw=(g,bb)=>{if(bb.hidden)return;g.save();g.globalAlpha=bb.alpha??1;const w=(im.naturalWidth||im.width)*sz,h=(im.naturalHeight||im.height)*sz;g.drawImage(im,R(bb.x-w/2),R(bb.y-h/2),w,h);g.restore()};b._d0=d0}
+    const o0=Array.isArray(b.img)?b.img[0]:b.img,iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+    const ow=o0?(o0.naturalWidth||o0.width):(b.box?.[2]||16),oh=o0?(o0.naturalHeight||o0.height):(b.box?.[3]||16);
+    const ccx=o0?ow/2-(b.ox||0):(b.box?b.box[0]+b.box[2]/2:0),ccy=o0?oh/2-(b.oy||0):(b.box?b.box[1]+b.box[3]/2:0);
+    const fit=Math.max(ow,oh)/Math.max(iw,ih)*sz,w=iw*fit,h=ih*fit;
+    b._d0=b.draw;b.draw=(g,bb)=>{if(bb.hidden)return;g.save();g.imageSmoothingEnabled=false;g.globalAlpha=bb.alpha??1;g.translate(bb.x+ccx*sz,bb.y+ccy*sz);if(bb.angle)g.rotate(-bb.angle*Math.PI/180);g.drawImage(im,-w/2,-h/2,w,h);g.restore()};
    }
   }
   if(sz!==1){
@@ -21900,6 +22291,7 @@ if(c.lesson > 20) {
  function patternLayers(m){
   const c=cfg(),pats=creatorPatternList(c),usable=creatorUsablePatternIndices(c);
   const idx=usable[Math.floor(rnd(usable.length))]??0;
+  m.v.pat=pats[idx]||pats[0];
   return ((pats[idx]||pats[0]).layers||[]).filter(l=>l&&l.enabled);
  }
  const actsOf=()=>creatorActList(cfg());
@@ -21958,6 +22350,7 @@ if(c.lesson > 20) {
    const layers=patternLayers(m);
    let border=null,blue=false,ms=3000;
    for(const layer of layers){
+    if(layer.mode==='build')continue;
     const pd=creatorPresetData(layer.preset);
     const count=Math.max(1,Math.min(60,Number(layer.count)||pd.count||1)),gap=Math.max(60,Number(layer.interval)||pd.interval||400);
     ms=Math.max(ms,900+(count-1)*gap+1800);
@@ -21982,14 +22375,20 @@ if(c.lesson > 20) {
     }
     for(const b of st.bullets.slice(before))tag(api,m,b,layer);
    }
-   if(border!=null)api.border(border);else api.border(0);
+   const pat=v.pat||{};v.run=null;
+   if(crbHasBuild(pat)){v.run=crbRun(pat);v.world=crbBattleWorld(api,m);ms=layers.some(l=>l.mode!=='build')?Math.max(ms,crbAutoMs(pat)):crbAutoMs(pat)}
+   if(pat.len>0)ms=pat.len;
+   if(pat.soul==='blue')blue=true;
+   if(pat.boxW||pat.boxH||(v.run&&border==null))crbBattleBox(api,pat);
+   else if(border!=null)api.border(border);else api.border(0);
    api.soul(blue?'blue':'red');
    if(blue){const h=api.heart;h.vspeed=-1;h.jumpstage=2}
-   api.turntimer(Math.max(60,Math.min(360,R(ms*.03))));
+   api.turntimer(Math.max(30,Math.min(900,R(ms*.03))));
    return `* ${cfg().name||'Custom'} watches your SOUL.`;
   },
   attackStep(m,api){
    const st=api.S,v=m.v;
+   if(v.run)crbTick(v.run,v.world);
    for(const a of v.active){
     if(!a.g.def.attackStep)continue;
     const before=st.bullets.length;st.curMon=a.g;
@@ -22001,7 +22400,7 @@ if(c.lesson > 20) {
   },
   endAttack(m,api){
    for(const a of m.v.active)try{a.g.def.endAttack&&a.g.def.endAttack(a.g,api)}catch(_){}
-   m.v.active=[];m.v.flowey=[];
+   m.v.active=[];m.v.flowey=[];m.v.run=null;
   },
   step(m,api){
    const v=m.v,st=api.S;
