@@ -7255,6 +7255,15 @@ function itBackdrop(now){
  ctx.fillStyle='rgba(159,216,134,.3)';ctx.fillRect(0,H-26*k,CW,26*k);
  // keep white text readable: a soft green shade and a darker edge
  ctx.fillStyle='rgba(3,28,12,.34)';ctx.fillRect(0,0,CW,H);
+ // green motes drifting up, twinkling
+ if(!uiReducedMotion)for(let i=0;i<48;i++){
+  const sp=.35+((i*37)%17)/17*.9,sx=(i*197.31)%CW,sw=Math.sin(t/40+i)*18;
+  const y=H+20-((t*sp+i*131)%(H+60)),x=(sx+sw+t*.15*((i%3)-1)+CW)%CW;
+  const tw=(Math.sin(t/9+i*1.7)+1)/2,sz=2+((i*7)%3)*Math.round(k);
+  ctx.globalAlpha=.18+tw*.45;ctx.fillStyle=i%4?'#e8ffc8':'#9fd886';ctx.fillRect(Math.round(x),Math.round(y),sz,sz);
+  if(sz>4&&tw>.7){ctx.fillRect(Math.round(x)-sz,Math.round(y)+sz/2-1,sz*3,2);ctx.fillRect(Math.round(x)+sz/2-1,Math.round(y)-sz,2,sz*3)}
+ }
+ ctx.globalAlpha=1;
  const rg=ctx.createRadialGradient(CW/2,H*.48,H*.3,CW/2,H*.48,H*1.05);rg.addColorStop(0,'rgba(0,0,0,0)');rg.addColorStop(1,'rgba(0,18,6,.55)');
  ctx.fillStyle=rg;ctx.fillRect(0,0,CW,H);
  ctx.fillStyle='rgba(0,14,5,.45)';ctx.fillRect(0,H-84,CW,84); // under the footer
@@ -7265,11 +7274,15 @@ function itBackdrop(now){
 // "cool text": each letter on its own bob, lime fading to green
 function itWaveText(t,cx,y,s,o={}){
  const total=ui6W(t,'text',s);let x=cx-total/2;
- const now=performance.now();
+ const now=performance.now(),band=uiReducedMotion?-9:((now/2200)%1.6-.3)*total;
  [...t].forEach((ch,i)=>{
-  const bob=uiReducedMotion?0:Math.round(Math.sin(now/260+i*.55)*(o.amp??6));
-  if(ch!==' ')ui6BigText(ch,x,y+bob,{s,top:o.top||IT_HEAD.top,bottom:o.bottom||IT_HEAD.bottom,shadow:o.shadow||IT_HEAD.shadow});
-  x+=ui6W(ch,'text',s);
+  const bob=uiReducedMotion?0:Math.round(Math.sin(now/260+i*.55)*(o.amp??6)),cw=ui6W(ch,'text',s);
+  if(ch!==' '){
+   ui6BigText(ch,x,y+bob,{s,top:o.top||IT_HEAD.top,bottom:o.bottom||IT_HEAD.bottom,shadow:o.shadow||IT_HEAD.shadow});
+   const d=Math.abs(x+cw/2-cx+total/2-band);
+   if(d<cw*1.6){ctx.save();ctx.globalAlpha*=(1-d/(cw*1.6))*.85;ui6BigText(ch,x,y+bob,{s,top:'#ffffff',bottom:'#e9ffc8',shadow:o.shadow||IT_HEAD.shadow});ctx.restore()}
+  }
+  x+=cw;
  });
 }
 // a big framed button: a green plate with corner brackets; lit, it glows and gets the SOUL
@@ -7277,6 +7290,12 @@ function itButton(r,label,on,o={}){
  const pulse=uiReducedMotion?0:(Math.sin(performance.now()/200)+1)/2;
  const border=on?`rgb(${125+Math.round(80*pulse)},255,${90+Math.round(80*pulse)})`:'#2f7a46';
  ui6Frame(r,{color:border,base:on?'#3fcf55':'#1f5c3c',tint:on?.5:.3,b:o.b||6,cs:on?3:2});
+ if(on&&!uiReducedMotion){
+  const ph=(performance.now()/1400)%1.4,sx=r.x-r.w*.3+ph*r.w*1.2;
+  ctx.save();ctx.beginPath();ctx.rect(r.x+6,r.y+6,r.w-12,r.h-12);ctx.clip();
+  const g=ctx.createLinearGradient(sx,0,sx+r.w*.25,0);g.addColorStop(0,'rgba(239,255,194,0)');g.addColorStop(.5,'rgba(239,255,194,.28)');g.addColorStop(1,'rgba(239,255,194,0)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(sx,r.y+r.h);ctx.lineTo(sx+r.w*.12,r.y);ctx.lineTo(sx+r.w*.37,r.y);ctx.lineTo(sx+r.w*.25,r.y+r.h);ctx.fill();ctx.restore();
+ }
  const s=o.s||5,cap=UI6F.text.cap*s;
  ui6BigText(label,r.x+r.w/2,r.y+Math.round((r.h-cap)/2)-2,{s,a:'center',top:on?'#ffffff':'#c8f7a4',bottom:on?'#7dff5a':'#4f8a5a',shadow:'#04210c'});
  if(on)ui6Soul(r.x+42,r.y+r.h/2,2);
@@ -7315,7 +7334,13 @@ function itHead(im,cx,cy,r,frac=.42){
   ctx.drawImage(im,0,0,iw,sh,Math.round(cx-iw*s/2),Math.round(cy-sh*s/2+(frac<1?r*.1:0)),Math.round(iw*s),Math.round(sh*s));ctx.restore()});
  return true;
 }
+function itRing(cx,cy,r){
+ if(uiReducedMotion)return;
+ const a0=performance.now()/1400;
+ for(let i=0;i<8;i++){const a=a0+i*Math.PI/4,tw=(Math.sin(performance.now()/250+i)+1)/2;ui6Bitmap(UI6_SPARKLE,cx+Math.cos(a)*(r+34)/(uiStretch?UISX:1),cy+Math.sin(a)*(r+34),tw>.5?3:2,i%2?'#efffc2':'#9fd886')}
+}
 function itCircle(cx,cy,r,on){
+ if(on)itRing(cx,cy,r);
  uiUnstretch(cx,()=>{
   ctx.save();
   const g=ctx.createRadialGradient(cx,cy-r*.3,r*.1,cx,cy,r);g.addColorStop(0,on?'#3fae55':'#2a6e45');g.addColorStop(1,on?'#0f4a24':'#0a2c17');
@@ -7323,6 +7348,17 @@ function itCircle(cx,cy,r,on){
   ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
   ctx.restore();
  });
+}
+ui6Load('itSansLegs','sprites/images/spr_sansb_legs_0.png');ui6Load('itSansTorso','sprites/images/spr_sansb_torso_0.png');ui6Load('itSansFaceB','sprites/images/spr_sansb_face_0.png');
+ui6Load('itFrisk','sprites/images/spr_maincharad_0.png');
+let itSansCv=null;
+function itSansBody(){
+ if(itSansCv)return itSansCv;
+ const L=ui6Img.itSansLegs,T=ui6Img.itSansTorso,F=ui6Img.itSansFaceB;if(!L||!T||!F)return null;
+ const c=document.createElement('canvas');c.width=120;c.height=150;const g=c.getContext('2d');g.imageSmoothingEnabled=false;
+ const put=(im,x,y,ox,oy)=>g.drawImage(im,x-ox*2,y-oy*2,im.width*2,im.height*2);
+ put(L,60,122,21,11);put(T,60,74,26,12);put(F,60,32,16,15);
+ return itSansCv=c;
 }
 // Sans's face for the UNDERTALE circle: his dialogue portrait (spr_face_sans), loaded on its own
 ui6Load('sansFace','sprites/images/spr_face_sans_0.png');
@@ -7350,15 +7386,19 @@ function itCast(now){
  // the characters on the left, on the floor: UNDERTALE at the back, the DELTARUNE party in front
  const t=Math.floor(now/(1000/30));
  if(!itDrBooted){itDrBooted=true;try{DR.load()}catch(_){}}
- const ut=['toriel','papyrus','sans','undyne'].map(id=>BOSS_OPTIONS.find(b=>b.id===id)).filter(Boolean).map(b=>bossImage(b,now)).filter(Boolean);
- const floor=990,gap=Math.min(170,520/Math.max(1,ut.length));
- ut.forEach((im,k)=>ui6Sprite(im,120+k*gap,floor-130,180,330,{bottom:true,smoothScale:true,alpha:.92}));
- // the front row at one size (3x), Frisk too when the sprite is in
+ const pick=id=>{const b=BOSS_OPTIONS.find(o=>o.id===id);return b?bossImage(b,now):null};
+ const ut=[pick('toriel'),pick('papyrus'),itSansBody(),pick('undyne')].filter(Boolean);
+ const floor=990,gap=Math.min(150,540/Math.max(1,ut.length));
+ const shadow=(cx,y,w)=>uiUnstretch(cx,()=>{ctx.save();ctx.fillStyle='rgba(2,30,10,.38)';ctx.beginPath();ctx.ellipse(cx,y,w/2,w/9,0,0,Math.PI*2);ctx.fill();ctx.restore()});
+ const breathe=k=>uiReducedMotion?0:Math.round(Math.sin(now/520+k*1.3)*3);
+ ut.forEach((im,k)=>{const cx=110+k*gap,by=floor-130;shadow(cx,by+2,110);ui6Sprite(im,cx,by+breathe(k),170,330,{bottom:true,smoothScale:true,alpha:.94})});
+ // the front row at one size (3x)
  const front=[];
- const fr=images.friskIdle;if(fr&&fr[0])front.push(fr[Math.floor(t/8)%fr.length]||fr[0]);
+ const fr=images.friskIdle,fi=ui6Img.itFrisk;
+ if(fr&&fr[0])front.push(fr[Math.floor(t/8)%fr.length]||fr[0]);else if(fi)front.push(fi);
  if(typeof DR!=='undefined'&&DR.ready)['spr_krisb_idle','spr_susieb_idle','spr_ralsei_idle'].forEach(n=>{const im=DR.gfx.frame(n,t/5);if(im)front.push(im)});
  let fx=70;
- for(const im of front){const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;ui6Sprite(im,fx+iw*1.5,floor,iw*3,ih*3,{bottom:true});fx+=iw*3+16}
+ front.forEach((im,k)=>{const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height,cx=fx+iw*1.5;shadow(cx,floor+2,iw*2.6);ui6Sprite(im,cx,floor+breathe(k+4),iw*3,ih*3,{bottom:true});fx+=iw*3+16});
 }
 function itDrawTitle(now=performance.now()){
  itCast(now);
@@ -7382,7 +7422,7 @@ function itDrawTitle(now=performance.now()){
 
 // ------------------------------------------------------------- CHOOSE! --
 // 0 UNDERTALE, 1 DELTARUNE, 2 EXTRA
-function itPickRects(){return[{cx:W/2-330,cy:440,r:170},{cx:W/2+330,cy:440,r:170},{x:W/2-200,y:760,w:400,h:150}]}
+function itPickRects(){const b=i=>gamePickSelected===i&&!uiReducedMotion?Math.round(Math.sin(performance.now()/380)*6):0;return[{cx:W/2-330,cy:440+b(0),r:170},{cx:W/2+330,cy:440+b(1),r:170},{x:W/2-200,y:760+b(2),w:400,h:150}]}
 function itDrawGamePick(now=performance.now()){
  itWaveText('CHOOSE!',W/2,40,10,{amp:5});
  const R=itPickRects(),sel=gamePickSelected;
@@ -7437,7 +7477,7 @@ let itLastSide=0;
 // --------------------------------------------------------------- WHICH? --
 const IT_WHICH=[{id:'bosses',label:'BOSS',sprite:'toriel'},{id:'enemies',label:'ENEMY',sprite:'froggit'},{id:'minibosses',label:'MINI BOSS',sprite:'napstablook'}];
 let itWhichSel=0;
-function itWhichRect(i){const on=i===itWhichSel,w=on?360:320,h=on?470:420;return{x:W/2+(i-1)*400-w/2,y:470-h/2,w,h}}
+function itWhichRect(i){const on=i===itWhichSel,w=on?360:320,h=on?470:420,b=on&&!uiReducedMotion?Math.round(Math.sin(performance.now()/380)*6):0;return{x:W/2+(i-1)*400-w/2,y:470-h/2+b,w,h}}
 function itDrawWhich(now=performance.now()){
  itWaveText('WHICH?',W/2,40,10,{amp:5});
  const cats=enemyCategoryLists();
