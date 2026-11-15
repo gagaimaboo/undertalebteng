@@ -62,8 +62,9 @@ cd port/tools && NODE_PATH=$(npm root -g) node export_assets.js
 # 3. run, or make a single Windows .exe (assets are built into it)
 cd ../UTBattle
 dotnet run -c Release
-dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true \
-  -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o publish/win-x64
+# (raylib.dll ships next to the exe instead of being unpacked into Temp at start-up, which
+#  antivirus heuristics treat like a dropper)
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -o publish/win-x64
 ```
 
 Installer (per user, no admin prompt, Start menu + desktop shortcuts, shows up in Add/Remove Programs):
