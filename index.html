@@ -6908,7 +6908,8 @@ function ui6Card(r,label,im,color,on,focus,now){
 // n cards, sel the selected one. st {pos,group} keeps the slide between frames; switching groups snaps.
 // o: {label(k),image(k),focus,onPick(k),onConfirm()}
 function ui6Carousel(st,group,n,sel,color,o,now=performance.now()){
- if(st.group!==group||uiReducedMotion){st.group=group;st.pos=sel}
+ if(uiReducedMotion||st.group==null){st.group=group;st.pos=sel;st.gi=o.groupIndex}
+ else if(st.group!==group){const dir=o.groupIndex!=null&&st.gi!=null?Math.sign(o.groupIndex-st.gi)||1:1;st.group=group;st.gi=o.groupIndex;st.pos=sel-3*dir}
  else{st.pos+=(sel-st.pos)*.3;if(Math.abs(sel-st.pos)<.01)st.pos=sel}
  const cards=[];for(let k=0;k<n;k++){const d=k-st.pos;if(Math.abs(d)<2.6)cards.push({k,d})}
  cards.sort((p,q)=>Math.abs(q.d)-Math.abs(p.d));
@@ -7288,6 +7289,8 @@ function itBackdrop(now){const g=itLow();itWall(g,now);itBlit()}
 ui6Load('sansFace','sprites/images/spr_face_sans_0.png');
 ui6Load('itSansLegs','sprites/images/spr_sansb_legs_0.png');ui6Load('itSansTorso','sprites/images/spr_sansb_torso_7.png');ui6Load('itSansFaceB','sprites/images/spr_sansb_face_14.png');
 ui6Load('itFrisk','sprites/images/spr_maincharad_0.png');
+// the Annoying Dog (spr_tobdogl), for EXTRA
+ui6Load('itDog0','sprites/images/spr_tobdogl_0.png');ui6Load('itDog1','sprites/images/spr_tobdogl_1.png');
 // Sans standing, from his battle parts at the Sans fight's offsets (its default torso and face frames)
 let itSansCv=null;
 function itSansBody(){
@@ -7315,7 +7318,7 @@ function itKeyBorder(im){
 // the roster's exports come at 1x, 2x or 4x: halve until it fits `room` (back to the game's own size)
 function lFit(im,room){const ih=im.naturalHeight||im.height,iw=im.naturalWidth||im.width;let s=1;while(s>.125&&(ih*s>room||iw*s>room*1.4))s/=2;return s}
 const itBoss=(id,now)=>{const b=BOSS_OPTIONS.find(o=>o.id===id);return b?bossImage(b,now):null};
-function itFooter(g,text){lT(g,text,LW/2,LH-17,{c:ITC.dim,a:'center',shadow:ITC.shadow})}
+function itFooter(g,text,cx=LW/2){lT(g,text,cx,LH-17,{c:ITC.dim,a:'center',shadow:ITC.shadow})}
 function itHeading(g,text,y=12){lT(g,text,LW/2,y,{f:'main',c:ITC.text,a:'center',shadow:ITC.shadow,outline:true,sd:2})}
 function itDesc(g,text,y){lWrap(text,560).slice(0,2).forEach((ln,k)=>lT(g,ln,LW/2,y+k*16,{c:ITC.text,a:'center',shadow:ITC.shadow}))}
 
@@ -7330,17 +7333,13 @@ function itDesc(g,text,y){lWrap(text,560).slice(0,2).forEach((ln,k)=>lT(g,ln,LW/
 }
 let itDrBooted=false;
 function itCast(g,now){
- // UNDERTALE at the back, the DELTARUNE party and Frisk in front, all at the games' own scale
- const t=Math.floor(now/(1000/30));
+ // Kris, giant, from the waist up (spr_krisb_idle, rows 0-25: everything above the legs), at 8x,
+ // rising from the bottom edge on the left
  if(!itDrBooted){itDrBooted=true;try{DR.load()}catch(_){}}
- const back=[itBoss('toriel',now),itBoss('papyrus',now),itSansBody(),itBoss('undyne',now)];
- const bx=[48,124,196,262],floor=IT_FLOOR+16;
- back.forEach((im,k)=>{if(!im)return;lShadow(g,bx[k],floor-1,44);lSpr(g,im,bx[k],floor,999,999,{s:lFit(im,150)})});
- const front=[];
- const fr=images.friskIdle,fi=ui6Img.itFrisk;front.push(fr&&fr[0]?(fr[Math.floor(t/8)%fr.length]||fr[0]):fi);
- if(typeof DR!=='undefined'&&DR.ready)for(const n of ['spr_krisb_idle','spr_susieb_idle','spr_ralsei_idle'])front.push(DR.gfx.frame(n,t/5));
- const fx=[34,92,158,226];
- front.forEach((im,k)=>{if(!im)return;lShadow(g,fx[k],floor+21,26);lSpr(g,im,fx[k],floor+22,999,999,{s:1})});
+ if(typeof DR==='undefined'||!DR.ready)return;
+ const t=Math.floor(now/(1000/30)),im=DR.gfx.frame('spr_krisb_idle',t/5);if(!im)return;
+ const crop=26,s=8;
+ g.drawImage(im,0,0,im.width,crop,10,LH-crop*s,im.width*s,crop*s);
 }
 function itTitleLayout(){
  const cx=450;
@@ -7376,42 +7375,72 @@ function itDrawTitle(now=performance.now()){
  });
  const item=TITLE_MENU[sel]||TITLE_MENU[0];
  lT(g,item.hint||'',cx,L.hint,{c:ITC.dim,a:'center',shadow:ITC.shadow});
- itFooter(g,'ARROWS  MOVE      Z  SELECT      F11  FULLSCREEN');
+ itFooter(g,'ARROWS  MOVE    Z  SELECT    F11  FULLSCREEN',cx+20);
  itBlit();
 }
 
 // ------------------------------------------------------------- CHOOSE! --
-// 0 UNDERTALE, 1 DELTARUNE, 2 EXTRA
-const IT_PICK=[{cx:220,cy:128,r:62},{cx:424,cy:128,r:62},{x:257,y:242,w:130,h:36}];
+// a bookshelf on the left (UNDERTALE, DELTARUNE, EXTRA, one square each on its own shelf),
+// and what's picked shown big on the right. The picked square slides out like a book being pulled.
+const IT_SHELF={x:22,y:48,w:226,h:240,row:80},IT_INFO={x:262,y:48,w:360,h:240};
+const itPick={pull:[0,0,0],at:0,last:-1};
+function itPickGames(){
+ const fights=enemyCategoryLists().filter(c=>c.id!=='extras').reduce((p,c)=>p+c.list.length,0);
+ const extras=(enemyCategoryLists().find(c=>c.id==='extras')||{list:[]}).list.length;
+ const dr=typeof DR!=='undefined'&&DR.ready;
+ return[
+  {name:'UNDERTALE',count:`${fights} FIGHTS`,icon:itKeyBorder(ui6Img.sansFace),
+   text:'Every UNDERTALE monster in the engine, from Froggit to ASGORE. BOSS, ENEMY or MINI BOSS next.'},
+  {name:'DELTARUNE',count:typeof DR!=='undefined'?`${DR.enemyIds.length} FIGHTS`:'',icon:dr?itKeyBorder(DR.gfx.frame('spr_headkris',0)):null,
+   text:'Kris, Susie and Ralsei against DELTARUNE\'s enemies, on the game\'s own battle code.'},
+  {name:'EXTRA',count:`${extras} FIGHTS`,icon:ui6Img.itDog0,
+   text:'Your custom monsters, and the fights from outside the two games.'}
+ ];
+}
+// the big picture in the info panel
+function itPickArt(g,i,cx,by,now){
+ const t=Math.floor(now/(1000/30));
+ if(i===0){const b=itSansBody();if(b)lSpr(g,b,cx,by,200,104,{max:1})}
+ else if(i===1){
+  if(!itDrBooted){itDrBooted=true;try{DR.load()}catch(_){}}
+  if(typeof DR==='undefined'||!DR.ready){lT(g,'...',cx,by-30,{c:ITC.dim,a:'center'});return}
+  ['spr_susieb_idle','spr_krisb_idle','spr_ralsei_idle'].forEach((k,n)=>{const im=DR.gfx.frame(k,t/5);if(im)lSpr(g,im,cx+(n-1)*92,by,120,104,{s:2})});
+ }
+ else{const im=(Math.floor(t/8)%2?ui6Img.itDog1:ui6Img.itDog0)||ui6Img.itDog0;if(im)lSpr(g,im,cx,by,99,99,{s:4})}
+}
 function itDrawGamePick(now=performance.now()){
  const g=itLow();itWall(g,now);
  itHeading(g,'CHOOSE!');
- const sel=gamePickSelected,t=Math.floor(now/(1000/30));
- const fights=enemyCategoryLists().filter(c=>c.id!=='extras').reduce((p,c)=>p+c.list.length,0);
- const games=[
-  {name:'UNDERTALE',count:`${fights} FIGHTS`,face:itKeyBorder(ui6Img.sansFace)},
-  {name:'DELTARUNE',count:typeof DR!=='undefined'?`${DR.enemyIds.length} FIGHTS`:'',face:typeof DR!=='undefined'&&DR.ready?itKeyBorder(DR.gfx.frame('spr_headkris',0)):null}
- ];
+ const sel=gamePickSelected,games=itPickGames(),S=IT_SHELF,I=IT_INFO;
+ if(itPick.last!==sel){itPick.last=sel;itPick.at=now}
+ // the case: a frame, three shelves, a plank under each
+ lBox(g,S.x,S.y,S.w,S.h,false);
  games.forEach((gm,i)=>{
-  const c=IT_PICK[i],on=sel===i;
-  lDisc(g,c.cx,c.cy,c.r,on?ITC.sel:ITC.frame);lDisc(g,c.cx,c.cy,c.r-1,ITC.frameIn);lDisc(g,c.cx,c.cy,c.r-2,ITC.panel);
-  if(gm.face){const iw=gm.face.width,ih=gm.face.height,s=Math.max(1,Math.floor(88/Math.max(iw,ih)));lSpr(g,gm.face,c.cx,c.cy+Math.round(ih*s/2),999,999,{s})}
-  else lT(g,'...',c.cx,c.cy-6,{c:ITC.dim,a:'center'});
-  lT(g,gm.name,c.cx,c.cy+c.r+10,{c:on?ITC.sel:ITC.text,a:'center',shadow:ITC.shadow});
-  lT(g,gm.count,c.cx,c.cy+c.r+27,{c:ITC.dim,a:'center',shadow:ITC.shadow});
-  if(on)lSoul(g,c.cx-8,c.cy-c.r-22);
-  itHit(c.cx-c.r,c.cy-c.r,c.r*2,c.r*2+40,()=>{if(on)itGamePickActivate(i);else{gamePickSelected=i;play('move')}});
+  const on=sel===i,top=S.y+8+i*S.row,sq=58;
+  itPick.pull[i]+=((on?14:0)-itPick.pull[i])*(uiReducedMotion?1:.35);
+  const px=Math.round(itPick.pull[i]),sx=S.x+30+px,sy=top+6;
+  // the plank, a lit edge on top and its shadow under
+  if(i<2){lFill(g,S.x+2,top+S.row-12,S.w-4,4,'#2c5c3a');lFill(g,S.x+2,top+S.row-12,S.w-4,1,'#4f8a5a');lFill(g,S.x+2,top+S.row-8,S.w-4,1,'#0b2414')}
+  lBox(g,sx,sy,sq,sq,on);
+  if(gm.icon){const iw=gm.icon.width||gm.icon.naturalWidth,ih=gm.icon.height||gm.icon.naturalHeight,s=Math.max(1,Math.floor(46/Math.max(iw,ih)));lSpr(g,gm.icon,sx+sq/2,sy+sq/2+Math.round(ih*s/2),999,999,{s})}
+  else lT(g,'...',sx+sq/2,sy+sq/2-8,{c:ITC.dim,a:'center'});
+  lT(g,gm.name,sx+sq+10,sy+12,{c:on?ITC.sel:ITC.text,shadow:ITC.shadow});
+  lT(g,gm.count,sx+sq+10,sy+30,{c:on?ITC.dim:ITC.off,shadow:ITC.shadow});
+  if(on)lSoul(g,S.x+8,sy+sq/2-8);
+  itHit(S.x,top,S.w,S.row,()=>{if(on)itGamePickActivate(i);else{gamePickSelected=i;play('move')}});
  });
- // EXTRA, between them, with the sparkles from the sketch
- {const r=IT_PICK[2],on=sel===2;
-  lBox(g,r.x,r.y,r.w,r.h,on);
-  lT(g,'EXTRA',r.x+r.w/2+(on?8:0),r.y+5,{f:'main',c:on?ITC.sel:ITC.text,a:'center'});
-  if(on)lSoul(g,r.x+9,r.y+10);
-  const tw=Math.floor(t/10);
-  [[r.x-34,r.y-14],[r.x+r.w+26,r.y-8],[r.x+r.w+12,r.y+r.h+6],[r.x-20,r.y+r.h+4]].forEach(([x,y],k)=>{if((tw+k)%3)lBitmap(g,L_SPARK[(tw+k)%2],x,y,'#e8ffc8')});
-  itHit(r.x,r.y,r.w,r.h,()=>{if(on)itGamePickActivate(2);else{gamePickSelected=2;play('move')}})}
- itDesc(g,['Every UNDERTALE monster in the engine. Pick BOSS, ENEMY or MINI BOSS next.','Kris, Susie and Ralsei (or Noelle) against DELTARUNE\'s enemies, from DELTARUNE\'s own battle code.','The extras: your custom monsters and fights from outside the games.'][sel]||'',300);
- itFooter(g,'ARROWS  CHOOSE      Z  CONFIRM      X  BACK');
+ // the info panel: the picture rises in when the pick changes
+ const gm=games[sel]||games[0],k=uiReducedMotion?1:Math.min(1,(now-itPick.at)/180),e=1-(1-k)*(1-k);
+ lBox(g,I.x,I.y,I.w,I.h,false);
+ const floor=I.y+124;
+ lShadow(g,I.x+I.w/2,floor-2,sel===1?280:110);
+ g.save();g.globalAlpha=e;itPickArt(g,sel,I.x+I.w/2,floor+Math.round((1-e)*10),now);g.restore();
+ lFill(g,I.x+12,floor+8,I.w-24,1,ITC.frameIn);
+ lT(g,gm.name,I.x+I.w/2,floor+16,{f:'main',c:ITC.sel,a:'center',shadow:ITC.shadow});
+ lT(g,gm.count,I.x+I.w/2,floor+50,{c:ITC.dim,a:'center'});
+ lWrap(gm.text,I.w-32).slice(0,2).forEach((ln,n)=>lT(g,ln.trim(),I.x+I.w/2,floor+70+n*15,{c:ITC.text,a:'center'}));
+ itHit(I.x,I.y,I.w,I.h,()=>itGamePickActivate(sel));
+ itFooter(g,'UP/DOWN  CHOOSE      Z  OPEN      X  BACK');
  itBlit();
 }
 function itGamePickActivate(i){
@@ -7420,16 +7449,13 @@ function itGamePickActivate(i){
  else if(i===1)drStart();
  else itOpenCat('extras');
 }
-let itLastSide=0;
 function itGamePickKey(e,low,k){
  if(e.repeat)return;
- const left=k==='ArrowLeft'||low==='a',right=k==='ArrowRight'||low==='d',up=k==='ArrowUp'||low==='w',down=k==='ArrowDown'||low==='s';
+ const prev=k==='ArrowUp'||low==='w'||k==='ArrowLeft'||low==='a',next=k==='ArrowDown'||low==='s'||k==='ArrowRight'||low==='d';
  if(low==='x'||k==='Shift'||k==='Escape'){backToTitle('battle');play('select');return}
  if(low==='z'||k==='Enter'){itGamePickActivate(gamePickSelected);return}
  const from=gamePickSelected;
- if(gamePickSelected===2){if(left)gamePickSelected=0;else if(right)gamePickSelected=1;else if(up)gamePickSelected=itLastSide}
- else{if(left)gamePickSelected=0;else if(right)gamePickSelected=1;else if(down){itLastSide=gamePickSelected;gamePickSelected=2}}
- if(gamePickSelected<2)itLastSide=gamePickSelected;
+ if(prev)gamePickSelected=(gamePickSelected+2)%3;else if(next)gamePickSelected=(gamePickSelected+1)%3;
  if(gamePickSelected!==from)play('move');
 }
 
@@ -33603,7 +33629,7 @@ function drawDrRoster(now=performance.now()){
  ui6T(`D$ ${drWallet()}`,64,40,{s:3,c:UI6_C.yellow});
  ui6GroupTabs(groups,gi,drFocus===9,i=>{if(i!==gi){drSel=ui6GroupPick(groups,drSel,i,drGroupMemory);play('move')}drFocus=0});
  ui6Carousel(drCarousel,grp.id,grp.list.length,grp.list.indexOf(drSel),grp.color,{
-   label:k=>name(grp.list[k]),image:k=>drEnemyImage(ids[grp.list[k]],now),focus:drFocus===0,
+   groupIndex:gi,label:k=>name(grp.list[k]),image:k=>drEnemyImage(ids[grp.list[k]],now),focus:drFocus===0,
    onPick:k=>{drSel=grp.list[k];drFocus=0;play('move')},onConfirm:drFight
  },now);
  const id=ids[drSel],e=DR.enemies[id],sup=drSup.length?drSup.map(s=>DR.enemies[s].name).join(', '):'none';
