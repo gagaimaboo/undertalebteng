@@ -1627,19 +1627,35 @@ var CRB_SPRITES=[
 ];
 var CRB_SPRITE_BY={};CRB_SPRITES.forEach(s=>CRB_SPRITE_BY[s.id]=s);
 var CRB_LISTS={
- from:[['top','TOP OF THE BOX'],['bottom','BOTTOM OF THE BOX'],['left','LEFT SIDE'],['right','RIGHT SIDE'],['sides','LEFT + RIGHT'],['edges','ANY EDGE'],['monster','THE MONSTER'],['center','BOX CENTER'],['soul','AROUND THE SOUL']],
+ from:[['point','A SPOT YOU PICK'],['top','TOP OF THE BOX'],['bottom','BOTTOM OF THE BOX'],['left','LEFT SIDE'],['right','RIGHT SIDE'],['sides','LEFT + RIGHT'],['edges','ANY EDGE'],['monster','THE MONSTER'],['center','BOX CENTER'],['soul','AROUND THE SOUL']],
  spot:[['random','RANDOM'],['soul','LINED UP WITH SOUL'],['sweep','SWEEPS ACROSS'],['middle','MIDDLE']],
  aim:[['straight','STRAIGHT IN'],['soul','AT THE SOUL'],['random','RANDOM'],['spiral','SPIRAL']],
  shape:[['single','ONE BULLET'],['fan','FAN'],['line','LINE'],['burst','RING BURST']],
- color:[['white','WHITE'],['blue','BLUE  (STAND STILL)'],['orange','ORANGE  (KEEP MOVING)']]
+ color:[['white','WHITE'],['blue','BLUE  (STAND STILL)'],['orange','ORANGE  (KEEP MOVING)']],
+ move:[['physics','SPEED + PHYSICS'],['path','KEYFRAME PATH']],
+ pathSpace:[['aim','FROM SPAWN, TURNED TO AIM'],['spawn','FROM WHERE IT SPAWNS'],['box','IN THE BOX']],
+ pathEnd:[['vanish','VANISH'],['stay','STAY THERE'],['loop','LOOP'],['pingpong','GO BACK AND FORTH'],['continue','KEEP FLYING']],
+ sound:[['none','NONE'],['undyneArrow','SPEAR'],['undyneSpearAppear','SPEAR APPEAR'],['gbCharge','BLASTER CHARGE'],['gbFire','BLASTER FIRE'],['bombTick','BOMB TICK'],['mexShoot','SHOT'],['shyNote1','NOTE'],['mdBell','BELL'],['impact','IMPACT'],['rsDrum','DRUM'],['cymbal','CYMBAL'],['asgSwipe','SWIPE'],['squeak','SQUEAK'],['floweyLaugh','FLOWEY LAUGH']],
+ ease:[['linear','LINEAR'],['in','EASE IN'],['out','EASE OUT'],['smooth','SMOOTH'],['back','OVERSHOOT'],['snap','SNAP']]
 };
 var CRB_DEF={from:'top',spot:'random',aim:'straight',shape:'single',shots:5,fan:60,spacing:24,volleys:16,gap:220,delay:0,
- vel:150,accel:0,bend:0,grav:0,wave:0,waveSpeed:10,homing:0,bounce:0,sprite:'pellet',px:16,hit:70,spin:0,face:false,color:'white',dmg:4,img:''};
+ vel:150,accel:0,bend:0,grav:0,wave:0,waveSpeed:10,homing:0,bounce:0,sprite:'pellet',px:16,hit:70,spin:0,face:false,color:'white',dmg:4,img:'',
+ move:'physics',pathSpace:'aim',curved:true,pathEnd:'vanish',keys:null,warn:0,fadeIn:0,life:0,split:0,splitN:6,splitVel:120,trail:0,sound:'none',velRand:0,wobble:0,pointX:0,pointY:0};
 var CRB_NUM={shots:[1,40],fan:[0,360],spacing:[4,200],volleys:[1,99],gap:[30,5000],delay:[0,20000],vel:[0,900],accel:[-900,900],
- bend:[-720,720],grav:[-900,900],wave:[0,120],waveSpeed:[1,60],homing:[0,100],bounce:[0,9],px:[2,160],hit:[10,150],spin:[-1440,1440],dmg:[0,99]};
+ bend:[-720,720],grav:[-900,900],wave:[0,120],waveSpeed:[1,60],homing:[0,100],bounce:[0,9],px:[2,160],hit:[10,150],spin:[-1440,1440],dmg:[0,99],
+ warn:[0,3000],fadeIn:[0,3000],life:[0,20000],split:[0,20000],splitN:[1,24],splitVel:[0,900],trail:[0,10],velRand:[0,100],wobble:[0,180],pointX:[-320,320],pointY:[-240,240]};
+var CRB_KEYNUM={t:[0,20000],x:[-640,640],y:[-480,480],rot:[-3600,3600],sc:[0,500],a:[0,100]};
+var CRB_MAX_KEYS=12;
+function crbDefaultKeys(){const k=(t,x,y,ease)=>({t,x,y,rot:0,sc:100,a:100,ease});return [k(0,0,0,'linear'),k(500,70,-45,'smooth'),k(1000,140,45,'smooth'),k(1500,210,-45,'smooth'),k(2000,280,0,'smooth')]}
+function crbNormKeys(v){
+ const src=Array.isArray(v)&&v.length?v.slice(0,CRB_MAX_KEYS):crbDefaultKeys();
+ const out=src.map(k=>{const r=k&&typeof k==='object'?k:{},o={};for(const f in CRB_KEYNUM){const n=Number(r[f]),[a,b]=CRB_KEYNUM[f];o[f]=Number.isFinite(n)&&r[f]!==undefined&&r[f]!==null?Math.max(a,Math.min(b,Math.round(n))):(f==='sc'||f==='a'?100:0)}o.ease=CRB_LISTS.ease.some(e=>e[0]===r.ease)?r.ease:'linear';return o});
+ out.sort((p,q)=>p.t-q.t);return out;
+}
+var crbEditKey=0;
 
 // ------------------------------------------------------------ the data --
-function crbDefaultLayer(base,i){return Object.assign(base,{mode:'build'},CRB_DEF,{enabled:i===0})}
+function crbDefaultLayer(base,i){return Object.assign(base,{mode:'build'},CRB_DEF,{enabled:i===0,keys:crbDefaultKeys()})}
 function crbNormLayer(raw,base,i){
  const r=raw&&typeof raw==='object'?raw:null;
  base.mode=r?(r.mode==='build'||r.mode==='copy'?r.mode:'copy'):'build';
@@ -1647,7 +1663,8 @@ function crbNormLayer(raw,base,i){
   const d=CRB_DEF[k],v=r?r[k]:undefined;
   if(CRB_LISTS[k])base[k]=CRB_LISTS[k].some(o=>o[0]===v)?v:d;
   else if(k==='sprite')base[k]=CRB_SPRITE_BY[v]?v:d;
-  else if(k==='face')base[k]=v===undefined?d:!!v;
+  else if(k==='face'||k==='curved')base[k]=v===undefined?d:!!v;
+  else if(k==='keys')base[k]=crbNormKeys(v);
   else if(k==='img')base[k]=typeof v==='string'?v:'';
   else{const n=Number(v),[a,b]=CRB_NUM[k];base[k]=Number.isFinite(n)&&v!==''&&v!==null&&v!==undefined?Math.max(a,Math.min(b,Math.round(n))):d}
  }
@@ -1679,7 +1696,7 @@ function crbImage(id){
 }
 function crbPreload(p){for(const l of crbBuildLayers(p))crbImage(l.sprite);crbImage('pellet')}
 var crbTintCache=new WeakMap();
-var CRB_TINT={blue:'#14a9ff',orange:'#ffa040'};
+var CRB_TINT={blue:'#14a9ff',orange:'#ffa040',red:'#ff2020'};
 function crbTint(im,col){
  if(!CRB_TINT[col]||!im)return im;
  let m=crbTintCache.get(im);if(!m){m={};crbTintCache.set(im,m)}
@@ -1700,22 +1717,87 @@ function crbLook(l){
  const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height,k=l.px/Math.max(iw,ih);
  return {kind:'img',im,w:iw*k,h:ih*k,dir:s.dir||0};
 }
-function crbDraw(g,b){
- const l=b.l,d=crbLook(l),col=CRB_TINT[l.color]||'#ffffff';
- g.save();g.imageSmoothingEnabled=false;g.translate(b.x,b.y);if(b.rot)g.rotate(b.rot*Math.PI/180);
- if(d.kind==='img'){const im=crbTint(d.im,l.color);g.drawImage(im,-d.w/2,-d.h/2,d.w,d.h)}
- else if(d.kind==='bone'){const L=Math.max(12,d.h),R=Math.round;g.fillStyle=col;g.fillRect(-3,R(-L/2+3),6,R(L-6));g.fillRect(-5,R(-L/2),4,5);g.fillRect(1,R(-L/2),4,5);g.fillRect(-5,R(L/2-5),4,5);g.fillRect(1,R(L/2-5),4,5)}
- else{g.fillStyle=col;g.fillRect(-d.w/2,-d.h/2,d.w,d.h)}
+function crbDrawOne(g,b,x,y,rot,sc,alpha,tint){
+ const l=b.l,d=crbLook(l),col=tint||l.color,fill=CRB_TINT[col]||'#ffffff';
+ if(alpha<=0||sc<=0)return;
+ g.save();g.imageSmoothingEnabled=false;g.globalAlpha*=Math.min(1,alpha);g.translate(x,y);if(rot)g.rotate(rot*Math.PI/180);if(sc!==1)g.scale(sc,sc);
+ if(d.kind==='img'){const im=crbTint(d.im,col);g.drawImage(im,-d.w/2,-d.h/2,d.w,d.h)}
+ else if(d.kind==='bone'){const L=Math.max(12,d.h),R=Math.round;g.fillStyle=fill;g.fillRect(-3,R(-L/2+3),6,R(L-6));g.fillRect(-5,R(-L/2),4,5);g.fillRect(1,R(-L/2),4,5);g.fillRect(-5,R(L/2-5),4,5);g.fillRect(1,R(L/2-5),4,5)}
+ else{g.fillStyle=fill;g.fillRect(-d.w/2,-d.h/2,d.w,d.h)}
  g.restore();
 }
-// half-width / half-height of the hitbox, turned with the sprite
+// the warning before a bullet appears: its red ghost, blinking, and where it will go
+function crbDrawWarn(g,b){
+ const l=b.l,on=Math.floor(b.warn/3)%2===0;
+ g.save();g.strokeStyle='#ff2020';g.lineWidth=2;g.globalAlpha=.75;g.setLineDash([6,4]);g.beginPath();
+ if(l.move==='path'&&b.W){const pts=crbPathPoints(b,b.W);pts.forEach((q,i)=>i?g.lineTo(q.x,q.y):g.moveTo(q.x,q.y))}
+ else{const a=b.ang0*Math.PI/180;g.moveTo(b.x,b.y);g.lineTo(b.x+Math.cos(a)*90,b.y+Math.sin(a)*90)}
+ g.stroke();g.restore();
+ if(on)crbDrawOne(g,b,b.x,b.y,b.rot,b.sc??1,.85,'red');
+}
+function crbDraw(g,b){
+ if(b.warn>0){crbDrawWarn(g,b);return}
+ const a=b.alpha??1;
+ if(b.tr)for(let i=b.tr.length-1;i>=0;i--){const q=b.tr[i];crbDrawOne(g,b,q.x,q.y,q.rot,q.sc,a*.55*(1-(i+1)/(b.tr.length+1)))}
+ crbDrawOne(g,b,b.x,b.y,b.rot,b.sc??1,a);
+}
+// half-width / half-height of the hitbox, turned and scaled with the sprite
 function crbHalf(b){
- const d=crbLook(b.l),k=b.l.hit/100,a=(b.rot||0)*Math.PI/180,c=Math.abs(Math.cos(a)),s=Math.abs(Math.sin(a));
+ const d=crbLook(b.l),k=b.l.hit/100*(b.sc??1),a=(b.rot||0)*Math.PI/180,c=Math.abs(Math.cos(a)),s=Math.abs(Math.sin(a));
  return {hw:Math.max(1,(c*d.w+s*d.h)/2*k),hh:Math.max(1,(s*d.w+c*d.h)/2*k)};
+}
+// does it hurt right now (not while warning, not while mostly faded)
+function crbLive(b){return !(b.warn>0)&&(b.alpha??1)>=.35&&(b.sc??1)>.05&&b.l.dmg>0}
+
+// ------------------------------------------------------------ keyframes --
+function crbEase(e,u){
+ u=Math.max(0,Math.min(1,u));
+ switch(e){case'in':return u*u;case'out':return 1-(1-u)*(1-u);case'smooth':return u*u*(3-2*u);
+  case'back':{const c=1.70158,v=u-1;return 1+(c+1)*v*v*v+c*v*v}case'snap':return u<1?0:1;default:return u}
+}
+function crbKeyAt(l,ms){
+ const K=l.keys;if(!K||!K.length)return {x:0,y:0,rot:0,sc:100,a:100};
+ if(K.length===1||ms<=K[0].t)return K[0];
+ const last=K[K.length-1];if(ms>=last.t)return last;
+ let i=0;while(i<K.length-2&&ms>K[i+1].t)i++;
+ const A=K[i],B=K[i+1],u=crbEase(B.ease,(ms-A.t)/Math.max(1,B.t-A.t)),lerp=(p,q)=>p+(q-p)*u;
+ let x,y;
+ if(l.curved&&K.length>2){
+  const P0=K[Math.max(0,i-1)],P3=K[Math.min(K.length-1,i+2)];
+  const cr=(p0,p1,p2,p3)=>.5*(2*p1+(-p0+p2)*u+(2*p0-5*p1+4*p2-p3)*u*u+(-p0+3*p1-3*p2+p3)*u*u*u);
+  x=cr(P0.x,A.x,B.x,P3.x);y=cr(P0.y,A.y,B.y,P3.y);
+ }else{x=lerp(A.x,B.x);y=lerp(A.y,B.y)}
+ return {x,y,rot:lerp(A.rot,B.rot),sc:lerp(A.sc,B.sc),a:lerp(A.a,B.a)};
+}
+function crbPathEnd(l){const K=l.keys||[];return K.length?K[K.length-1].t:0}
+// the path's own time after the end rule; null once it has vanished
+function crbPathLocal(l,ms){
+ const T=crbPathEnd(l);let t=ms,over=0;
+ if(T<=0)t=0;
+ else if(ms>T){
+  if(l.pathEnd==='stay')t=T;else if(l.pathEnd==='loop')t=ms%T;
+  else if(l.pathEnd==='pingpong'){const k=ms%(2*T);t=k<=T?k:2*T-k}
+  else if(l.pathEnd==='continue'){t=T;over=ms-T}else return null;
+ }
+ const k=crbKeyAt(l,t);let x=k.x,y=k.y;
+ if(over){const k0=crbKeyAt(l,Math.max(0,T-34));x+=(k.x-k0.x)/34*over;y+=(k.y-k0.y)/34*over}
+ return {x,y,rot:k.rot,sc:k.sc,a:k.a};
+}
+function crbToWorld(b,W,x,y){
+ const sp=b.l.pathSpace;
+ if(sp==='box')return {x:(W.L+W.R)/2+x,y:(W.T+W.B)/2+y};
+ if(sp==='spawn')return {x:b.ox+x,y:b.oy+y};
+ const a=b.ang0*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+ return {x:b.ox+x*c-y*s,y:b.oy+x*s+y*c};
+}
+function crbPathPoints(b,W){
+ const l=b.l,T=crbPathEnd(l),out=[];
+ for(let t=0;t<=T;t+=Math.max(20,T/60)){const p=crbPathLocal(l,t)||crbKeyAt(l,T);out.push(crbToWorld(b,W,p.x,p.y))}
+ const e=crbKeyAt(l,T);out.push(crbToWorld(b,W,e.x,e.y));return out;
 }
 
 // ------------------------------------------------------------ the sim --
-// W: {L,R,T,B, soul()->{x,y}, mon()->{x,y}, rnd()->[0,1), fire(b)}
+// W: {L,R,T,B, soul()->{x,y}, mon()->{x,y}, rnd()->[0,1), fire(b), sound?(name)}
 function crbRun(p){
  crbPreload(p);
  return {t:0,ls:crbBuildLayers(p).map(l=>({l,next:Math.round(l.delay*.03),left:l.volleys,k:0}))};
@@ -1728,9 +1810,16 @@ function crbTick(run,W){
  }
  run.t++;
 }
+function crbNew(l,x,y,ang,W,extra){
+ const d=crbLook(l),sp=l.vel*(1+(W.rnd()*2-1)*(l.velRand||0)/100)/30;
+ return Object.assign({l,W,x,y,bx:x,by:y,ox:x,oy:y,ang0:ang,ang,sp,gv:0,t:0,age:0,bounces:l.bounce,inside:false,
+  rot:l.face?ang-(d.dir||0):(l.move==='path'&&l.pathSpace==='aim'?ang-(d.dir||0):0),
+  warn:Math.round((l.warn||0)*.03),sc:1,ka:1,alpha:l.fadeIn?0:1,dead:false},extra||{});
+}
 function crbVolley(s,W){
  const l=s.l,so=W.soul(),L=W.L,R=W.R,T=W.T,B=W.B,cx=(L+R)/2,cy=(T+B)/2;
  const d=crbLook(l),m=Math.max(d.w,d.h)/2+3,n=l.shape==='single'?1:l.shots;
+ if(l.sound&&l.sound!=='none'&&W.sound)W.sound(l.sound);
  let from=l.from;
  if(from==='sides')from=s.k%2?'right':'left';
  if(from==='edges')from=['top','bottom','left','right'][Math.floor(W.rnd()*4)];
@@ -1753,6 +1842,7 @@ function crbVolley(s,W){
   else if(from==='left'){P={x:L-m,y:along(T+8,B-8,so.y)};inward=0}
   else if(from==='right'){P={x:R+m,y:along(T+8,B-8,so.y)};inward=180}
   else if(from==='monster'){P=W.mon();inward=Math.atan2(cy-P.y,cx-P.x)*180/Math.PI}
+  else if(from==='point'){P={x:cx+l.pointX,y:cy+l.pointY};inward=Math.atan2(cy-P.y,cx-P.x)*180/Math.PI;if(!l.pointX&&!l.pointY)inward=90}
   else{P={x:cx,y:cy};inward=90}
   let base=inward;
   if(l.aim==='soul')base=Math.atan2(so.y-P.y,so.x-P.x)*180/Math.PI;
@@ -1763,10 +1853,22 @@ function crbVolley(s,W){
   else if(l.shape==='line'&&n>1){const pa=(base+90)*Math.PI/180;for(let i=0;i<n;i++){const o=(i-(n-1)/2)*l.spacing;shots.push({x:P.x+Math.cos(pa)*o,y:P.y+Math.sin(pa)*o,ang:base})}}
   else shots.push({x:P.x,y:P.y,ang:base});
  }
- for(const q of shots)W.fire({l,x:q.x,y:q.y,bx:q.x,by:q.y,ang:q.ang,sp:l.vel/30,gv:0,t:0,bounces:l.bounce,inside:false,
-  rot:l.face?q.ang-(d.dir||0):0,dead:false});
+ for(const q of shots){
+  const ang=q.ang+(l.wobble?(W.rnd()*2-1)*l.wobble:0);
+  const b=crbNew(l,q.x,q.y,ang,W);
+  if(l.move==='path'){const p=crbPathLocal(l,0);if(p){const w=crbToWorld(b,W,p.x,p.y);b.x=w.x;b.y=w.y;b.sc=p.sc/100;b.ka=p.a/100}}
+  W.fire(b);
+ }
 }
-function crbMove(b,W){
+// a split: the bullet bursts into a ring of smaller plain ones
+var crbKids=new WeakMap();
+function crbSplit(b,W){
+ const l=b.l;let c=crbKids.get(l);
+ if(!c){c=Object.assign({},l,{move:'physics',split:0,warn:0,fadeIn:0,life:0,trail:0,vel:l.splitVel,accel:0,bend:0,grav:0,wave:0,homing:0,bounce:0,velRand:0,wobble:0,px:Math.max(2,Math.round(l.px*.6))});crbKids.set(l,c)}
+ const n=l.splitN,base=b.ang||0;
+ for(let i=0;i<n;i++){const ang=base+i*360/n;W.fire(crbNew(c,b.x,b.y,ang,W,{child:true,warn:0}))}
+}
+function crbPhysMove(b,W){
  const l=b.l;
  b.sp+=l.accel/900;
  if(l.bend)b.ang+=l.bend/30;
@@ -1782,12 +1884,35 @@ function crbMove(b,W){
   if(hit){b.bounces--;b.sp=Math.hypot(vx,vy);b.ang=Math.atan2(vy,vx)*180/Math.PI;b.gv=0}
  }
  let ox=0,oy=0;
- if(l.wave){const w=l.wave*Math.sin(b.t*(l.waveSpeed/10)*2*Math.PI/30),pa=a+Math.PI/2;ox=Math.cos(pa)*w;oy=Math.sin(pa)*w}
+ if(l.wave){const w=l.wave*Math.sin(b.age*(l.waveSpeed/10)*2*Math.PI/30),pa=a+Math.PI/2;ox=Math.cos(pa)*w;oy=Math.sin(pa)*w}
  b.x=b.bx+ox;b.y=b.by+oy;
  if(l.face){if(vx||vy)b.rot=Math.atan2(vy,vx)*180/Math.PI-(crbLook(l).dir||0)}
  else if(l.spin)b.rot=(b.rot||0)+l.spin/30;
- b.t++;
- if(b.x<-160||b.x>800||b.y<-160||b.y>640||b.t>1800)b.dead=true;
+}
+function crbPathMove(b,W,ms){
+ const l=b.l,p=crbPathLocal(l,ms);
+ if(!p){b.dead=true;return}
+ const w=crbToWorld(b,W,p.x,p.y),px=b.x,py=b.y;
+ b.x=w.x;b.y=w.y;b.sc=p.sc/100;b.ka=p.a/100;
+ if(b.x!==px||b.y!==py)b.ang=Math.atan2(b.y-py,b.x-px)*180/Math.PI;
+ const dir=crbLook(l).dir||0;
+ let rot=p.rot+(l.pathSpace==='aim'?b.ang0-dir:0);
+ if(l.face)rot=p.rot+b.ang-dir;
+ else if(l.spin){b.spin=(b.spin||0)+l.spin/30;rot+=b.spin}
+ b.rot=rot;
+}
+function crbMove(b,W){
+ const l=b.l;
+ if(b.warn>0){b.warn--;return}
+ b.age++;b.t=b.age;const ms=b.age*1000/30;
+ if(l.trail&&b.age%2===0){(b.tr||(b.tr=[])).unshift({x:b.x,y:b.y,rot:b.rot,sc:b.sc??1});if(b.tr.length>l.trail)b.tr.length=l.trail}
+ if(l.move==='path')crbPathMove(b,W,ms);else crbPhysMove(b,W);
+ let a=b.ka??1;
+ if(l.fadeIn)a*=Math.min(1,ms/l.fadeIn);
+ if(l.life){if(ms>=l.life)b.dead=true;else a*=Math.min(1,(l.life-ms)/200)}
+ b.alpha=a;
+ if(l.split&&!b.child&&!b.dead&&ms>=l.split){crbSplit(b,W);b.dead=true}
+ if(b.x<-160||b.x>800||b.y<-160||b.y>640||b.age>1800)b.dead=true;
 }
 
 // --------------------------------------------------------- in battle --
@@ -1798,13 +1923,14 @@ function crbBattleWorld(api,m){
   soul:()=>{const h=api.heart;return {x:h.x+8,y:h.y+8}},
   mon:()=>({x:m.x+m.w/2,y:m.y+m.h*.6}),
   rnd:()=>NB.rnd(1),
+  sound:n=>api.snd(n),
   fire:b=>{
    const box=()=>{const {hw,hh}=crbHalf(b);return [-hw,-hh,hw*2,hh*2]};
    api.spawn({x:b.x,y:b.y,manual:true,wallKill:false,kill:false,dmg:b.l.dmg,box:box(),
     step(nb){crbMove(b,W);nb.x=b.x;nb.y=b.y;nb.box=box();if(b.dead)nb.alive=false},
     draw(g){crbDraw(g,b)},
     onHit(){
-     const l=b.l;if(!(l.dmg>0))return false;
+     const l=b.l;if(!crbLive(b))return false;
      if(l.color==='blue'&&!api.moving())return false;
      if(l.color==='orange'&&api.moving())return false;
      return api.damage(l.dmg);
@@ -1857,29 +1983,49 @@ function crbPatternRows(c){
   );
   return rows;
  }
- const edge=['top','bottom','left','right','sides','edges'].includes(l.from);
- rows.push(
-  num('delay','START AFTER',0,20000,50,v=>`${v} ms`),
-  list('from','COMES FROM')
- );
+ const edge=['top','bottom','left','right','sides','edges'].includes(l.from),path=l.move==='path';
+ rows.push(num('delay','START AFTER',0,20000,50,v=>`${v} ms`),list('move','MOVEMENT'),list('from','COMES FROM'));
  if(edge)rows.push(list('spot','POSITION'));
- rows.push(list('aim','AIM'),list('shape','SHAPE'));
+ if(l.from==='point')rows.push(num('pointX','SPOT X',-320,320,5,v=>`${v} px`),num('pointY','SPOT Y',-240,240,5,v=>`${v} px`));
+ rows.push(list('aim','AIM'),num('wobble','AIM WOBBLE',0,180,5,v=>v?`± ${v}°`:'OFF'),list('shape','SHAPE'));
  if(l.shape!=='single'||l.from==='soul')rows.push(num('shots','BULLETS PER SHOT',1,40,1));
  if(l.shape==='fan')rows.push(num('fan','FAN WIDTH',0,360,5,v=>`${v}°`));
  if(l.shape==='line')rows.push(num('spacing','LINE SPACING',4,200,2,v=>`${v} px`));
+ rows.push(num('volleys','SHOTS',1,99,1),num('gap','TIME BETWEEN SHOTS',30,5000,10,v=>`${v} ms`));
+ if(!path){
+  rows.push(
+   num('vel','SPEED',0,900,10,v=>`${v} px/s`),
+   num('velRand','SPEED VARIES',0,100,5,v=>v?`± ${v}%`:'OFF'),
+   num('accel','ACCELERATION',-900,900,10,v=>`${v} px/s²`),
+   num('bend','CURVE',-720,720,10,v=>`${v}°/s`),
+   num('grav','GRAVITY',-900,900,10,v=>`${v} px/s²`),
+   num('wave','WAVE SIZE',0,120,2,v=>v?`${v} px`:'OFF'));
+  if(l.wave)rows.push(num('waveSpeed','WAVE SPEED',1,60,1,v=>`${(v/10).toFixed(1)} /s`));
+  rows.push(num('homing','HOMING',0,100,5,v=>v?`${v}`:'OFF'),num('bounce','BOUNCES OFF THE BOX',0,9,1,v=>v?`${v}`:'NO'));
+ }else{
+  const K=l.keys;crbEditKey=clamp(crbEditKey,0,K.length-1);const kf=K[crbEditKey],aimed=l.pathSpace==='aim';
+  const keyNum=(f,label,min,max,step,fmt)=>({kind:'creatorLayerNumber',label,value:fmt?fmt(kf[f]):kf[f],rawValue:kf[f],min,max,step,
+   set:v=>{kf[f]=v;if(f==='t'){K.sort((p,q)=>p.t-q.t);crbEditKey=K.indexOf(kf)}save()}});
+  rows.push(
+   list('pathSpace','PATH IS'),
+   {kind:'crbList',label:'PATH SHAPE',value:l.curved?'SMOOTH CURVE':'STRAIGHT LINES',cycle:()=>{l.curved=!l.curved}},
+   list('pathEnd','AT THE END'),
+   {kind:'crbList',label:'KEYFRAME',value:`${crbEditKey+1} OF ${K.length}   (${kf.t} ms)`,cycle:dir=>{crbEditKey=(crbEditKey+dir+K.length)%K.length}},
+   {kind:'crbList',act:true,label:'ADD KEYFRAME',value:K.length>=CRB_MAX_KEYS?`MAX ${CRB_MAX_KEYS}`:'ENTER',cycle:()=>{
+    if(K.length>=CRB_MAX_KEYS)return;const nx=K[crbEditKey+1];
+    const k=nx?{...kf,t:Math.round((kf.t+nx.t)/2),x:Math.round((kf.x+nx.x)/2),y:Math.round((kf.y+nx.y)/2)}:{...kf,t:kf.t+400,x:kf.x+(aimed?50:40)};
+    K.splice(crbEditKey+1,0,k);crbEditKey++;play('heal')}},
+   {kind:'crbList',act:true,label:'DELETE KEYFRAME',value:K.length<=1?'KEEP AT LEAST 1':'ENTER',cycle:()=>{if(K.length<=1)return;K.splice(crbEditKey,1);crbEditKey=Math.max(0,crbEditKey-1);play('break1')}},
+   keyNum('t','KEY TIME',0,20000,50,v=>`${v} ms`),
+   keyNum('x',aimed?'FORWARD':'X',-640,640,5,v=>`${v} px`),
+   keyNum('y',aimed?'SIDEWAYS':'Y',-480,480,5,v=>`${v} px`),
+   keyNum('rot','TURN',-3600,3600,15,v=>`${v}°`),
+   keyNum('sc','SCALE',0,500,10,v=>`${v}%`),
+   keyNum('a','OPACITY',0,100,10,v=>`${v}%`),
+   {kind:'crbList',label:'EASE INTO IT',value:crbListValue('ease',kf.ease),cycle:dir=>{crbCycleList('ease',kf,dir)}}
+  );
+ }
  rows.push(
-  num('volleys','SHOTS',1,99,1),
-  num('gap','TIME BETWEEN SHOTS',30,5000,10,v=>`${v} ms`),
-  num('vel','SPEED',0,900,10,v=>`${v} px/s`),
-  num('accel','ACCELERATION',-900,900,10,v=>`${v} px/s²`),
-  num('bend','CURVE',-720,720,10,v=>`${v}°/s`),
-  num('grav','GRAVITY',-900,900,10,v=>`${v} px/s²`),
-  num('wave','WAVE SIZE',0,120,2,v=>v?`${v} px`:'OFF')
- );
- if(l.wave)rows.push(num('waveSpeed','WAVE SPEED',1,60,1,v=>`${(v/10).toFixed(1)} /s`));
- rows.push(
-  num('homing','HOMING',0,100,5,v=>v?`${v}`:'OFF'),
-  num('bounce','BOUNCES OFF THE BOX',0,9,1,v=>v?`${v}`:'NO'),
   {kind:'crbList',label:'BULLET SPRITE',value:(CRB_SPRITE_BY[l.sprite]||{}).label||l.sprite,cycle:dir=>{
    const ids=CRB_SPRITES.map(s=>s.id).filter(id=>id!=='custom'||l.img);l.sprite=creatorCycle(ids,l.sprite,dir);
    const s=CRB_SPRITE_BY[l.sprite];if(s&&s.id!=='custom')l.px=s.n;crbImage(l.sprite)}},
@@ -1889,6 +2035,15 @@ function crbPatternRows(c){
   num('spin','SPIN',-1440,1440,30,v=>v?`${v}°/s`:'OFF'),
   {kind:'crbList',label:'POINTS WHERE IT GOES',value:l.face?'YES':'NO',cycle:()=>{l.face=!l.face}},
   list('color','COLOR'),
+  num('trail','TRAIL',0,10,1,v=>v?`${v}`:'OFF'),
+  num('warn','WARNING FIRST',0,3000,50,v=>v?`${v} ms`:'OFF'),
+  num('fadeIn','FADE IN',0,3000,50,v=>v?`${v} ms`:'OFF'),
+  num('life','LIFETIME',0,20000,100,v=>v?`${v} ms`:'UNTIL IT LEAVES'),
+  num('split','SPLIT AFTER',0,20000,100,v=>v?`${v} ms`:'NEVER')
+ );
+ if(l.split)rows.push(num('splitN','SPLIT INTO',1,24,1),num('splitVel','SPLIT SPEED',0,900,10,v=>`${v} px/s`));
+ rows.push(
+  {kind:'crbList',label:'SOUND',value:crbListValue('sound',l.sound),cycle:dir=>{crbCycleList('sound',l,dir);if(l.sound!=='none')play(l.sound)}},
   num('dmg','DAMAGE',0,99,1)
  );
  return rows;
@@ -1905,7 +2060,17 @@ var CRB_HELP={
  'BOUNCES OFF THE BOX':'They bounce off the box walls this many times.','BULLET SPRITE':'A sprite from the game, or your own upload.',
  'UPLOAD YOUR OWN':'Any image. It gets fitted to BULLET SIZE.','BULLET SIZE':'Longest side, in pixels. Uploads fit to it.',
  'HITBOX':'How much of the sprite hurts.','COLOR':'BLUE only hurts if you move. ORANGE only if you stand still.',
- 'POINTS WHERE IT GOES':'Turns the sprite to face where it moves.'
+ 'POINTS WHERE IT GOES':'Turns the sprite to face where it moves.',
+ 'MOVEMENT':'PHYSICS: speed, curve, gravity... KEYFRAME PATH: it follows points you place.',
+ 'PATH IS':'TURNED TO AIM: FORWARD follows the aim, so fans and rings fan out.','PATH SHAPE':'SMOOTH CURVE bends through the keyframes.',
+ 'AT THE END':'What it does after the last keyframe.','KEYFRAME':'Tap or drag in the preview to move this keyframe.',
+ 'ADD KEYFRAME':'Adds one after this keyframe.','KEY TIME':'When it reaches this keyframe, from when it appears.',
+ 'FORWARD':'Tap or drag in the preview to place it.','SIDEWAYS':'Tap or drag in the preview to place it.','X':'Tap or drag in the preview to place it.','Y':'Tap or drag in the preview to place it.',
+ 'TURN':'Rotation at this keyframe.','SCALE':'Size at this keyframe. 0% shrinks it away.','OPACITY':'0% is invisible, and can\'t hurt.',
+ 'EASE INTO IT':'How it speeds up or slows into this keyframe.','SPOT X':'Tap the preview to pick the spot.','SPOT Y':'Tap the preview to pick the spot.',
+ 'AIM WOBBLE':'Random wiggle on every bullet\'s aim.','SPEED VARIES':'Random speed per bullet.','TRAIL':'Afterimages behind it.',
+ 'WARNING FIRST':'A red ghost and its path flash before it appears.','FADE IN':'Harmless until it\'s mostly visible.',
+ 'LIFETIME':'It fades out and vanishes after this.','SPLIT AFTER':'Bursts into a ring of smaller bullets.','SOUND':'Plays on every shot.'
 };
 
 // ---------------------------------------------------------- preview --
@@ -1927,7 +2092,7 @@ function crbPvStep(p){
  pv.bullets=pv.bullets.filter(b=>!b.dead);
  if(pv.inv>0)pv.inv--;
  else for(const b of pv.bullets){
-  if(!(b.l.dmg>0))continue;
+  if(!crbLive(b))continue;
   const {hw,hh}=crbHalf(b);
   if(Math.abs(b.x-pv.soul.x)<hw+6&&Math.abs(b.y-pv.soul.y)<hh+6){pv.hits++;pv.inv=20;break}
  }
@@ -1943,7 +2108,44 @@ function crbPvRender(p,now){
  for(const b of pv.bullets)crbDraw(g,b);
  const heart=images.heart||images.heartFallback;
  if(heart&&!(pv.inv>0&&Math.floor(pv.inv/3)%2)){const im=p.soul==='blue'?crbTint(heart,'blue'):heart;g.drawImage(im,Math.round(pv.soul.x-8),Math.round(pv.soul.y-8),16,16)}
+ crbPvOverlay(p,g,bx);
 }
+// the layer being edited: its keyframe path (drawn from the box centre, aiming right) or its spot
+function crbEditingLayer(p){const l=p&&p.layers&&p.layers[clamp(creatorEditLayer,0,3)];return l&&l.mode==='build'?l:null}
+function crbPvOverlay(p,g,bx){
+ const l=crbEditingLayer(p);if(!l)return;
+ const cx=(bx.L+bx.R)/2,cy=(bx.T+bx.B)/2;
+ g.save();g.lineWidth=1;
+ if(l.move==='path'){
+  const T=crbPathEnd(l);g.strokeStyle='rgba(255,255,0,.55)';g.setLineDash([3,3]);g.beginPath();
+  for(let t=0,i=0;t<=T+1;t+=Math.max(15,T/80),i++){const q=crbKeyAt(l,Math.min(t,T));i?g.lineTo(cx+q.x,cy+q.y):g.moveTo(cx+q.x,cy+q.y)}
+  g.stroke();g.setLineDash([]);
+  l.keys.forEach((k,i)=>{const on=i===clamp(crbEditKey,0,l.keys.length-1);g.fillStyle=on?'#ffff00':'#ff8a00';g.fillRect(Math.round(cx+k.x)-(on?3:2),Math.round(cy+k.y)-(on?3:2),on?7:5,on?7:5)});
+  g.fillStyle='#ffff00';g.fillRect(cx-1,cy-6,2,12);g.fillRect(cx-6,cy-1,12,2);
+ }else if(l.from==='point'){
+  const x=cx+l.pointX,y=cy+l.pointY;g.strokeStyle='#ffff00';g.beginPath();g.moveTo(x-7,y);g.lineTo(x+7,y);g.moveTo(x,y-7);g.lineTo(x,y+7);g.stroke();
+ }
+ g.restore();
+}
+// tap or drag in the preview: moves the keyframe being edited (or the spot bullets come from)
+var crbDrag=false;
+function crbPvTap(mx,my){
+ const pv=crbPv,M=pv&&pv.map;if(!M)return false;
+ const c=sandboxConfig.customCharacter,p=creatorPatternAt(creatorEditPattern,c),l=crbEditingLayer(p);
+ if(!l||!(l.move==='path'||l.from==='point'))return false;
+ const k=uiStretchScreen()?UISX:1,u=M.ax+(mx-M.ax)*k;
+ const rx=M.sx+(u-M.dx)*M.sw/M.dw,ry=M.sy+(my-M.dy)*M.sh/M.dh,bx=pv.box;
+ const lx=Math.round(rx-(bx.L+bx.R)/2),ly=Math.round(ry-(bx.T+bx.B)/2);
+ if(l.move==='path'){const kf=l.keys[clamp(crbEditKey,0,l.keys.length-1)];kf.x=clamp(lx,-640,640);kf.y=clamp(ly,-480,480)}
+ else{l.pointX=clamp(lx,-320,320);l.pointY=clamp(ly,-240,240)}
+ return true;
+}
+window.addEventListener('pointermove',e=>{
+ if(!crbDrag)return;
+ if(screen!=='creator'||!(e.buttons&1)){crbDrag=false;try{syncCustomBossFromConfig();saveSandboxConfig()}catch(_){}return}
+ const pt=ui6CanvasPoint(e);crbPvTap(pt.x,pt.y);
+},true);
+window.addEventListener('pointerup',()=>{if(crbDrag){crbDrag=false;try{syncCustomBossFromConfig();saveSandboxConfig()}catch(_){}}},true);
 function crbDrawPreview(r,now){
  const c=sandboxConfig.customCharacter,p=creatorPatternAt(creatorEditPattern,c);
  if(!crbPv){const cv=document.createElement('canvas');cv.width=640;cv.height=480;crbPv={cv,g:cv.getContext('2d'),key:'',last:now,acc:0}}
@@ -1956,6 +2158,13 @@ function crbDrawPreview(r,now){
  const bx=crbPv.box,dw=r.w-40,dh=360,dx=r.x+20,dy=r.y+20;
  const k=Math.min(3,dw/(bx.R-bx.L+70),dh/(bx.B-bx.T+130)),sw=dw/k,sh=dh/k,sx=320-sw/2,sy=Math.min(480-sh,bx.B+30-sh);
  uiUnstretch(r.x+r.w/2,()=>{ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(crbPv.cv,sx,sy,sw,sh,dx,dy,dw,dh);ctx.restore()});
+ const ax=r.x+r.w/2,kk=uiStretch?UISX:1;crbPv.map={ax,dx,dy,dw,dh,sx,sy,sw,sh};
+ const el=crbEditingLayer(p);
+ if(el&&(el.move==='path'||el.from==='point')){
+  const hr={x:ax+(dx-ax)/kk,y:dy,w:dw/kk,h:dh};
+  ui6Hit(hr,(x,y)=>{if(crbPvTap(x,y)){crbDrag=true;play('move')}});
+  ui6T(el.move==='path'?`TAP: KEYFRAME ${clamp(crbEditKey,0,el.keys.length-1)+1}`:'TAP: PICK THE SPOT',dx+dw/2,dy+10,{f:'small',s:2,c:UI6_C.yellow,a:'center'});
+ }
  ui6T('PREVIEW',dx+10,dy+10,{f:'small',s:2,c:UI6_C.gray});
  ui6T(`HITS ${crbPv.hits}`,dx+dw-10,dy+10,{f:'small',s:2,c:crbPv.hits?UI6_C.red:UI6_C.gray,a:'right'});
  return dy+dh;
