@@ -7188,129 +7188,116 @@ function drawEnemySelectOld(now=performance.now()){
 
 // ---------- INNERTALE ENGINE ----------
 /* ==========================================================================
-   INNERTALE ENGINE // the menus in the green of DELTARUNE Chapter 3's Green Room.
-   The backdrop is that room's wall (obj_dw_green_room_wall_fx / obj_dw_green_room_bg_fx in the
-   Chapter 3 decomp): its teal-to-green gradient, the diagonal rows that scroll across it, the
-   shines and vines along the top. The decomp has no sprite files, so the wall row and the
-   vines are drawn here from that code's colours and spacing.
-   New screens: the title (PLAY / CONFIG / the rest), CHOOSE! (UNDERTALE, DELTARUNE or EXTRA),
-   WHICH? (BOSS, ENEMY or MINI BOSS) and CHOOSE BOSS (a card carousel with FIGHT and CUSTOM).
+   INNERTALE ENGINE // the menus, in the green of DELTARUNE Chapter 3's Green Room.
+   The new screens (title, CHOOSE!, WHICH?, CHOOSE BOSS, loading) are drawn the way a game
+   draws its menus: on a 644x362 canvas at one pixel scale, then blown up 3x to the screen,
+   so every pixel, line and letter is the same size. One small palette: black panels with
+   a light-green frame, white text, yellow for what's picked, the red SOUL as the cursor.
+   The backdrop is the Green Room's wall (obj_dw_green_room_wall_fx / obj_dw_green_room_bg_fx
+   in the Chapter 3 decomp): its teal-to-green wall, the rows that scroll diagonally across
+   it, the vines along the top, the light strip at its foot; here with a tiled floor below.
+   The decomp has no sprite files, so the rows and the vines are drawn from that code's
+   colours and spacing. The older menu screens keep their layouts on the same backdrop.
    ========================================================================== */
-// the kit's palette: the highlight, the frames and the idle text go green
-Object.assign(UI6_C,{pink:'#7dff5a',plum:'#1f5c3c',lav:'#9fd886',lavDim:'#4f8a5a'});
-const IT_COL={'#ff6aa6':'#e4ffa8','#d4105e':'#36c24c','#33061d':'#04210c','#ffa3c8':'#c8f7a4','#8a1747':'#2e8a3e','#2a2238':'#17301f',
- '#4d4560':'#3c5a45','#1d0c33':'#062410','#c4b2ec':'#b6f29a','#050308':'#03120a','#ff2a7a':'#7dff5a','#3d2163':'#1f5c3c','#9a76d6':'#9fd886','#5f4893':'#4f8a5a'};
+// the older screens: the kit's palette and pinks go green
+Object.assign(UI6_C,{pink:'#c8f7a4',plum:'#1f5c3c',lav:'#9fd886',lavDim:'#4f8a5a'});
+const IT_COL={'#ff6aa6':'#ffffff','#d4105e':'#c8f7a4','#33061d':'#0b2414','#ffa3c8':'#c8f7a4','#8a1747':'#2e8a3e','#2a2238':'#17301f',
+ '#4d4560':'#3c5a45','#1d0c33':'#0b2414','#c4b2ec':'#c8f7a4','#050308':'#050d08','#ff2a7a':'#ffff00','#3d2163':'#1f5c3c','#9a76d6':'#9fd886','#5f4893':'#4f8a5a'};
 function itc(c){return typeof c==='string'&&IT_COL[c.toLowerCase()]||c}
-// headline colours: pale lime to green, a deep green outline
-const IT_HEAD={top:'#efffc2',bottom:'#3fcf55',shadow:'#04210c'};
 UI6_SCREENS.add('itwhich');
 
-// ---------------------------------------------------------------- the wall --
-const IT_K=H/480; // the room's 480 rows on our 1086
-// GameMaker colours are BGR: wall_dark 9997923, wall_light 8643752
-const IT_WALL_DARK='#638e98',IT_WALL_LIGHT='#a8e483';
-const itMerge=(a,b,t)=>{const p=parseInt(a.slice(1),16),q=parseInt(b.slice(1),16),m=(s)=>Math.round((p>>s&255)+((q>>s&255)-(p>>s&255))*t);return `rgb(${m(16)},${m(8)},${m(0)})`};
-// spr_dw_green_room_bg_fx_wallrow, as this engine draws it: a band of pixel stars and diamonds
-const IT_STAR=['...#...','..###..','.#####.','#######','.#####.','..###..','...#...'];
-const IT_SHINE=[['...#...','...#...','..###..','#######','..###..','...#...','...#...'],['.......','...#...','..###..','.#####.','..###..','...#...','.......']];
-function itBitmap(rows,x,y,s,color){
- const fr=CanvasRenderingContext2D.prototype.fillRect;ctx.fillStyle=color;
- rows.forEach((row,r)=>{for(let c=0;c<row.length;c++){if(row[c]!=='#')continue;let e=c;while(row[e+1]==='#')e++;fr.call(ctx,Math.round(x+c*s),Math.round(y+r*s),(e-c+1)*s,s);c=e}});
+// ------------------------------------------------------------ the canvas --
+const LW=644,LH=362,LS=3;
+const ITC={panel:'#06100a',frame:'#c8f7a4',frameIn:'#2c5c3a',text:'#ffffff',dim:'#9fd886',off:'#4f7a58',sel:'#ffff00',shadow:'#0b2414'};
+let itCv=null,itG=null;
+function itLow(){if(!itCv){itCv=document.createElement('canvas');itCv.width=LW;itCv.height=LH;itG=itCv.getContext('2d');itG.imageSmoothingEnabled=false}return itG}
+function itBlit(){
+ const st=uiStretch;uiStretch=false;ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.imageSmoothingEnabled=false;
+ ctx.drawImage(itCv,0,0,LW*LS,LH*LS);ctx.restore();uiStretch=st;
 }
-let itVine=null;
-function itVineStrip(){
- // spr_dw_green_room_vines tiled along the top edge: a leafy band with drips
- if(itVine)return itVine;
- const k=Math.round(IT_K*2),w=40*k,h=18*k,c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');
- g.fillStyle='#2c6b3b';g.fillRect(0,0,w,6*k);
- g.fillStyle='#3f8a4a';for(let x=0;x<40;x+=8){g.fillRect(x*k,5*k,5*k,3*k);g.fillRect((x+2)*k,8*k,3*k,(x%16?4:8)*k)}
- g.fillStyle='#62b35a';for(let x=4;x<40;x+=8){g.fillRect(x*k,3*k,3*k,3*k);g.fillRect((x+1)*k,(x%16?11:15)*k,2*k,2*k)}
- g.fillStyle='#9fd886';for(let x=0;x<40;x+=16)g.fillRect((x+6)*k,2*k,2*k,1*k);
- return itVine=c;
-}
-function itBackdrop(now){
- const st=uiStretch;uiStretch=false;ctx.save();ctx.setTransform(1,0,0,1,0,0);
- // the wall: dark at the top, light at the bottom (ossafe_fill_rectangle_color)
- const lg=ctx.createLinearGradient(0,0,0,H);lg.addColorStop(0,IT_WALL_DARK);lg.addColorStop(1,IT_WALL_LIGHT);
- ctx.fillStyle=lg;ctx.fillRect(0,0,CW,H);
- // the rows: step 40 across and 44 down, scrolling left and down (xadj -= 1, yadj += 1 at 30 steps a second)
- const t=uiReducedMotion?0:now/(1000/30),k=IT_K,xadj=-(t%80),yadj=t%88,sz=Math.max(3,Math.round(k*1.8));
- for(let i=0;i<14;i++){
-  const ry=-40+yadj+44*i,amt=clamp(ry/300,0,1),col=itMerge('#66839d','#8cb497',amt),alph=clamp(1-ry/620,.25,1)*.9;
-  const y=ry*k,x0=(xadj+i*40-200)*k;
-  ctx.globalAlpha=alph;
-  for(let x=x0;x<CW+80*k;x+=80*k)itBitmap(IT_STAR,x,y,sz,col);
-  ctx.globalAlpha=alph*.35;
-  for(let x=x0+40*k;x<CW+80*k;x+=80*k)itBitmap(IT_STAR,x,y,sz,col);
- }
- ctx.globalAlpha=1;
- // the vines along the top, and the shines (spr_shine_white, blended #E8FFC8) under them
- const vine=itVineStrip();for(let x=0;x<CW;x+=vine.width)ctx.drawImage(vine,x,0);
- const ss=Math.max(2,Math.round(k));
- for(let i=0;i*55*k<CW;i++){
-  const f=Math.floor((t*.08+(i%3===1?1:0)))%2;
-  itBitmap(IT_SHINE[f],i*55*k+12,(i%2?4:10)*k+vine.height-4*k,ss,'#e8ffc8');
- }
- // the light strip along the bottom of the wall (#9FD886, alpha .3)
- ctx.fillStyle='rgba(159,216,134,.3)';ctx.fillRect(0,H-26*k,CW,26*k);
- // keep white text readable: a soft green shade and a darker edge
- ctx.fillStyle='rgba(3,28,12,.34)';ctx.fillRect(0,0,CW,H);
- // green motes drifting up, twinkling
- if(!uiReducedMotion)for(let i=0;i<48;i++){
-  const sp=.35+((i*37)%17)/17*.9,sx=(i*197.31)%CW,sw=Math.sin(t/40+i)*18;
-  const y=H+20-((t*sp+i*131)%(H+60)),x=(sx+sw+t*.15*((i%3)-1)+CW)%CW;
-  const tw=(Math.sin(t/9+i*1.7)+1)/2,sz=2+((i*7)%3)*Math.round(k);
-  ctx.globalAlpha=.18+tw*.45;ctx.fillStyle=i%4?'#e8ffc8':'#9fd886';ctx.fillRect(Math.round(x),Math.round(y),sz,sz);
-  if(sz>4&&tw>.7){ctx.fillRect(Math.round(x)-sz,Math.round(y)+sz/2-1,sz*3,2);ctx.fillRect(Math.round(x)+sz/2-1,Math.round(y)-sz,2,sz*3)}
- }
- ctx.globalAlpha=1;
- const rg=ctx.createRadialGradient(CW/2,H*.48,H*.3,CW/2,H*.48,H*1.05);rg.addColorStop(0,'rgba(0,0,0,0)');rg.addColorStop(1,'rgba(0,18,6,.55)');
- ctx.fillStyle=rg;ctx.fillRect(0,0,CW,H);
- ctx.fillStyle='rgba(0,14,5,.45)';ctx.fillRect(0,H-84,CW,84); // under the footer
- ctx.restore();uiStretch=st;
-}
+// mouse regions are kept in the menu's own (stretched) coordinates
+function itRect(x,y,w,h){return{x:x*LS/UISX,y:y*LS,w:w*LS/UISX,h:h*LS}}
+function itHit(x,y,w,h,click,hover){ui6Hit(itRect(x,y,w,h),click,hover)}
 
-// ------------------------------------------------------------- pieces --
-// "cool text": each letter on its own bob, lime fading to green
-function itWaveText(t,cx,y,s,o={}){
- const total=ui6W(t,'text',s);let x=cx-total/2;
- const now=performance.now(),band=uiReducedMotion?-9:((now/2200)%1.6-.3)*total;
- [...t].forEach((ch,i)=>{
-  const bob=uiReducedMotion?0:Math.round(Math.sin(now/260+i*.55)*(o.amp??6)),cw=ui6W(ch,'text',s);
-  if(ch!==' '){
-   ui6BigText(ch,x,y+bob,{s,top:o.top||IT_HEAD.top,bottom:o.bottom||IT_HEAD.bottom,shadow:o.shadow||IT_HEAD.shadow});
-   const d=Math.abs(x+cw/2-cx+total/2-band);
-   if(d<cw*1.6){ctx.save();ctx.globalAlpha*=(1-d/(cw*1.6))*.85;ui6BigText(ch,x,y+bob,{s,top:'#ffffff',bottom:'#e9ffc8',shadow:o.shadow||IT_HEAD.shadow});ctx.restore()}
-  }
-  x+=cw;
- });
+// text from the game's own font atlases: 'main' (fnt_main, chunky headings), 'text' (fnt_maintext)
+function lW(t,f='text',s=1,sp=0){return ui6W(t,f,s)+Math.max(0,String(t).length-1)*sp}
+function lT(g,t,x,y,o={}){
+ const f=o.f||'text',s=o.s||1,sp=o.sp||0;t=String(t??'');
+ const w=lW(t,f,s,sp);let left=o.a==='center'?x-w/2:o.a==='right'?x-w:x;left=Math.round(left);y=Math.round(y);
+ const draw=(color,dx,dy)=>{const at=ui6Atlas(f,color);if(!at)return;let cx=left+dx;
+  for(const ch of t){const gl=ui6Glyph(f,ch);if(!gl)continue;if(gl[2]>0&&gl[3]>0)g.drawImage(at,gl[0],gl[1],gl[2],gl[3],cx+gl[5]*s,y+dy,gl[2]*s,gl[3]*s);cx+=gl[4]*s+sp}};
+ if(o.shadow){const d=o.sd||1;draw(o.shadow,d,d);if(o.outline){for(const [dx,dy] of [[-d,0],[d,0],[0,-d],[0,d],[-d,-d],[d,-d],[-d,d]])draw(o.shadow,dx,dy)}}
+ draw(o.c||ITC.text,0,0);
+ return w;
 }
-// a big framed button: a green plate with corner brackets; lit, it glows and gets the SOUL
-function itButton(r,label,on,o={}){
- const pulse=uiReducedMotion?0:(Math.sin(performance.now()/200)+1)/2;
- const border=on?`rgb(${125+Math.round(80*pulse)},255,${90+Math.round(80*pulse)})`:'#2f7a46';
- ui6Frame(r,{color:border,base:on?'#3fcf55':'#1f5c3c',tint:on?.5:.3,b:o.b||6,cs:on?3:2});
- if(on&&!uiReducedMotion){
-  const ph=(performance.now()/1400)%1.4,sx=r.x-r.w*.3+ph*r.w*1.2;
-  ctx.save();ctx.beginPath();ctx.rect(r.x+6,r.y+6,r.w-12,r.h-12);ctx.clip();
-  const g=ctx.createLinearGradient(sx,0,sx+r.w*.25,0);g.addColorStop(0,'rgba(239,255,194,0)');g.addColorStop(.5,'rgba(239,255,194,.28)');g.addColorStop(1,'rgba(239,255,194,0)');
-  ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(sx,r.y+r.h);ctx.lineTo(sx+r.w*.12,r.y);ctx.lineTo(sx+r.w*.37,r.y);ctx.lineTo(sx+r.w*.25,r.y+r.h);ctx.fill();ctx.restore();
+function lWrap(t,maxW){return ui6Wrap(t,maxW,'text',1)}
+function lFill(g,x,y,w,h,c){g.fillStyle=c;g.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h))}
+// a panel: black inside, a 1px light frame with a darker line inside it
+function lBox(g,x,y,w,h,sel){
+ lFill(g,x,y,w,h,sel?ITC.sel:ITC.frame);lFill(g,x+1,y+1,w-2,h-2,ITC.frameIn);lFill(g,x+2,y+2,w-4,h-4,ITC.panel);
+}
+function lBitmap(g,rows,x,y,c){g.fillStyle=c;rows.forEach((row,r)=>{for(let k=0;k<row.length;k++)if(row[k]==='#')g.fillRect(Math.round(x)+k,Math.round(y)+r,1,1)})}
+// the SOUL (spr_heart) at its own size
+function lSoul(g,x,y){const im=images.heart||images.heartFallback;if(im)g.drawImage(im,Math.round(x),Math.round(y),16,16);else lBitmap(g,UI_PIXEL_HEART.map(r=>r.replace(/X/g,'#')),x+1,y+2,'#ff0000')}
+// a sprite at a whole-number scale (or half, for the ones exported at 2x), feet on `by`
+function lSpr(g,im,cx,by,maxW,maxH,o={}){
+ if(!im)return 0;const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;if(!iw||!ih)return 0;
+ let s=o.s;if(s==null){s=Math.min(maxW/iw,maxH/ih);s=s>=1?Math.min(Math.floor(s),o.max??1):(s>=.5?.5:s)}
+ const w=Math.round(iw*s),h=Math.round(ih*s);
+ g.save();if(o.alpha!=null)g.globalAlpha=o.alpha;g.drawImage(im,Math.round(cx-w/2),Math.round(by-h),w,h);g.restore();
+ return h;
+}
+// a filled circle, pixel by pixel
+function lDisc(g,cx,cy,r,c){g.fillStyle=c;for(let dy=-r;dy<=r;dy++){const hw=Math.floor(Math.sqrt(r*r-dy*dy+r*.6));g.fillRect(cx-hw,cy+dy,hw*2+1,1)}}
+function lShadow(g,cx,y,w){lFill(g,cx-w/2+2,y,w-4,1,'#15301e');lFill(g,cx-w/2,y+1,w,2,'#15301e');lFill(g,cx-w/2+2,y+3,w-4,1,'#15301e')}
+const L_SPARK=[['..#..','..#..','#####','..#..','..#..'],['.....','..#..','.###.','..#..','.....']];
+
+// ---------------------------------------------------------------- the wall --
+// GameMaker colours are BGR: wall_dark 9997923 (#638E98) at the top, wall_light 8643752 (#A8E483) at the
+// foot; banded here like pixel art, and taken darker so text and panels stand off it.
+const IT_BANDS=['#2f4f58','#33585a','#37625b','#3c6b5b','#42745a','#487d57','#4f8654','#568e50'];
+const IT_ROWS=IT_BANDS.map(c=>{const n=parseInt(c.slice(1),16),f=v=>Math.min(255,v+22);return `rgb(${f(n>>16&255)},${f(n>>8&255)},${f(n&255)})`});
+const L_DIAMOND=['..#..','.###.','#####','.###.','..#..'];
+const IT_FLOOR=292;
+function itWall(g,now){
+ const t=uiReducedMotion?0:Math.floor(now/(1000/30));
+ const bh=Math.ceil(IT_FLOOR/IT_BANDS.length);
+ IT_BANDS.forEach((c,i)=>lFill(g,0,i*bh,LW,bh,c));
+ // the rows: a diamond every 54px, the half-strength copy between, each row 27px over and 30px down,
+ // all drifting left and down (xadj -= 1, yadj += 1 in the room, at half speed here)
+ const ox=-((t>>1)%54),oy=(t>>1)%30;
+ for(let r=-1;r<11;r++){
+  const y=r*30+oy-6;if(y>IT_FLOOR-6)break;
+  const band=clamp(Math.floor((y+2)/bh),0,IT_BANDS.length-1),x0=ox+((r*27)%54+54)%54-54;
+  for(let x=x0;x<LW+54;x+=54){lBitmap(g,L_DIAMOND,x,y,IT_ROWS[band]);if(r%2===0){g.globalAlpha=.45;lBitmap(g,L_DIAMOND,x+27,y+15,IT_ROWS[band]);g.globalAlpha=1}}
  }
- const s=o.s||5,cap=UI6F.text.cap*s;
- ui6BigText(label,r.x+r.w/2,r.y+Math.round((r.h-cap)/2)-2,{s,a:'center',top:on?'#ffffff':'#c8f7a4',bottom:on?'#7dff5a':'#4f8a5a',shadow:'#04210c'});
- if(on)ui6Soul(r.x+42,r.y+r.h/2,2);
+ // the vines along the top (spr_dw_green_room_vines), and a few shines (spr_shine_white, #E8FFC8) under them
+ lFill(g,0,0,LW,4,'#16301e');
+ for(let x=0;x<LW;x+=8){const k=(x/8)%5;lFill(g,x+1,3,4,2,'#24482e');lFill(g,x+2,5,2,k===1?5:k===3?3:2,'#24482e');if(k===1)lFill(g,x+2,9,2,1,'#3d7146');lFill(g,x+3,2,2,1,'#3d7146')}
+ const tw=Math.floor(t/12);
+ for(let i=0;i<12;i++){const x=24+i*54+(i%2?13:0),y=16+(i%3)*5;if((tw+i)%4!==0)lBitmap(g,L_SPARK[(tw+i)%2],x,y,'#e8ffc8')}
+ // the foot of the wall: the light strip (#9FD886), then the floor's tiles
+ lFill(g,0,IT_FLOOR-4,LW,4,'#5f9a58');lFill(g,0,IT_FLOOR-1,LW,1,'#9fd886');
+ lFill(g,0,IT_FLOOR,LW,LH-IT_FLOOR,'#1d3826');
+ for(let y=IT_FLOOR+2,row=0;y<LH;y+=10,row++)for(let x=(row%2)*16-16;x<LW;x+=32){lFill(g,x+4,y,24,1,'#24452f');lFill(g,x,y+1,32,3,'#24452f');lFill(g,x+4,y+4,24,1,'#24452f')}
 }
-function itSmallButton(r,label,icon,on){
- ui6Frame(r,{color:on?'#7dff5a':'#2f7a46',base:on?'#3fcf55':'#1f5c3c',tint:on?.45:.28,b:4,cs:2});
- if(icon)ui6Icon(icon,r.x+34,r.y+r.h/2,3,on?'#efffc2':'#9fd886');
- ui6T(label,r.x+(icon?62:r.w/2),r.y+Math.round((r.h-UI6F.text.cap*2)/2),{s:2,c:on?UI6_C.yellow:'#c8f7a4',a:icon?'left':'center'});
+// every menu screen sits on it (the older screens draw their own panels over it at full size)
+function itBackdrop(now){const g=itLow();itWall(g,now);itBlit()}
+
+// ------------------------------------------------------------- sprites --
+ui6Load('sansFace','sprites/images/spr_face_sans_0.png');
+ui6Load('itSansLegs','sprites/images/spr_sansb_legs_0.png');ui6Load('itSansTorso','sprites/images/spr_sansb_torso_7.png');ui6Load('itSansFaceB','sprites/images/spr_sansb_face_14.png');
+ui6Load('itFrisk','sprites/images/spr_maincharad_0.png');
+// Sans standing, from his battle parts at the Sans fight's offsets (its default torso and face frames)
+let itSansCv=null;
+function itSansBody(){
+ if(itSansCv)return itSansCv;
+ const L=ui6Img.itSansLegs,T=ui6Img.itSansTorso,F=ui6Img.itSansFaceB;if(!L||!T||!F)return null;
+ const c=document.createElement('canvas');c.width=60;c.height=75;const g=c.getContext('2d');g.imageSmoothingEnabled=false;
+ g.drawImage(L,30-21,61-11);g.drawImage(itKeyBorder(T),30-27,37-12);g.drawImage(itKeyBorder(F),30-16,16-15);
+ return itSansCv=c;
 }
-function itSparkle(x,y,s,phase){
- const tw=uiReducedMotion?1:(Math.sin(performance.now()/300+phase)+1)/2;
- if(tw<.15)return;
- ui6Bitmap(UI6_SPARKLE,x,y,Math.max(1,Math.round(s*(.6+tw*.6))),'#efffc2');
-}
-// a sprite with the black around it (the HUD heads sit on black) made see-through: a flood fill from the edges
+// a sprite with the black around it (portraits and HUD heads sit on black) made see-through
 const itKeyed=new WeakMap();
 function itKeyBorder(im){
  if(!im)return null;let c=itKeyed.get(im);if(c)return c;
@@ -7319,148 +7306,121 @@ function itKeyBorder(im){
  try{
   const d=g.getImageData(0,0,w,h),a=d.data,seen=new Uint8Array(w*h),st=[];
   const dark=i=>a[i*4+3]===0||(a[i*4]<24&&a[i*4+1]<24&&a[i*4+2]<24);
-  for(let x=0;x<w;x++){st.push(x,(h-1)*w+x)}for(let y=0;y<h;y++){st.push(y*w,y*w+w-1)}
+  for(let x=0;x<w;x++)st.push(x,(h-1)*w+x);for(let y=0;y<h;y++)st.push(y*w,y*w+w-1);
   while(st.length){const i=st.pop();if(seen[i]||!dark(i))continue;seen[i]=1;a[i*4+3]=0;const x=i%w,y=(i-x)/w;if(x>0)st.push(i-1);if(x<w-1)st.push(i+1);if(y>0)st.push(i-w);if(y<h-1)st.push(i+w)}
   g.putImageData(d,0,0);
  }catch(_){}
  itKeyed.set(im,c);return c;
 }
-// the top part of a sprite (a head) filling a circle
-function itHead(im,cx,cy,r,frac=.42){
- if(!im)return false;
- const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;if(!iw||!ih)return false;
- const sh=ih*frac,s=Math.floor(Math.min(r*1.6/iw,r*1.6/sh));
- uiUnstretch(cx,()=>{ctx.save();ctx.imageSmoothingEnabled=false;ctx.beginPath();ctx.arc(cx,cy,r-6,0,Math.PI*2);ctx.clip();
-  ctx.drawImage(im,0,0,iw,sh,Math.round(cx-iw*s/2),Math.round(cy-sh*s/2+(frac<1?r*.1:0)),Math.round(iw*s),Math.round(sh*s));ctx.restore()});
- return true;
-}
-function itRing(cx,cy,r){
- if(uiReducedMotion)return;
- const a0=performance.now()/1400;
- for(let i=0;i<8;i++){const a=a0+i*Math.PI/4,tw=(Math.sin(performance.now()/250+i)+1)/2;ui6Bitmap(UI6_SPARKLE,cx+Math.cos(a)*(r+34)/(uiStretch?UISX:1),cy+Math.sin(a)*(r+34),tw>.5?3:2,i%2?'#efffc2':'#9fd886')}
-}
-function itCircle(cx,cy,r,on){
- if(on)itRing(cx,cy,r);
- uiUnstretch(cx,()=>{
-  ctx.save();
-  const g=ctx.createRadialGradient(cx,cy-r*.3,r*.1,cx,cy,r);g.addColorStop(0,on?'#3fae55':'#2a6e45');g.addColorStop(1,on?'#0f4a24':'#0a2c17');
-  ctx.fillStyle=on?'#efffc2':'#4f8a5a';ctx.beginPath();ctx.arc(cx,cy,r+7,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
-  ctx.restore();
- });
-}
-ui6Load('itSansLegs','sprites/images/spr_sansb_legs_0.png');ui6Load('itSansTorso','sprites/images/spr_sansb_torso_0.png');ui6Load('itSansFaceB','sprites/images/spr_sansb_face_0.png');
-ui6Load('itFrisk','sprites/images/spr_maincharad_0.png');
-let itSansCv=null;
-function itSansBody(){
- if(itSansCv)return itSansCv;
- const L=ui6Img.itSansLegs,T=ui6Img.itSansTorso,F=ui6Img.itSansFaceB;if(!L||!T||!F)return null;
- const c=document.createElement('canvas');c.width=120;c.height=150;const g=c.getContext('2d');g.imageSmoothingEnabled=false;
- const put=(im,x,y,ox,oy)=>g.drawImage(im,x-ox*2,y-oy*2,im.width*2,im.height*2);
- put(L,60,122,21,11);put(T,60,74,26,12);put(F,60,32,16,15);
- return itSansCv=c;
-}
-// Sans's face for the UNDERTALE circle: his dialogue portrait (spr_face_sans), loaded on its own
-ui6Load('sansFace','sprites/images/spr_face_sans_0.png');
+// the roster's exports come at 1x, 2x or 4x: halve until it fits `room` (back to the game's own size)
+function lFit(im,room){const ih=im.naturalHeight||im.height,iw=im.naturalWidth||im.width;let s=1;while(s>.125&&(ih*s>room||iw*s>room*1.4))s/=2;return s}
+const itBoss=(id,now)=>{const b=BOSS_OPTIONS.find(o=>o.id===id);return b?bossImage(b,now):null};
+function itFooter(g,text){lT(g,text,LW/2,LH-17,{c:ITC.dim,a:'center',shadow:ITC.shadow})}
+function itHeading(g,text,y=12){lT(g,text,LW/2,y,{f:'main',c:ITC.text,a:'center',shadow:ITC.shadow,outline:true,sd:2})}
+function itDesc(g,text,y){lWrap(text,560).slice(0,2).forEach((ln,k)=>lT(g,ln,LW/2,y+k*16,{c:ITC.text,a:'center',shadow:ITC.shadow}))}
 
 // ---------------------------------------------------------------- title --
 // TITLE_MENU in the new order: PLAY and CONFIG first, then the rest
 {
  const by=id=>TITLE_MENU.find(m=>m.id===id);
  const order=['battle','settings','online','creator','records','mods'].map(by).filter(Boolean);
- by('battle').label='PLAY';by('battle').hint='UNDERTALE, DELTARUNE AND EXTRAS';
+ by('battle').label='PLAY';by('battle').hint='UNDERTALE, DELTARUNE AND THE EXTRAS';
  by('settings').label='CONFIG';by('settings').hint='FRAME RATE, AUTO LOADOUT, THE TUTORIAL';
  TITLE_MENU.splice(0,TITLE_MENU.length,...order);
 }
-const IT_TITLE_ICONS={online:'souls',creator:'pencil',records:'trophy',mods:'bolt'};
-function itTitleRects(){
- const R={};
- R.battle={x:820,y:430,w:480,h:130};
- R.settings={x:880,y:590,w:400,h:100};
- const small=['online','creator','records','mods'];
- small.forEach((id,k)=>{R[id]={x:700+(k%2)*330,y:740+Math.floor(k/2)*76,w:310,h:62}});
- return R;
-}
 let itDrBooted=false;
-function itCast(now){
- // the characters on the left, on the floor: UNDERTALE at the back, the DELTARUNE party in front
+function itCast(g,now){
+ // UNDERTALE at the back, the DELTARUNE party and Frisk in front, all at the games' own scale
  const t=Math.floor(now/(1000/30));
  if(!itDrBooted){itDrBooted=true;try{DR.load()}catch(_){}}
- const pick=id=>{const b=BOSS_OPTIONS.find(o=>o.id===id);return b?bossImage(b,now):null};
- const ut=[pick('toriel'),pick('papyrus'),itSansBody(),pick('undyne')].filter(Boolean);
- const floor=990,gap=Math.min(150,540/Math.max(1,ut.length));
- const shadow=(cx,y,w)=>uiUnstretch(cx,()=>{ctx.save();ctx.fillStyle='rgba(2,30,10,.38)';ctx.beginPath();ctx.ellipse(cx,y,w/2,w/9,0,0,Math.PI*2);ctx.fill();ctx.restore()});
- const breathe=k=>uiReducedMotion?0:Math.round(Math.sin(now/520+k*1.3)*3);
- ut.forEach((im,k)=>{const cx=110+k*gap,by=floor-130;shadow(cx,by+2,110);ui6Sprite(im,cx,by+breathe(k),170,330,{bottom:true,smoothScale:true,alpha:.94})});
- // the front row at one size (3x)
+ const back=[itBoss('toriel',now),itBoss('papyrus',now),itSansBody(),itBoss('undyne',now)];
+ const bx=[48,124,196,262],floor=IT_FLOOR+16;
+ back.forEach((im,k)=>{if(!im)return;lShadow(g,bx[k],floor-1,44);lSpr(g,im,bx[k],floor,999,999,{s:lFit(im,150)})});
  const front=[];
- const fr=images.friskIdle,fi=ui6Img.itFrisk;
- if(fr&&fr[0])front.push(fr[Math.floor(t/8)%fr.length]||fr[0]);else if(fi)front.push(fi);
- if(typeof DR!=='undefined'&&DR.ready)['spr_krisb_idle','spr_susieb_idle','spr_ralsei_idle'].forEach(n=>{const im=DR.gfx.frame(n,t/5);if(im)front.push(im)});
- let fx=70;
- front.forEach((im,k)=>{const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height,cx=fx+iw*1.5;shadow(cx,floor+2,iw*2.6);ui6Sprite(im,cx,floor+breathe(k+4),iw*3,ih*3,{bottom:true});fx+=iw*3+16});
+ const fr=images.friskIdle,fi=ui6Img.itFrisk;front.push(fr&&fr[0]?(fr[Math.floor(t/8)%fr.length]||fr[0]):fi);
+ if(typeof DR!=='undefined'&&DR.ready)for(const n of ['spr_krisb_idle','spr_susieb_idle','spr_ralsei_idle'])front.push(DR.gfx.frame(n,t/5));
+ const fx=[34,92,158,226];
+ front.forEach((im,k)=>{if(!im)return;lShadow(g,fx[k],floor+21,26);lSpr(g,im,fx[k],floor+22,999,999,{s:1})});
+}
+function itTitleLayout(){
+ const cx=450;
+ return{cx,play:{x:cx-80,y:120,w:160,h:34},config:{x:cx-80,y:162,w:160,h:28},row:{y:206},hint:228};
 }
 function itDrawTitle(now=performance.now()){
- itCast(now);
- // INNERTALE ENGINE, top right, bobbing
- itWaveText('INNERTALE',1010,70,9);
- itWaveText('ENGINE',1010,200,12,{amp:4});
- for(const [x,y,s,p] of [[640,110,3,0],[1390,150,4,1.7],[700,330,2,3.1],[1360,380,3,4.4],[80,70,4,2.2],[560,40,2,5]])itSparkle(x,y,s,p);
- const R=itTitleRects();
- TITLE_MENU.forEach((m,i)=>{
-  const r=R[m.id];if(!r)return;ui6Marks['title_'+m.id]=r;
-  const on=i===mainSelected;
-  if(m.id==='battle')itButton(r,m.label,on,{s:7});
-  else if(m.id==='settings')itButton(r,m.label,on,{s:5});
-  else itSmallButton(r,m.label,IT_TITLE_ICONS[m.id],on);
-  ui6Hit(r,()=>titleActivate(i),()=>{if(mainSelected!==i){mainSelected=i;play('move')}});
+ const g=itLow();itWall(g,now);
+ itCast(g,now);
+ const L=itTitleLayout(),cx=L.cx;
+ // the logo: INNERTALE in fnt_main at 2x, ENGINE spaced out under it
+ lT(g,'INNERTALE',cx,24,{f:'main',s:2,c:'#ffffff',a:'center',shadow:'#0b2414',outline:true,sd:2});
+ lT(g,'ENGINE',cx,86,{c:'#c8f7a4',a:'center',sp:9,shadow:ITC.shadow});
+ const sel=mainSelected;
+ for(const [id,r] of [['battle',L.play],['settings',L.config]]){
+  const i=TITLE_MENU.findIndex(m=>m.id===id),m=TITLE_MENU[i],on=i===sel,big=id==='battle';
+  lBox(g,r.x,r.y,r.w,r.h,on);
+  lT(g,m.label,r.x+r.w/2,r.y+Math.round((r.h-(big?26:13))/2)+(big?1:0),{f:big?'main':'text',c:on?ITC.sel:ITC.text,a:'center'});
+  if(on)lSoul(g,r.x+10,r.y+Math.round(r.h/2)-8);
+  ui6Marks['title_'+id]=itRect(r.x,r.y,r.w,r.h);
+  itHit(r.x,r.y,r.w,r.h,()=>titleActivate(i),()=>{if(mainSelected!==i){mainSelected=i;play('move')}});
+ }
+ // the rest, in one row of words
+ const rest=TITLE_MENU.map((m,i)=>({m,i})).filter(o=>!['battle','settings'].includes(o.m.id));
+ const gap=26,ws=rest.map(o=>lW(o.m.label)),total=ws.reduce((p,v)=>p+v,0)+gap*(rest.length-1);
+ let x=cx-total/2;
+ rest.forEach((o,k)=>{
+  const on=o.i===sel;
+  lT(g,o.m.label,x,L.row.y,{c:on?ITC.sel:ITC.text,shadow:ITC.shadow});
+  if(on)lSoul(g,x-19,L.row.y-2);
+  ui6Marks['title_'+o.m.id]=itRect(x-4,L.row.y-4,ws[k]+8,21);
+  itHit(x-4,L.row.y-4,ws[k]+8,21,()=>titleActivate(o.i),()=>{if(mainSelected!==o.i){mainSelected=o.i;play('move')}});
+  x+=ws[k]+gap;
  });
- const item=TITLE_MENU[mainSelected]||TITLE_MENU[0];
- ui6T(item.hint||'',1000,900,{f:'small',s:3,c:'#c8f7a4',a:'center'});
- ui6Footer('ARROWS  MOVE      Z  SELECT      F11  FULLSCREEN','#c8f7a4');
+ const item=TITLE_MENU[sel]||TITLE_MENU[0];
+ lT(g,item.hint||'',cx,L.hint,{c:ITC.dim,a:'center',shadow:ITC.shadow});
+ itFooter(g,'ARROWS  MOVE      Z  SELECT      F11  FULLSCREEN');
+ itBlit();
 }
 
 // ------------------------------------------------------------- CHOOSE! --
 // 0 UNDERTALE, 1 DELTARUNE, 2 EXTRA
-function itPickRects(){const b=i=>gamePickSelected===i&&!uiReducedMotion?Math.round(Math.sin(performance.now()/380)*6):0;return[{cx:W/2-330,cy:440+b(0),r:170},{cx:W/2+330,cy:440+b(1),r:170},{x:W/2-200,y:760+b(2),w:400,h:150}]}
+const IT_PICK=[{cx:220,cy:128,r:62},{cx:424,cy:128,r:62},{x:257,y:242,w:130,h:36}];
 function itDrawGamePick(now=performance.now()){
- itWaveText('CHOOSE!',W/2,40,10,{amp:5});
- const R=itPickRects(),sel=gamePickSelected;
- // UNDERTALE: Sans's face
- {const c=R[0],on=sel===0;itCircle(c.cx,c.cy,on?c.r+12:c.r,on);
-  if(!itHead(itKeyBorder(ui6Img.sansFace),c.cx,c.cy,on?c.r+12:c.r,1))ui6T('LOADING...',c.cx,c.cy-10,{f:'small',s:3,c:'#c8f7a4',a:'center'});
-  ui6BigText('UT',c.cx,c.cy+c.r+30,{s:6,a:'center',...(on?IT_HEAD:{top:'#c8f7a4',bottom:'#4f8a5a',shadow:'#04210c'})});
-  ui6T(`${enemyCategoryLists().filter(g=>g.id!=='extras').reduce((p,g)=>p+g.list.length,0)} FIGHTS`,c.cx,c.cy+c.r+120,{f:'small',s:3,c:'#c8f7a4',a:'center'});
-  if(on)ui6Soul(c.cx,c.cy-c.r-36,2);
-  ui6Hit({x:c.cx-c.r,y:c.cy-c.r,w:c.r*2,h:c.r*2+140},()=>{if(on)gamePickActivate(0);else{gamePickSelected=0;play('move')}})}
- // DELTARUNE: Kris
- {const c=R[1],on=sel===1;itCircle(c.cx,c.cy,on?c.r+12:c.r,on);
-  const kris=typeof DR!=='undefined'&&DR.ready?itKeyBorder(DR.gfx.frame('spr_headkris',0)):null;
-  if(!itHead(kris,c.cx,c.cy,on?c.r+12:c.r,1))ui6T('LOADING...',c.cx,c.cy-10,{f:'small',s:3,c:'#c8f7a4',a:'center'});
-  ui6BigText('DR',c.cx,c.cy+c.r+30,{s:6,a:'center',...(on?IT_HEAD:{top:'#c8f7a4',bottom:'#4f8a5a',shadow:'#04210c'})});
-  ui6T(typeof DR!=='undefined'?`${DR.enemyIds.length} FIGHTS`:'',c.cx,c.cy+c.r+120,{f:'small',s:3,c:'#c8f7a4',a:'center'});
-  if(on)ui6Soul(c.cx,c.cy-c.r-36,2);
-  ui6Hit({x:c.cx-c.r,y:c.cy-c.r,w:c.r*2,h:c.r*2+140},()=>{if(on)gamePickActivate(1);else{gamePickSelected=1;play('move')}})}
- // EXTRA, with its sparkles
- {const r=R[2],on=sel===2;
-  uiUnstretch(r.x+r.w/2,()=>{ctx.save();const cx=r.x+r.w/2,cy=r.y+r.h/2;
-   ctx.fillStyle=on?'#efffc2':'#4f8a5a';ctx.beginPath();ctx.ellipse(cx,cy,r.w/2+7,r.h/2+7,0,0,Math.PI*2);ctx.fill();
-   const g=ctx.createLinearGradient(0,r.y,0,r.y+r.h);g.addColorStop(0,on?'#3fae55':'#2a6e45');g.addColorStop(1,on?'#0f4a24':'#0a2c17');
-   ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(cx,cy,r.w/2,r.h/2,0,0,Math.PI*2);ctx.fill();ctx.restore()});
-  ui6BigText('EXTRA',r.x+r.w/2,r.y+r.h/2-UI6F.text.cap*3,{s:6,a:'center',...(on?IT_HEAD:{top:'#c8f7a4',bottom:'#4f8a5a',shadow:'#04210c'})});
-  for(const [dx,dy,s,p] of [[-60,-30,4,0],[r.w+50,-20,3,1.3],[-90,r.h-10,3,2.6],[r.w+80,r.h,4,3.9],[r.w/2,-60,3,5.2],[-30,r.h+40,2,.7],[r.w+20,r.h+50,2,2]])itSparkle(r.x+dx,r.y+dy,on?s+1:s,p);
-  if(on)ui6Soul(r.x-50,r.y+r.h/2,2);
-  ui6Hit(r,()=>{if(on)gamePickActivate(2);else{gamePickSelected=2;play('move')}})}
- const text=['* Every UNDERTALE monster in this engine.\n* Pick BOSS, ENEMY or MINI BOSS next.','* Kris, Susie and Ralsei (or Noelle) vs DELTARUNE\'s enemies,\n  built from DELTARUNE\'s own battle code.','* The extras: custom monsters and fights from outside the games.'][sel]||'';
- ui6Wrap(text,W-200,'main',1).forEach((ln,k)=>ui6T(ln,W/2,950+k*34,{f:'main',s:1,c:'#c8f7a4',a:'center'}));
- ui6Footer('ARROWS  CHOOSE      Z  CONFIRM      X  BACK','#c8f7a4');
+ const g=itLow();itWall(g,now);
+ itHeading(g,'CHOOSE!');
+ const sel=gamePickSelected,t=Math.floor(now/(1000/30));
+ const fights=enemyCategoryLists().filter(c=>c.id!=='extras').reduce((p,c)=>p+c.list.length,0);
+ const games=[
+  {name:'UNDERTALE',count:`${fights} FIGHTS`,face:itKeyBorder(ui6Img.sansFace)},
+  {name:'DELTARUNE',count:typeof DR!=='undefined'?`${DR.enemyIds.length} FIGHTS`:'',face:typeof DR!=='undefined'&&DR.ready?itKeyBorder(DR.gfx.frame('spr_headkris',0)):null}
+ ];
+ games.forEach((gm,i)=>{
+  const c=IT_PICK[i],on=sel===i;
+  lDisc(g,c.cx,c.cy,c.r,on?ITC.sel:ITC.frame);lDisc(g,c.cx,c.cy,c.r-1,ITC.frameIn);lDisc(g,c.cx,c.cy,c.r-2,ITC.panel);
+  if(gm.face){const iw=gm.face.width,ih=gm.face.height,s=Math.max(1,Math.floor(88/Math.max(iw,ih)));lSpr(g,gm.face,c.cx,c.cy+Math.round(ih*s/2),999,999,{s})}
+  else lT(g,'...',c.cx,c.cy-6,{c:ITC.dim,a:'center'});
+  lT(g,gm.name,c.cx,c.cy+c.r+10,{c:on?ITC.sel:ITC.text,a:'center',shadow:ITC.shadow});
+  lT(g,gm.count,c.cx,c.cy+c.r+27,{c:ITC.dim,a:'center',shadow:ITC.shadow});
+  if(on)lSoul(g,c.cx-8,c.cy-c.r-22);
+  itHit(c.cx-c.r,c.cy-c.r,c.r*2,c.r*2+40,()=>{if(on)itGamePickActivate(i);else{gamePickSelected=i;play('move')}});
+ });
+ // EXTRA, between them, with the sparkles from the sketch
+ {const r=IT_PICK[2],on=sel===2;
+  lBox(g,r.x,r.y,r.w,r.h,on);
+  lT(g,'EXTRA',r.x+r.w/2+(on?8:0),r.y+5,{f:'main',c:on?ITC.sel:ITC.text,a:'center'});
+  if(on)lSoul(g,r.x+9,r.y+10);
+  const tw=Math.floor(t/10);
+  [[r.x-34,r.y-14],[r.x+r.w+26,r.y-8],[r.x+r.w+12,r.y+r.h+6],[r.x-20,r.y+r.h+4]].forEach(([x,y],k)=>{if((tw+k)%3)lBitmap(g,L_SPARK[(tw+k)%2],x,y,'#e8ffc8')});
+  itHit(r.x,r.y,r.w,r.h,()=>{if(on)itGamePickActivate(2);else{gamePickSelected=2;play('move')}})}
+ itDesc(g,['Every UNDERTALE monster in the engine. Pick BOSS, ENEMY or MINI BOSS next.','Kris, Susie and Ralsei (or Noelle) against DELTARUNE\'s enemies, from DELTARUNE\'s own battle code.','The extras: your custom monsters and fights from outside the games.'][sel]||'',300);
+ itFooter(g,'ARROWS  CHOOSE      Z  CONFIRM      X  BACK');
+ itBlit();
 }
 function itGamePickActivate(i){
  gamePickSelected=i;play('select');
- if(i===0){screen='itwhich'}
+ if(i===0)screen='itwhich';
  else if(i===1)drStart();
  else itOpenCat('extras');
 }
+let itLastSide=0;
 function itGamePickKey(e,low,k){
  if(e.repeat)return;
  const left=k==='ArrowLeft'||low==='a',right=k==='ArrowRight'||low==='d',up=k==='ArrowUp'||low==='w',down=k==='ArrowDown'||low==='s';
@@ -7472,29 +7432,30 @@ function itGamePickKey(e,low,k){
  if(gamePickSelected<2)itLastSide=gamePickSelected;
  if(gamePickSelected!==from)play('move');
 }
-let itLastSide=0;
 
 // --------------------------------------------------------------- WHICH? --
-const IT_WHICH=[{id:'bosses',label:'BOSS',sprite:'toriel'},{id:'enemies',label:'ENEMY',sprite:'froggit'},{id:'minibosses',label:'MINI BOSS',sprite:'napstablook'}];
+const IT_WHICH=[{id:'bosses',label:'BOSS',sprite:'toriel',text:'The big fights: Toriel, Papyrus, Undyne, Mettaton, Muffet, ASGORE...'},
+ {id:'enemies',label:'ENEMY',sprite:'froggit',text:'Everyday monsters, from Froggit to Knight Knight.'},
+ {id:'minibosses',label:'MINI BOSS',sprite:'napstablook',text:'The in-betweens: Napstablook, the dogs, Mad Dummy, Glyde, the Royal Guards.'}];
 let itWhichSel=0;
-function itWhichRect(i){const on=i===itWhichSel,w=on?360:320,h=on?470:420,b=on&&!uiReducedMotion?Math.round(Math.sin(performance.now()/380)*6):0;return{x:W/2+(i-1)*400-w/2,y:470-h/2+b,w,h}}
 function itDrawWhich(now=performance.now()){
- itWaveText('WHICH?',W/2,40,10,{amp:5});
+ const g=itLow();itWall(g,now);
+ itHeading(g,'WHICH?');
  const cats=enemyCategoryLists();
  IT_WHICH.forEach((c,i)=>{
-  const r=itWhichRect(i),on=i===itWhichSel,cat=cats.find(g=>g.id===c.id);
-  ui6Frame(r,{color:on?'#7dff5a':'#2f7a46',base:on?'#3fcf55':'#1f5c3c',tint:on?.5:.3,b:on?7:5,cs:on?3:2});
-  const b=BOSS_OPTIONS.find(o=>o.id===c.sprite);
-  if(b)ui6Sprite(bossImage(b,now),r.x+r.w/2,r.y+r.h-150,r.w-80,r.h-260,{bottom:true,smoothScale:true,gray:!on});
-  const s=ui6W(c.label,'text',5)<=r.w-40?5:4;
-  ui6BigText(c.label,r.x+r.w/2,r.y+34,{s,a:'center',...(on?IT_HEAD:{top:'#c8f7a4',bottom:'#4f8a5a',shadow:'#04210c'})});
-  ui6T(`${cat?cat.list.length:0} FIGHTS`,r.x+r.w/2,r.y+r.h-110,{s:3,c:on?UI6_C.yellow:'#9fd886',a:'center'});
-  if(on)ui6Soul(r.x+r.w/2,r.y,2);
-  ui6Hit(r,()=>{if(on)itOpenCat(c.id);else{itWhichSel=i;play('move')}});
+  const on=i===itWhichSel,w=160,x=152+i*170-w/2,y=58,h=196,cat=cats.find(q=>q.id===c.id);
+  lBox(g,x,y,w,h,on);
+  const big=lW(c.label,'main')<=w-16;
+  lT(g,c.label,x+w/2,y+(big?10:16),{f:big?'main':'text',c:on?ITC.sel:ITC.text,a:'center'});
+  const im=itBoss(c.sprite,now);
+  if(im)lSpr(g,im,x+w/2,y+h-34,w-20,h-80,{s:lFit(im,h-80),alpha:on?1:.55})
+  lT(g,`${cat?cat.list.length:0} FIGHTS`,x+w/2,y+h-22,{c:on?ITC.text:ITC.dim,a:'center'});
+  if(on)lSoul(g,x+w/2-8,y-20);
+  itHit(x,y,w,h,()=>{if(on)itOpenCat(c.id);else{itWhichSel=i;play('move')}});
  });
- const text=['* The big fights: Toriel, Papyrus, Undyne, Mettaton, Muffet, ASGORE, Sans...','* Everyday monsters, from Froggit to Knight Knight.','* The in-betweens: Napstablook, the dogs, Mad Dummy, Glyde, the Royal Guards...'][itWhichSel];
- ui6Wrap(text,W-200,'main',1).forEach((ln,k)=>ui6T(ln,W/2,770+k*34,{f:'main',s:1,c:'#c8f7a4',a:'center'}));
- ui6Footer('LEFT / RIGHT  CHOOSE      Z  CONFIRM      X  BACK','#c8f7a4');
+ itDesc(g,IT_WHICH[itWhichSel].text,274);
+ itFooter(g,'LEFT / RIGHT  CHOOSE      Z  CONFIRM      X  BACK');
+ itBlit();
 }
 function itWhichKey(e,low,k){
  if(e.repeat)return;
@@ -7505,11 +7466,10 @@ function itWhichKey(e,low,k){
 }
 
 // ---------------------------------------------------------- CHOOSE BOSS --
-// One group at a time (picked in WHICH? or EXTRA); the carousel, the info panel, FIGHT and CUSTOM,
-// and the rest of the old row (SUPPORT, RULES, ROUTE, BACK) underneath.
+// One group at a time (picked in WHICH? or EXTRA): the cards, what you know about the one in the
+// middle, FIGHT and CUSTOM, and the rest of the old row (SUPPORT, RULES, ROUTE, BACK) under them.
 let itCat=null;
 const IT_CAT_NAME={bosses:'BOSS',minibosses:'MINI BOSS',enemies:'ENEMY',extras:'EXTRA'};
-const IT_CAT_COLOR={bosses:'#b8ff6a',minibosses:'#6affc0',enemies:'#7dff5a',extras:'#e6ff7a'};
 const itCatMemory={};
 function itOpenCat(id){
  play('select');
@@ -7533,39 +7493,64 @@ function itEnemyActivate(f){
  if(f===6){play('select');if(itCat==='extras'){screen='gamepick';gamePickSelected=2}else screen='itwhich';return}
  enemyActivate(f);
 }
+const itCarousel={pos:0,group:''};
 function itDrawEnemySelect(now=performance.now()){
- const cat=itCurCat(),color=IT_CAT_COLOR[cat.id]||'#7dff5a';
- itWaveText('CHOOSE '+(IT_CAT_NAME[cat.id]||cat.label),W/2,26,6,{amp:3});
- ui6Carousel(enemyCarousel,cat.id,cat.list.length,cat.list.indexOf(varRep(bossSelected)),color,{
-  label:k=>{const g=variantGroupOf(BOSS_OPTIONS[cat.list[k]].id);return g?g.label:BOSS_OPTIONS[cat.list[k]].label},image:k=>bossImage(BOSS_OPTIONS[cat.list[k]],now),focus:enemySelectFocus===0,
-  onPick:k=>{bossSelected=cat.list[k];enemySelectFocus=0;play('move')},onConfirm:()=>{play('select');enemyOpen()}
- },now);
- ui6Marks.enemyGrid={x:80,y:196,w:W-160,h:440};
+ const g=itLow();itWall(g,now);
+ const cat=itCurCat(),n=cat.list.length,sel=cat.list.indexOf(varRep(bossSelected)),f=enemySelectFocus;
+ itHeading(g,'CHOOSE '+(IT_CAT_NAME[cat.id]||cat.label),8);
+ // the cards: the one in the middle full size, its neighbours smaller and dimmed
+ const st=itCarousel;
+ if(st.group!==cat.id||uiReducedMotion){st.group=cat.id;st.pos=sel}else{st.pos+=(sel-st.pos)*.3;if(Math.abs(sel-st.pos)<.02)st.pos=sel}
+ const cards=[];for(let k=0;k<n;k++){const d=k-st.pos;if(Math.abs(d)<2.6)cards.push({k,d})}
+ cards.sort((p,q)=>Math.abs(q.d)-Math.abs(p.d));
+ for(const v of cards){
+  const a=Math.min(Math.abs(v.d),2.4),w=Math.round(136-a*26),h=Math.round(160-a*30),cx=Math.round(LW/2+Math.sign(v.d)*(a<=1?a*128:128+(a-1)*96)),y=Math.round(46+a*14);
+  const on=v.k===sel,b=BOSS_OPTIONS[cat.list[v.k]],grp=variantGroupOf(b.id);
+  lBox(g,cx-w/2,y,w,h,on&&f===0);
+  const im=bossImage(b,now);
+  if(im)lSpr(g,im,cx,y+h-22,w-12,h-34,{s:lFit(im,h-34)})
+  lT(g,ui6Fit(grp?grp.label:b.label,w-10,'text',1),cx,y+h-18,{c:on&&f===0?ITC.sel:ITC.text,a:'center'});
+  if(!on){g.save();g.globalAlpha=Math.min(.65,a*.4);lFill(g,cx-w/2,y,w,h,'#000');g.restore()}
+  itHit(cx-w/2,y,w,h,()=>{if(on){play('select');enemyOpen()}else{bossSelected=cat.list[v.k];enemySelectFocus=0;play('move')}});
+ }
+ if(n>1){lT(g,'<',LW/2-180,104,{f:'main',c:ITC.dim,a:'center',shadow:ITC.shadow});lT(g,'>',LW/2+180,104,{f:'main',c:ITC.dim,a:'center',shadow:ITC.shadow})}
+ ui6Marks.enemyGrid=itRect(120,40,404,170);
+ // what you know about it
  const base=BOSS_OPTIONS[bossSelected]||BOSS_OPTIONS[0];
  let b=effectiveBossById(base.id)||base;
  if(base.id==='papyrus'&&vanillaMode&&papyrusGenocideMode())b={...b,atk:3,def:-20000};
- const f=enemySelectFocus;
+ const info={x:22,y:212,w:600,h:58};
+ lBox(g,info.x,info.y,info.w,info.h,false);
+ lT(g,ui6Fit(b.label,180,'text',1),info.x+10,info.y+7,{c:ITC.text});
+ lT(g,ui6Fit(String(b.area||''),180,'text',1),info.x+10,info.y+23,{c:ITC.dim});
+ lT(g,`HP ${b.hp}  AT ${b.atk}  DF ${b.def}`,info.x+10,info.y+39,{c:ITC.text});
+ lFill(g,info.x+200,info.y+7,1,info.h-14,ITC.frameIn);
  const text=f===4?'* The CUSTOM HUB: your stats, party, the encounter and your loadout.\n* (It switches the rules to CUSTOM: no EXP or GOLD.)':ui6EnemyText(f,b,base);
- ui6InfoPanel(color,b.label,b.area,`HP ${b.hp}   AT ${b.atk}   DF ${b.def}`,text);
- // FIGHT and CUSTOM, big
- const main=[{f:5,label:'FIGHT',r:{x:W/2-330,y:850,w:300,h:96}},{f:4,label:'CUSTOM',r:{x:W/2+30,y:850,w:300,h:96}}];
+ const lines=[];for(const p of String(text).split('\n'))lines.push(...ui6Wrap(p,380,'text',1));
+ lines.slice(0,3).forEach((ln,k)=>lT(g,ln,info.x+210,info.y+7+k*16,{c:ITC.text}));
+ // FIGHT and CUSTOM
+ const main=[{f:5,label:'FIGHT',x:LW/2-118},{f:4,label:'CUSTOM',x:LW/2+8}];
  for(const m of main){
-  itButton(m.r,m.label,f===m.f,{s:4,b:5});
-  ui6Hit(m.r,()=>itEnemyActivate(m.f),()=>{enemySelectFocus=m.f});
+  const on=f===m.f;lBox(g,m.x,278,110,26,on);
+  lT(g,m.label,m.x+55,284,{c:on?ITC.sel:ITC.text,a:'center'});
+  if(on)lSoul(g,m.x+7,283);
+  itHit(m.x,278,110,26,()=>itEnemyActivate(m.f),()=>{enemySelectFocus=m.f});
  }
- // the rest, small, under them
- const more=[{f:1,label:'SUPPORT'},{f:2,label:vanillaMode?'RULES: VANILLA':'RULES: CUSTOM'},{f:3,label:'ROUTE',disabled:!bossHasRoute(base.id)},{f:6,label:'BACK'}];
- const ws=more.map(m=>ui6W(m.label,'text',2)+56),gap=24,total=ws.reduce((p,v)=>p+v,0)+gap*(more.length-1);
- let x=W/2-total/2;const rects={};
+ // the rest, in words
+ const more=[{f:1,label:'SUPPORT'},{f:2,label:vanillaMode?'RULES: VANILLA':'RULES: CUSTOM'},{f:3,label:'ROUTE',off:!bossHasRoute(base.id)},{f:6,label:'BACK'}];
+ const gap=28,ws=more.map(m=>lW(m.label)),total=ws.reduce((p,v)=>p+v,0)+gap*(more.length-1);
+ let x=LW/2-total/2;const rects={};
  more.forEach((m,i)=>{
-  const r={x,y:962,w:ws[i],h:46};x+=ws[i]+gap;rects[m.f]=r;
   const on=f===m.f;
-  ui6Frame(r,{color:m.disabled?'#1d3a26':(on?'#7dff5a':'#2f7a46'),base:'#1f5c3c',tint:on?.45:.25,b:3,cs:1,corners:false});
-  ui6T(m.label,r.x+r.w/2,r.y+Math.round((r.h-UI6F.text.cap*2)/2),{s:2,c:m.disabled?'#3c5a45':(on?UI6_C.yellow:'#c8f7a4'),a:'center'});
-  ui6Hit(r,()=>itEnemyActivate(m.f),()=>{enemySelectFocus=m.f});
+  lT(g,m.label,x,316,{c:m.off?ITC.off:(on?ITC.sel:ITC.text),shadow:ITC.shadow});
+  if(on)lSoul(g,x-19,314);
+  rects[m.f]=itRect(x-4,312,ws[i]+8,20);
+  itHit(x-4,312,ws[i]+8,20,()=>itEnemyActivate(m.f),()=>{enemySelectFocus=m.f});
+  x+=ws[i]+gap;
  });
  ui6Marks.enemySupport=rects[1];ui6Marks.enemySandbox=rects[2];
- ui6Footer(f===0?'LEFT / RIGHT  BROWSE      DOWN  FIGHT / CUSTOM      Z  FIGHT      X  BACK':'ARROWS  MOVE      UP  BACK TO THE CARDS      Z  CONFIRM      X  BACK','#c8f7a4');
+ itFooter(g,f===0?'LEFT / RIGHT  BROWSE      DOWN  BUTTONS      Z  FIGHT      X  BACK':'ARROWS  MOVE      Z  CONFIRM      X  BACK');
+ itBlit();
 }
 function itEnemyKey(e,low,k){
  if(e.repeat)return;
@@ -7593,18 +7578,17 @@ function itEnemyKey(e,low,k){
 
 // -------------------------------------------------------------- loading --
 function itDrawLoading(){
- const now=performance.now();
- itBackdrop(now);
+ const now=performance.now(),g=itLow();itWall(g,now);
  const pct=loadTotal?clamp(loadDone/loadTotal,0,1):0;
- itWaveText('INNERTALE',W/2,150,9);
- itWaveText('ENGINE',W/2,280,10,{amp:4});
- ui6T('LOADING',W/2-300,500,{s:3,c:'#efffc2'});
- ui6T(`${loadDone} / ${loadTotal}`,W/2+300,500,{s:3,c:'#efffc2',a:'right'});
- ui6Bar(W/2-300,556,600,30,pct,'#7dff5a','#1f5c3c');
- ui6T(ui6Fit(String(loadLabel||''),600,'small',3),W/2,610,{f:'small',s:3,c:'#c8f7a4',a:'center'});
- const idx=Math.floor(now/3600)%UI_LOADING_LINES.length;
- const line=UI_LOADING_LINES[idx].slice(0,Math.floor(((now%3600)/1000)*34));
- ui6Dialogue({x:W/2-440,y:700,w:880,h:200},line,{f:'main',s:1.5,lh:52,frame:{color:'#7dff5a',base:'#1f5c3c',tint:.3}});
+ lT(g,'INNERTALE',LW/2,70,{f:'main',s:2,c:'#ffffff',a:'center',shadow:'#0b2414',outline:true,sd:2});
+ lT(g,'ENGINE',LW/2,132,{c:'#c8f7a4',a:'center',sp:9,shadow:ITC.shadow});
+ lBox(g,LW/2-120,176,240,14,false);lFill(g,LW/2-117,179,Math.round(234*pct),8,'#c8f7a4');
+ lT(g,`LOADING  ${loadDone} / ${loadTotal}`,LW/2,198,{c:ITC.text,a:'center',shadow:ITC.shadow});
+ lT(g,ui6Fit(String(loadLabel||''),400,'text',1),LW/2,216,{c:ITC.dim,a:'center',shadow:ITC.shadow});
+ const idx=Math.floor(now/3600)%UI_LOADING_LINES.length,line=UI_LOADING_LINES[idx].slice(0,Math.floor(((now%3600)/1000)*34));
+ lBox(g,LW/2-200,244,400,40,false);
+ lWrap(line,380).slice(0,2).forEach((ln,k)=>lT(g,ln,LW/2-190,251+k*16,{c:ITC.text}));
+ itBlit();
 }
 
 // ---------- Support select ----------
