@@ -15,11 +15,14 @@ const IMAGES=['nbBattleBg','target','targetChoice','btn_fight_sel','btn_fight_un
  'nbUndLegs','nbUndLarm','nbUndPants','nbUndRarm','nbUndArmor','nbUndHair','nbUndFace','nbUndSmear','nbUndMelt','nbUndB','nbUndLastMelt',
  'nbUndArrowX','nbUndArrowL','nbUndArrowR','nbUndArrowU','nbUndArrowD','nbUndWhiteSpear','nbUndRiseSpear','nbUndSpearR',
  // Undyne the Undying
- 'nbUxLarm','nbUxHair','nbUxLegs','nbUxRarm','nbUxTorso','nbUxPants','nbUxFace1','nbUxFaceDmg','nbUxFaceLaugh','nbUxFaceE','nbUxEyebeam','nbUxSpear2','nbUxMelt'];
+ 'nbUxLarm','nbUxHair','nbUxLegs','nbUxRarm','nbUxTorso','nbUxPants','nbUxFace1','nbUxFaceDmg','nbUxFaceLaugh','nbUxFaceE','nbUxEyebeam','nbUxSpear2','nbUxMelt',
+ // weapons: the Dirty Blaster's Gaster Blaster and bones, the KARMA marker
+ 'snsBlaster','snsBoneWall','snsStabV','snsKr'];
 // battle music (MUSIC keys), copied out of the bundle as .ogg
 const MUSIC_KEYS=['battle','toriel','undyne','undyneex'];
 const SOUNDS=['text','txt2','move','select','hurt','damage','laz','vaporized','heal','escaped','break1','break2','asgoreText','power','item',
- 'torielText','encounterNoise','txtUnd','txtUnd2','txtUnd3','txtUnd4','undyneSpearAppear','undyneArrow','undyneSpearRise','mdBell'];
+ 'torielText','encounterNoise','txtUnd','txtUnd2','txtUnd3','txtUnd4','undyneSpearAppear','undyneArrow','undyneSpearRise','mdBell',
+ 'weaponPunchStrong','weaponPunchWeak','weaponSaber','weaponGun','weaponPan','weaponBook','victor','hit','gbCharge','gbFire','sansGiga','sansB'];
 (async()=>{
  const page=fs.readFileSync(path.join(ROOT,'ub.html'),'utf8');
  const doc=`<!doctype html><html><head><meta charset="utf-8"></head><body>${page}</body></html>`;
@@ -29,6 +32,7 @@ const SOUNDS=['text','txt2','move','select','hurt','damage','laz','vaporized','h
  await p.goto(`http://localhost:${srv.address().port}/`);
  for(let i=0;i<240;i++){if(await p.evaluate(()=>typeof screen==='string'&&screen!=='loading'))break;await sleep(250)}
  await p.evaluate(()=>new Promise(r=>withFightAssets(r)));await sleep(1500);
+ await p.evaluate(async()=>{window.__wpn=await loadWeaponSpriteAtlas()});
  const out=await p.evaluate(({IMAGES,SOUNDS,MUSIC_KEYS})=>{
   const toPng=im=>{if(!im)return null;const w=im.naturalWidth||im.width,h=im.naturalHeight||im.height;if(!w||!h)return null;const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0);return c.toDataURL('image/png')};
   const img={};for(const k of IMAGES){const v=images[k];if(Array.isArray(v))img[k]=v.map(toPng);else if(v)img[k]=toPng(v)}
@@ -36,6 +40,12 @@ const SOUNDS=['text','txt2','move','select','hurt','damage','laz','vaporized','h
   // spr_undynex_melt sits on an opaque black backdrop: key it out for the dust effect
   const keyBlack=im=>{if(!im)return null;const c=document.createElement('canvas');c.width=im.naturalWidth||im.width;c.height=im.naturalHeight||im.height;
    const g=c.getContext('2d');g.drawImage(im,0,0);const d=g.getImageData(0,0,c.width,c.height),a=d.data;for(let i=0;i<a.length;i+=4)if(a[i]<48&&a[i+1]<48&&a[i+2]<48)a[i+3]=0;g.putImageData(d,0,0);return c.toDataURL('image/png')};
+  // the weapon sheet (weaponSpriteAtlas): wpn_<name>[_i] and its gold copy wpnG_<name>[_i]; every
+  // frame's origin is its centre
+  for(const [k,v] of Object.entries(window.__wpn||{})){
+   const one=(f,suffix)=>{img['wpn_'+k+suffix]=f.image.toDataURL('image/png');img['wpnG_'+k+suffix]=f.gold.toDataURL('image/png')};
+   if(Array.isArray(v))v.forEach((f,i)=>one(f,'_'+i));else one(v,'');
+  }
   const um=images.nbUxMelt;if(Array.isArray(um))img.nbUxMeltKeyed=um.map(keyBlack);
   const mus={};for(const k of MUSIC_KEYS)mus[k]=MUSIC[k]||null;
   return {img,snd,mus,data:{undText:NB.undText},fonts:{main:UT_FNT_MAIN_GLYPHS,mars:UT_HUD_MARS_GLYPHS,plain:NB_PLAIN_GLYPHS}};
