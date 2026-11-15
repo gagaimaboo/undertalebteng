@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Runs as the user who starts it (no admin prompt), on Windows 10 / 11, DPI aware. -->
 <assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
-  <assemblyIdentity version="1.4.0.0" name="InnertaleEngine.UTBattle" type="win32" />
+  <assemblyIdentity version="1.4.1.0" name="InnertaleEngine.UTBattle" type="win32" />
   <description>Innertale Engine (C# port)</description>
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>

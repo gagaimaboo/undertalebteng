@@ -6,7 +6,7 @@ Unicode true
 !include "MUI2.nsh"
 
 !define APP "Innertale Engine (C#)"
-!define VER "1.4.0"
+!define VER "1.4.1"
 !define REG "Software\Microsoft\Windows\CurrentVersion\Uninstall\UTBattleCSharp"
 
 Name "${APP}"

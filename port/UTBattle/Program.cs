@@ -30,12 +30,13 @@ public static class Program
     // Esc in a fight: the pause menu (RESUME / QUIT TO MENU); QUIT on the main menu closes the game
     static bool paused, quitGame, escQueued;
     static int pauseSel;
-    // menu rows: the fights, then LV, WEAPON and QUIT; `chosen` is the fight they apply to
-    static int chosen;
+    // the menu: the fight list (the fights, then QUIT) on the left; the highlighted fight's
+    // loadout (LV, WEAPON) in a panel on the right. RIGHT steps into the panel and X steps back
+    // out, so the fight you're setting up stays the one you're on.
+    static int chosen, panelRow;
+    static bool inPanel;
     static string weapon = "toyknife";
-    static int RowLv => Roster.Length;
-    static int RowWeapon => Roster.Length + 1;
-    static bool OnQuit => sel == Roster.Length + 2;
+    static bool OnQuit => sel == Roster.Length;
     static void Choose(int i) { if (i == chosen) return; chosen = i; lv = Roster[i].lv; weapon = Roster[i].gear.Weapon; }
     static string notice = "";
 
@@ -220,41 +221,66 @@ public static class Program
     static void MenuStep()
     {
         Input.Step(); menuT++;
-        int n = Roster.Length + 3; // the fights, LV, WEAPON, QUIT
+        if (inPanel)
+        {
+            if (Pressed(K.Cancel)) { inPanel = false; Assets.Play("move"); return; }
+            if (Pressed(K.Up) || Pressed(K.Down)) { panelRow = 1 - panelRow; Assets.Play("move"); }
+            int dx = (Pressed(K.Right) ? 1 : 0) - (Pressed(K.Left) ? 1 : 0);
+            if (dx != 0 && panelRow == 0) { int nl = Math.Clamp(lv + dx, 1, 20); if (nl != lv) { lv = nl; Assets.Play("move"); } }
+            if (dx != 0 && panelRow == 1)
+            {
+                var ws = Fight.Weapons; int i = Array.FindIndex(ws, w => w.Id == weapon);
+                weapon = ws[((i + dx) % ws.Length + ws.Length) % ws.Length].Id; Assets.Play("move");
+            }
+            if (Pressed(K.Confirm)) { Assets.Play("select"); notice = ""; StartFight(); }
+            return;
+        }
+        int n = Roster.Length + 1; // the fights, then QUIT
         if (Pressed(K.Up)) { sel = (sel + n - 1) % n; Assets.Play("move"); }
         if (Pressed(K.Down)) { sel = (sel + 1) % n; Assets.Play("move"); }
-        if (sel < Roster.Length) Choose(sel); // moving onto a fight loads its stage's LV and weapon
+        if (!OnQuit) Choose(sel); // a fight you move onto starts with its stage's LV and weapon
         if (OnQuit) { if (Pressed(K.Confirm)) quitGame = true; return; }
-        int dx = (Pressed(K.Right) ? 1 : 0) - (Pressed(K.Left) ? 1 : 0);
-        if (dx != 0 && sel != RowWeapon) { int nl = Math.Clamp(lv + dx, 1, 20); if (nl != lv) { lv = nl; Assets.Play("move"); } }
-        if (dx != 0 && sel == RowWeapon)
-        {
-            var ws = Fight.Weapons; int i = Array.FindIndex(ws, w => w.Id == weapon);
-            weapon = ws[((i + dx) % ws.Length + ws.Length) % ws.Length].Id; Assets.Play("move");
-        }
+        if (Pressed(K.Right)) { inPanel = true; panelRow = 0; Assets.Play("move"); return; }
         if (Pressed(K.Confirm)) { Assets.Play("select"); notice = ""; StartFight(); }
     }
 
     static void MenuDraw()
     {
         Raylib.ClearBackground(Color.Black);
-        Gfx.Text("UNDERTALE BATTLE ENGINE", 320 - 23 * 8, 30, Color.White);
-        Gfx.Text("C# PORT (WORK IN PROGRESS)", 320 - 26 * 8, 62, Gfx.Hex("#808080"));
-        var w = Fight.WeaponOf(weapon); var g = Roster[chosen].gear; var st = Fight.LvStats(lv);
         var yel = Gfx.Hex("#ffff00"); var grey = Gfx.Hex("#808080");
-        void Row(int i, string text, double y, Color? c = null)
+        Gfx.Text("INNERTALE ENGINE", 320 - 16 * 8, 28, Color.White);
+        Gfx.Text("C# PORT (WORK IN PROGRESS)", 320 - 26 * 8, 58, grey);
+        // the fights
+        for (int i = 0; i <= Roster.Length; i++)
         {
-            bool on = i == sel;
-            Gfx.Text(text, 150, y, on ? yel : c ?? Color.White);
-            if (on) Gfx.Draw(Assets.Frame("nbHeart", 0), 120, y + 2, 16, 16);
+            bool on = i == sel, quit = i == Roster.Length;
+            double y = quit ? 300 : 110 + i * 32;
+            Gfx.Text(quit ? "QUIT" : Roster[i].label, 48, y, on ? (inPanel ? Color.White : yel) : (inPanel ? grey : Color.White));
+            if (on && !inPanel) Gfx.Draw(Assets.Frame("nbHeart", 0), 24, y + 2, 16, 16);
         }
-        for (int i = 0; i < Roster.Length; i++) Row(i, Roster[i].label, 96 + i * 30, i == chosen ? Color.White : grey);
-        Row(RowLv, $"LV      < {lv} >", 256);
-        Row(RowWeapon, $"WEAPON  < {w.Name} >", 286);
-        Row(Roster.Length + 2, "QUIT", 326);
-        Gfx.Text($"HP {st.hp}  AT {st.at}+{w.Atk}  DF {st.df}+{g.Df}", 150, 366, grey);
-        Gfx.Text($"Armor: {g.Armor}", 150, 392, grey);
-        Gfx.Text("Z FIGHT  ESC PAUSE/QUIT  F11 FULL", 56, 450, grey);
-        if (notice != "") Gfx.Text(notice, 150, 418, yel);
+        // the loadout of the one you're on
+        double px = 348, py = 100, pw = 280, ph = 240;
+        var frame = inPanel ? yel : Color.White;
+        Gfx.Rect(px, py, pw, ph, frame); Gfx.Rect(px + 3, py + 3, pw - 6, ph - 6, Color.Black);
+        if (OnQuit) Gfx.Text("CLOSE THE GAME", px + 20, py + 100, grey);
+        else
+        {
+            var w = Fight.WeaponOf(weapon); var g = Roster[chosen].gear; var st = Fight.LvStats(lv);
+            void Field(int row, string label, string value, double y)
+            {
+                bool on = inPanel && panelRow == row;
+                Gfx.Text(label, px + 40, y, on ? yel : Color.White);
+                if (on) Gfx.Draw(Assets.Frame("nbHeart", 0), px + 14, y + 2, 16, 16);
+                var text = $"< {value} >";
+                Gfx.Text(text, px + pw / 2 - text.Length * 8, y + 30, on ? yel : Color.White);
+            }
+            Field(0, "LV", lv.ToString(), py + 16);
+            Field(1, "WEAPON", w.Name, py + 84);
+            Gfx.Text($"HP {st.hp}  AT {st.at}+{w.Atk}", px + 20, py + 150, grey);
+            Gfx.Text($"DF {st.df}+{g.Df}", px + 20, py + 176, grey);
+            Gfx.Text(g.Armor, px + 20, py + 202, grey);
+        }
+        if (notice != "") Gfx.Text(notice, 56, 360, yel);
+        Gfx.Text(inPanel ? "LEFT/RIGHT CHANGE  Z FIGHT  X BACK" : "Z FIGHT  RIGHT LOADOUT  ESC QUIT", inPanel ? 48 : 64, 440, grey);
     }
 }
