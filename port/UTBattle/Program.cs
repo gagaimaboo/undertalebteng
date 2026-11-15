@@ -27,6 +27,10 @@ public static class Program
         ("undyne", "UNDYNE", Waterfall, 9), ("undyneex", "UNDYNE THE UNDYING", Waterfall, 14),
     };
     static int sel, lv = 3, menuT;
+    // Esc in a fight: the pause menu (RESUME / QUIT TO MENU); QUIT on the main menu closes the game
+    static bool paused, quitGame, escQueued;
+    static int pauseSel;
+    static bool OnQuit => sel == Roster.Length;
     static string notice = "";
 
     public static void Main(string[] args)
@@ -84,6 +88,7 @@ public static class Program
             if (Raylib.IsKeyPressed(KeyboardKey.F11) || (Raylib.IsKeyPressed(KeyboardKey.Enter) && Raylib.IsKeyDown(KeyboardKey.LeftAlt)))
                 Raylib.ToggleBorderlessWindowed();
             Input.Poll();
+            if (Raylib.IsKeyPressed(KeyboardKey.Escape)) escQueued = true;
             Music.Update();
             acc += Math.Min(Raylib.GetFrameTime(), .25) * (fight?.SpeedMul ?? 1);
             if (testSteps > 0 || shotDir != null) acc = StepSec * 4;
@@ -94,7 +99,9 @@ public static class Program
                 if (shotDir != null)
                 {
                     ++autoStep;
-                    string? cmd = testId == "froggit" ? (froggitScript.TryGetValue(autoStep, out var c) ? c : null) : BossCmd(autoStep);
+                    // --fight pausequit: Esc mid-fight, QUIT TO MENU, then QUIT on the menu
+                    var pq = new Dictionary<int, string> { [5] = "start", [60] = "shot:fight", [61] = "ESC", [70] = "shot:paused", [100] = "shot:still", [104] = "D", [110] = "shot:quitsel", [114] = "Z", [120] = "shot:menu", [124] = "U", [130] = "shot:onquit", [134] = "Z", [200] = "quit" };
+                    string? cmd = testId == "froggit" ? (froggitScript.TryGetValue(autoStep, out var c) ? c : null) : testId == "pausequit" ? (pq.TryGetValue(autoStep, out var c2) ? c2 : null) : BossCmd(autoStep);
                     if (cmd == "start") { StartFight(); if (monHp > 0) foreach (var m in fight!.Mons) m.Hp = monHp; if (playerHp > 0) fight!.Hp = fight.MaxHp = playerHp; }
                     else if (cmd == "Z") Input.Inject(K.Confirm);
                     else if (cmd == "X") Input.Inject(K.Cancel);
@@ -102,17 +109,26 @@ public static class Program
                     else if (cmd == "L") Input.Inject(K.Left);
                     else if (cmd == "U") Input.Inject(K.Up);
                     else if (cmd == "D") Input.Inject(K.Down);
+                    else if (cmd == "ESC") escQueued = true;
                     else if (cmd?.StartsWith("shot:") == true) shot = cmd[5..];
                     else if (cmd == "quit") { Console.WriteLine($"autotest done: {(fight == null ? "back at menu" : $"fight turn {fight.Turn} hp {fight.Hp}")} notice='{notice}'"); goto done; }
                 }
-                if (fight != null) { fight.Step(); if (fight.Exited) fight = null; }
+                if (escQueued)
+                {
+                    escQueued = false;
+                    if (fight == null) quitGame = true;
+                    else if (!fight.Exited) SetPaused(!paused);
+                }
+                if (fight != null && paused) PauseStep();
+                else if (fight != null) { fight.Step(); if (fight.Exited) fight = null; }
                 else MenuStep();
+                if (quitGame) { Console.WriteLine("quit"); goto done; }
                 if (testSteps > 0 && --testSteps == 0) { Console.WriteLine(fight != null ? $"ok: fight running, turn {fight.Turn}, hp {fight.Hp}" : "ok: back at the menu"); goto done; }
             }
 
             fight?.PreRender();
             Raylib.BeginTextureMode(screen);
-            if (fight != null) fight.Draw(); else MenuDraw();
+            if (fight != null) { fight.Draw(); if (paused) PauseDraw(); } else MenuDraw();
             Raylib.EndTextureMode();
             if (shot != null)
             {
@@ -121,7 +137,7 @@ public static class Program
                 Raylib.ExportImage(im, Path.Combine(shotDir!, $"{autoStep:0000}_{shot}.png"));
                 Raylib.UnloadImage(im);
                 var mon = fight?.Mons.FirstOrDefault();
-                Console.WriteLine($"step {autoStep} {shot}: hp {fight?.Hp} mnfight {fight?.MnFight} myfight {fight?.MyFight} bullets {fight?.Bullets.Count} soul {fight?.H.Mode} {mon?.Name} hp {mon?.Hp} music {Music.Key}");
+                Console.WriteLine($"step {autoStep} {shot}: t {fight?.T} paused {paused} sel {sel} hp {fight?.Hp} mnfight {fight?.MnFight} myfight {fight?.MyFight} bullets {fight?.Bullets.Count} soul {fight?.H.Mode} {mon?.Name} hp {mon?.Hp} music {Music.Key}");
             }
 
             Raylib.BeginDrawing();
@@ -155,11 +171,46 @@ public static class Program
         };
     }
 
+    static void SetPaused(bool on)
+    {
+        paused = on; pauseSel = 0;
+        Assets.Play("select");
+        if (on) Music.Pause(); else Music.Resume();
+        Input.ClearAll();
+    }
+    static void PauseStep()
+    {
+        Input.Step();
+        if (Pressed(K.Up) || Pressed(K.Down)) { pauseSel = 1 - pauseSel; Assets.Play("move"); }
+        if (Pressed(K.Cancel)) { SetPaused(false); return; }
+        if (Pressed(K.Confirm))
+        {
+            if (pauseSel == 0) { SetPaused(false); return; }
+            // quit the fight: back to the fight select, nothing won or lost
+            Assets.Play("select"); paused = false; Music.Stop(); fight = null; notice = ""; Input.ClearAll();
+        }
+    }
+    static void PauseDraw()
+    {
+        Gfx.Rect(0, 0, 640, 480, Gfx.A(Color.Black, .6));
+        Gfx.Rect(170, 160, 300, 160, Color.White); Gfx.Rect(175, 165, 290, 150, Color.Black);
+        Gfx.Text("PAUSED", 320 - 6 * 8, 182, Color.White);
+        string[] opts = { "RESUME", "QUIT TO MENU" };
+        for (int i = 0; i < 2; i++)
+        {
+            bool on = i == pauseSel;
+            Gfx.Text(opts[i], 230, 232 + i * 36, on ? Gfx.Hex("#ffff00") : Color.White);
+            if (on) Gfx.Draw(Assets.Frame("nbHeart", 0), 202, 234 + i * 36, 16, 16);
+        }
+    }
+
     static void MenuStep()
     {
         Input.Step(); menuT++;
-        if (Pressed(K.Up)) { sel = (sel + Roster.Length - 1) % Roster.Length; lv = Roster[sel].lv; Assets.Play("move"); }
-        if (Pressed(K.Down)) { sel = (sel + 1) % Roster.Length; lv = Roster[sel].lv; Assets.Play("move"); }
+        int n = Roster.Length + 1; // the fights, then QUIT
+        if (Pressed(K.Up)) { sel = (sel + n - 1) % n; if (!OnQuit) lv = Roster[sel].lv; Assets.Play("move"); }
+        if (Pressed(K.Down)) { sel = (sel + 1) % n; if (!OnQuit) lv = Roster[sel].lv; Assets.Play("move"); }
+        if (OnQuit) { if (Pressed(K.Confirm)) quitGame = true; return; }
         if (Pressed(K.Left) && lv > 1) { lv--; Assets.Play("move"); }
         if (Pressed(K.Right) && lv < 20) { lv++; Assets.Play("move"); }
         if (Pressed(K.Confirm)) { Assets.Play("select"); notice = ""; StartFight(); }
@@ -170,17 +221,20 @@ public static class Program
         Raylib.ClearBackground(Color.Black);
         Gfx.Text("UNDERTALE BATTLE ENGINE", 320 - 23 * 8, 30, Color.White);
         Gfx.Text("C# PORT (WORK IN PROGRESS)", 320 - 26 * 8, 62, Gfx.Hex("#808080"));
-        for (int i = 0; i < Roster.Length; i++)
+        for (int i = 0; i <= Roster.Length; i++)
         {
             bool on = i == sel;
-            Gfx.Text(Roster[i].label, 150, 120 + i * 36, on ? Gfx.Hex("#ffff00") : Color.White);
-            if (on) Gfx.Draw(Assets.Frame("nbHeart", 0), 120, 122 + i * 36, 16, 16);
+            Gfx.Text(i < Roster.Length ? Roster[i].label : "QUIT", 150, 110 + i * 32, on ? Gfx.Hex("#ffff00") : Color.White);
+            if (on) Gfx.Draw(Assets.Frame("nbHeart", 0), 120, 112 + i * 32, 16, 16);
         }
-        var st = Fight.LvStats(lv); var g = Roster[sel].gear;
-        Gfx.Text($"LV {lv}  (< >)", 150, 310, Color.White);
-        Gfx.Text($"HP {st.hp}  AT {st.at}({g.Atk})  DF {st.df}({g.Df})", 150, 342, Gfx.Hex("#808080"));
-        Gfx.Text($"{g.Weapon} / {g.Armor}", 150, 374, Gfx.Hex("#808080"));
-        Gfx.Text("Z  FIGHT     F11  FULLSCREEN", 120, 440, Gfx.Hex("#808080"));
+        if (!OnQuit)
+        {
+            var st = Fight.LvStats(lv); var g = Roster[sel].gear;
+            Gfx.Text($"LV {lv}  (< >)", 150, 314, Color.White);
+            Gfx.Text($"HP {st.hp}  AT {st.at}({g.Atk})  DF {st.df}({g.Df})", 150, 346, Gfx.Hex("#808080"));
+            Gfx.Text($"{g.Weapon} / {g.Armor}", 150, 374, Gfx.Hex("#808080"));
+        }
+        Gfx.Text("Z FIGHT  ESC PAUSE/QUIT  F11 FULL", 56, 440, Gfx.Hex("#808080"));
         if (notice != "") Gfx.Text(notice, 150, 406, Gfx.Hex("#ffff00"));
     }
 }

@@ -21,6 +21,7 @@ game's own objects), function by function, so it plays the same.
 - Battle music (Enemy Approaching, Heartache, Spear of Justice, Battle Against a True Hero)
 - A fight-select menu; each fight starts with that stage's LV, weapon, armor and items (LV changeable)
 - 16:9 window, the 640x480 picture scaled into the middle; F11 / Alt+Enter fullscreen
+- Esc pauses a fight (RESUME / QUIT TO MENU); QUIT on the fight select (or Esc there) closes the game
 
 ## Layout
 

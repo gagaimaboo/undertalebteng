@@ -33,6 +33,9 @@ public static class Music
         cur = null; curBytes = null; Key = null;
     }
 
+    public static void Pause() { if (cur is { } m) Raylib.PauseMusicStream(m); }
+    public static void Resume() { if (cur is { } m) Raylib.ResumeMusicStream(m); }
+
     // every rendered frame: keeps the stream buffers filled
     public static void Update() { if (cur is { } m) Raylib.UpdateMusicStream(m); }
 }
