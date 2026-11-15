@@ -65,6 +65,18 @@ public static class Gfx
             new Vector2((float)(ox * sx), (float)(oy * sy)), (float)-angle, A(tint ?? Color.White, alpha));
     }
 
+    // canvas-style: origin (ox, oy) at (x, y), scaled by (sx, sy) (a negative sx mirrors it), turned
+    // clockwise by angle degrees
+    public static void DrawFrame(Texture2D? t, double x, double y, double ox, double oy, double sx, double sy, double angle, double alpha = 1)
+    {
+        if (t is not { } tex || sx == 0 || sy == 0) return;
+        var src = new Rectangle(0, 0, sx < 0 ? -tex.Width : tex.Width, sy < 0 ? -tex.Height : tex.Height);
+        double ax = Math.Abs(sx), ay = Math.Abs(sy);
+        double oxx = sx < 0 ? tex.Width - ox : ox, oyy = sy < 0 ? tex.Height - oy : oy;
+        Raylib.DrawTexturePro(tex, src, new Rectangle((float)x, (float)y, (float)(tex.Width * ax), (float)(tex.Height * ay)),
+            new Vector2((float)(oxx * ax), (float)(oyy * ay)), (float)angle, A(Color.White, alpha));
+    }
+
     public static void DrawPart(Texture2D? t, int sx, int sy, int sw, int sh, double x, double y, double w, double h, Color tint)
     {
         if (t is not { } tex) return;

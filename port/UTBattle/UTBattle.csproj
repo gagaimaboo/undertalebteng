@@ -8,6 +8,14 @@
     <AssemblyName>UTBattle</AssemblyName>
     <RootNamespace>UTBattle</RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- who made it and which version: an exe with none of this looks suspicious to antivirus heuristics -->
+    <Product>Innertale Engine (C# port)</Product>
+    <Company>Innertale Engine</Company>
+    <Description>Innertale Engine, the UNDERTALE battle engine (C# port)</Description>
+    <Copyright>Fan project; UNDERTALE and DELTARUNE by Toby Fox</Copyright>
+    <Version>1.4.1</Version>
+    <FileVersion>1.4.1.0</FileVersion>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup>

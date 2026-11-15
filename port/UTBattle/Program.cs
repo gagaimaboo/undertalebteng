@@ -17,10 +17,10 @@ public static class Program
     static Fight? fight;
 
     // the gear each fight starts with (the web build's AUTO LOADOUT: that stage of the game)
-    record Loadout(int Lv, string Weapon, double Atk, string Armor, double Df, (string name, int heal, int n)[] Items);
-    static readonly Loadout Tutorial = new(1, "Stick", 0, "Bandage", 0, new[] { ("Monster Candy", 10, 2) });
-    static readonly Loadout Ruins = new(3, "Toy Knife", 3, "Faded Ribbon", 3, new[] { ("Monster Candy", 10, 3), ("Spider Donut", 12, 1) });
-    static readonly Loadout Waterfall = new(9, "Ballet Shoes", 7, "Old Tutu", 10, new[] { ("Crab Apple", 18, 2), ("Sea Tea", 10, 2), ("Nice Cream", 15, 2), ("Spider Donut", 12, 1) });
+    record Loadout(int Lv, string Weapon, string Armor, double Df, (string name, int heal, int n)[] Items);
+    static readonly Loadout Tutorial = new(1, "stick", "Bandage", 0, new[] { ("Monster Candy", 10, 2) });
+    static readonly Loadout Ruins = new(3, "toyknife", "Faded Ribbon", 3, new[] { ("Monster Candy", 10, 3), ("Spider Donut", 12, 1) });
+    static readonly Loadout Waterfall = new(9, "balletshoes", "Old Tutu", 10, new[] { ("Crab Apple", 18, 2), ("Sea Tea", 10, 2), ("Nice Cream", 15, 2), ("Spider Donut", 12, 1) });
     static readonly (string id, string label, Loadout gear, int lv)[] Roster =
     {
         ("froggit", "FROGGIT", Ruins, 3), ("dummy", "DUMMY", Tutorial, 1), ("toriel", "TORIEL", Ruins, 3),
@@ -30,7 +30,14 @@ public static class Program
     // Esc in a fight: the pause menu (RESUME / QUIT TO MENU); QUIT on the main menu closes the game
     static bool paused, quitGame, escQueued;
     static int pauseSel;
+    // the menu: the fight list (the fights, then QUIT) on the left; the highlighted fight's
+    // loadout (LV, WEAPON) in a panel on the right. RIGHT steps into the panel and X steps back
+    // out, so the fight you're setting up stays the one you're on.
+    static int chosen, panelRow;
+    static bool inPanel;
+    static string weapon = "toyknife";
     static bool OnQuit => sel == Roster.Length;
+    static void Choose(int i) { if (i == chosen) return; chosen = i; lv = Roster[i].lv; weapon = Roster[i].gear.Weapon; }
     static string notice = "";
 
     public static void Main(string[] args)
@@ -62,7 +69,12 @@ public static class Program
         double monHp = double.Parse(Arg("--mon-hp", "-1"));
         int testLen = int.Parse(Arg("--steps", "905"));
         double playerHp = double.Parse(Arg("--player-hp", "-1"));
-        if (testSteps > 0 || shotDir != null) { sel = Math.Max(0, Array.FindIndex(Roster, r => r.id == testId)); lv = Roster[sel].lv; }
+        int mash = int.Parse(Arg("--mash", "12")), shotEvery = int.Parse(Arg("--shot-every", "45"));
+        if (testSteps > 0 || shotDir != null)
+        {
+            sel = Math.Max(0, Array.FindIndex(Roster, r => r.id == testId)); chosen = -1; Choose(sel);
+            weapon = Arg("--weapon", weapon);
+        }
         if (testSteps > 0) StartFight();
         int autoStep = 0;
         var froggitScript = new Dictionary<int, string>
@@ -77,9 +89,9 @@ public static class Program
         {
             if (s == 5) return "start";
             if (s == testLen) return "quit";
-            if (s % 45 == 0) return "shot:t" + s;
-            if (s % 12 == 0) return "Z";
-            if (s % 12 == 6) return new[] { "U", "L", "D", "R" }[s / 12 % 4];
+            if (s % shotEvery == 0) return "shot:t" + s;
+            if (s % mash == 0) return "Z";
+            if (s % 12 == 6 && fight?.MnFight == 2) return new[] { "U", "L", "D", "R" }[s / 12 % 4];
             return null;
         }
 
@@ -101,7 +113,10 @@ public static class Program
                     ++autoStep;
                     // --fight pausequit: Esc mid-fight, QUIT TO MENU, then QUIT on the menu
                     var pq = new Dictionary<int, string> { [5] = "start", [60] = "shot:fight", [61] = "ESC", [70] = "shot:paused", [100] = "shot:still", [104] = "D", [110] = "shot:quitsel", [114] = "Z", [120] = "shot:menu", [124] = "U", [130] = "shot:onquit", [134] = "Z", [200] = "quit" };
-                    string? cmd = testId == "froggit" ? (froggitScript.TryGetValue(autoStep, out var c) ? c : null) : testId == "pausequit" ? (pq.TryGetValue(autoStep, out var c2) ? c2 : null) : BossCmd(autoStep);
+                    // --keys "30:R,34:Z,...": a custom script (step:command), plus "start" at 5 and screenshots
+                    var custom = Arg("--keys", "") is { Length: > 0 } ks ? ks.Split(',').Select(k => k.Split(':', 2)).ToDictionary(k => int.Parse(k[0]), k => k[1]) : null;
+                    if (custom != null) { custom.TryAdd(5, "start"); custom.TryAdd(testLen, "quit"); }
+                    string? cmd = custom != null ? (custom.TryGetValue(autoStep, out var c3) ? c3 : autoStep % shotEvery == 0 ? "shot:t" + autoStep : null) : testId == "froggit" ? (froggitScript.TryGetValue(autoStep, out var c) ? c : null) : testId == "pausequit" ? (pq.TryGetValue(autoStep, out var c2) ? c2 : null) : BossCmd(autoStep);
                     if (cmd == "start") { StartFight(); if (monHp > 0) foreach (var m in fight!.Mons) m.Hp = monHp; if (playerHp > 0) fight!.Hp = fight.MaxHp = playerHp; }
                     else if (cmd == "Z") Input.Inject(K.Confirm);
                     else if (cmd == "X") Input.Inject(K.Cancel);
@@ -157,11 +172,10 @@ public static class Program
 
     static void StartFight()
     {
-        var g = Roster[sel].gear;
+        var g = Roster[chosen].gear;
         var items = new List<Fight.Item>();
         foreach (var (name, heal, n) in g.Items) for (int i = 0; i < n; i++) items.Add(new() { Name = name, Heal = heal });
-        var name0 = Roster[sel].label;
-        fight = new Fight(new[] { Roster[sel].id }, lv, "Frisk", items, g.Atk, g.Df)
+        fight = new Fight(new[] { Roster[chosen].id }, lv, "Frisk", items, weapon, g.Df)
         {
             OnExit = (reason, f) => notice = reason switch
             {
@@ -207,34 +221,66 @@ public static class Program
     static void MenuStep()
     {
         Input.Step(); menuT++;
+        if (inPanel)
+        {
+            if (Pressed(K.Cancel)) { inPanel = false; Assets.Play("move"); return; }
+            if (Pressed(K.Up) || Pressed(K.Down)) { panelRow = 1 - panelRow; Assets.Play("move"); }
+            int dx = (Pressed(K.Right) ? 1 : 0) - (Pressed(K.Left) ? 1 : 0);
+            if (dx != 0 && panelRow == 0) { int nl = Math.Clamp(lv + dx, 1, 20); if (nl != lv) { lv = nl; Assets.Play("move"); } }
+            if (dx != 0 && panelRow == 1)
+            {
+                var ws = Fight.Weapons; int i = Array.FindIndex(ws, w => w.Id == weapon);
+                weapon = ws[((i + dx) % ws.Length + ws.Length) % ws.Length].Id; Assets.Play("move");
+            }
+            if (Pressed(K.Confirm)) { Assets.Play("select"); notice = ""; StartFight(); }
+            return;
+        }
         int n = Roster.Length + 1; // the fights, then QUIT
-        if (Pressed(K.Up)) { sel = (sel + n - 1) % n; if (!OnQuit) lv = Roster[sel].lv; Assets.Play("move"); }
-        if (Pressed(K.Down)) { sel = (sel + 1) % n; if (!OnQuit) lv = Roster[sel].lv; Assets.Play("move"); }
+        if (Pressed(K.Up)) { sel = (sel + n - 1) % n; Assets.Play("move"); }
+        if (Pressed(K.Down)) { sel = (sel + 1) % n; Assets.Play("move"); }
+        if (!OnQuit) Choose(sel); // a fight you move onto starts with its stage's LV and weapon
         if (OnQuit) { if (Pressed(K.Confirm)) quitGame = true; return; }
-        if (Pressed(K.Left) && lv > 1) { lv--; Assets.Play("move"); }
-        if (Pressed(K.Right) && lv < 20) { lv++; Assets.Play("move"); }
+        if (Pressed(K.Right)) { inPanel = true; panelRow = 0; Assets.Play("move"); return; }
         if (Pressed(K.Confirm)) { Assets.Play("select"); notice = ""; StartFight(); }
     }
 
     static void MenuDraw()
     {
         Raylib.ClearBackground(Color.Black);
-        Gfx.Text("UNDERTALE BATTLE ENGINE", 320 - 23 * 8, 30, Color.White);
-        Gfx.Text("C# PORT (WORK IN PROGRESS)", 320 - 26 * 8, 62, Gfx.Hex("#808080"));
+        var yel = Gfx.Hex("#ffff00"); var grey = Gfx.Hex("#808080");
+        Gfx.Text("INNERTALE ENGINE", 320 - 16 * 8, 28, Color.White);
+        Gfx.Text("C# PORT (WORK IN PROGRESS)", 320 - 26 * 8, 58, grey);
+        // the fights
         for (int i = 0; i <= Roster.Length; i++)
         {
-            bool on = i == sel;
-            Gfx.Text(i < Roster.Length ? Roster[i].label : "QUIT", 150, 110 + i * 32, on ? Gfx.Hex("#ffff00") : Color.White);
-            if (on) Gfx.Draw(Assets.Frame("nbHeart", 0), 120, 112 + i * 32, 16, 16);
+            bool on = i == sel, quit = i == Roster.Length;
+            double y = quit ? 300 : 110 + i * 32;
+            Gfx.Text(quit ? "QUIT" : Roster[i].label, 48, y, on ? (inPanel ? Color.White : yel) : (inPanel ? grey : Color.White));
+            if (on && !inPanel) Gfx.Draw(Assets.Frame("nbHeart", 0), 24, y + 2, 16, 16);
         }
-        if (!OnQuit)
+        // the loadout of the one you're on
+        double px = 348, py = 100, pw = 280, ph = 240;
+        var frame = inPanel ? yel : Color.White;
+        Gfx.Rect(px, py, pw, ph, frame); Gfx.Rect(px + 3, py + 3, pw - 6, ph - 6, Color.Black);
+        if (OnQuit) Gfx.Text("CLOSE THE GAME", px + 20, py + 100, grey);
+        else
         {
-            var st = Fight.LvStats(lv); var g = Roster[sel].gear;
-            Gfx.Text($"LV {lv}  (< >)", 150, 314, Color.White);
-            Gfx.Text($"HP {st.hp}  AT {st.at}({g.Atk})  DF {st.df}({g.Df})", 150, 346, Gfx.Hex("#808080"));
-            Gfx.Text($"{g.Weapon} / {g.Armor}", 150, 374, Gfx.Hex("#808080"));
+            var w = Fight.WeaponOf(weapon); var g = Roster[chosen].gear; var st = Fight.LvStats(lv);
+            void Field(int row, string label, string value, double y)
+            {
+                bool on = inPanel && panelRow == row;
+                Gfx.Text(label, px + 40, y, on ? yel : Color.White);
+                if (on) Gfx.Draw(Assets.Frame("nbHeart", 0), px + 14, y + 2, 16, 16);
+                var text = $"< {value} >";
+                Gfx.Text(text, px + pw / 2 - text.Length * 8, y + 30, on ? yel : Color.White);
+            }
+            Field(0, "LV", lv.ToString(), py + 16);
+            Field(1, "WEAPON", w.Name, py + 84);
+            Gfx.Text($"HP {st.hp}  AT {st.at}+{w.Atk}", px + 20, py + 150, grey);
+            Gfx.Text($"DF {st.df}+{g.Df}", px + 20, py + 176, grey);
+            Gfx.Text(g.Armor, px + 20, py + 202, grey);
         }
-        Gfx.Text("Z FIGHT  ESC PAUSE/QUIT  F11 FULL", 56, 440, Gfx.Hex("#808080"));
-        if (notice != "") Gfx.Text(notice, 150, 406, Gfx.Hex("#ffff00"));
+        if (notice != "") Gfx.Text(notice, 56, 360, yel);
+        Gfx.Text(inPanel ? "LEFT/RIGHT CHANGE  Z FIGHT  X BACK" : "Z FIGHT  RIGHT LOADOUT  ESC QUIT", inPanel ? 48 : 64, 440, grey);
     }
 }

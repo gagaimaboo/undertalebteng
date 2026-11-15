@@ -15,6 +15,8 @@ public class Monster
     public int W, H, Wd;
     public int HurtAnim, Shudder, ShakeT, T;
     public double TakeDamage;
+    // KARMA left by the Dirty Blaster, and its tick timer
+    public double Kr; public int KrT;
     public int WhatIHeard = -1;
     // per-monster script state (the JS m.v)
     public readonly Dictionary<string, object?> V = new();
