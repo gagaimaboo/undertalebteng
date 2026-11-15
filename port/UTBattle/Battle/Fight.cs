@@ -1,4 +1,5 @@
 using Raylib_cs;
+using Music = UTBattle.Engine.Music;
 using UTBattle.Engine;
 using static UTBattle.Engine.Input;
 
@@ -15,7 +16,13 @@ public class Fight
         [3] = new[] { 237, 397, 250, 385 }, [4] = new[] { 267, 367, 295, 385 }, [5] = new[] { 192, 442, 250, 385 },
         [6] = new[] { 227, 407, 250, 385 }, [7] = new[] { 227, 407, 200, 385 }, [8] = new[] { 202, 432, 290, 385 },
         [9] = new[] { 132, 492, 250, 385 }, [10] = new[] { 147, 487, 200, 385 }, [11] = new[] { 32, 602, 330, 465 },
-        [12] = new[] { 280, 360, 200, 280 }, [13] = new[] { 280, 360, 250, 385 },
+        [12] = new[] { 280, 360, 200, 280 }, [13] = new[] { 280, 360, 250, 385 }, [14] = new[] { 285, 355, 300, 385 },
+        [15] = new[] { 270, 370, 250, 385 }, [16] = new[] { 270, 370, 50, 385 }, [17] = new[] { 162, 472, 250, 385 }, [18] = new[] { 162, 472, 220, 385 },
+        [19] = new[] { 220, 420, 185, 385 }, [20] = new[] { 257, 547, 250, 385 }, [21] = new[] { 197, 437, 250, 385 }, [24] = new[] { 235, 405, 250, 385 },
+        [25] = new[] { 235, 405, 160, 385 }, [26] = new[] { 295, 345, 250, 385 }, [27] = new[] { 270, 370, 250, 385 }, [28] = new[] { 235, 405, 35, 385 },
+        [29] = new[] { 207, 427, 250, 385 }, [30] = new[] { 207, 427, 200, 385 }, [31] = new[] { 32, 602, 100, 385 }, [35] = new[] { 132, 502, 250, 385 },
+        [36] = new[] { 240, 400, 225, 385 }, [37] = new[] { 120, 520, 185, 385 }, [38] = new[] { 270, 370, 285, 385 }, [39] = new[] { 112, 542, 230, 385 },
+        [50] = new[] { 192, 512, 250, 385 },
     };
     static readonly (int x, string img)[] Buttons = { (32, "fight"), (185, "act"), (345, "item"), (500, "mercy") };
     // spr_heart's hit mask
@@ -23,15 +30,24 @@ public class Fight
     static readonly List<(int, int)> HeartPx = new();
     static Fight() { for (int j = 0; j < 16; j++) for (int i = 0; i < 16; i++) if (HeartMask[j][i] == '#') HeartPx.Add((i, j)); }
 
-    public class Heart { public double X = 40, Y = 446, XPrev, YPrev, Frame; public bool Visible = true, Gtfo; public double Hs; }
+    // Mode: "red" moves, "green" stays put (Undyne's shield turns instead)
+    public class Heart { public double X = 40, Y = 446, XPrev, YPrev, Frame; public bool Visible = true, Gtfo; public double Hs; public string Mode = "red"; }
     public class Item { public string Name = ""; public int Heal; }
-    public class Fx { public string Kind = ""; public double X, Y, Frame, Alpha = 1, Sc = 1, Sp, Dir, Isp, Cx, Cy; public int T, Wait, Line; public Monster? M; public bool Dead; public List<double[]>? Parts; public List<(int x0, int n)>[]? Lines; }
+    // Kind "vapor" dissolves sprite Key drawn at (X, Y, W, H); StepFn/DrawFn make a self-contained effect
+    public class Fx { public string Kind = ""; public double X, Y, W, H, Frame, Alpha = 1, Sc = 1, Sp, Dir, Isp, Cx, Cy; public int T, Wait, Line; public string? Key; public bool Dead; public List<double[]>? Parts; public List<(int x0, int n)>[]? Lines; public Action<Fx>? StepFn, DrawFn; }
     public class DmgWriter { public double X, Y, YStart, Vy, Dmg, MaxHp, Apparent, Actual; public Monster M = null!; public int Life = -1, Tick; public bool Dead; }
     public class FightBar { public double Tx, Ty, X, X0, Hs, Alpha = 1, Xs = 1, Blink; public bool Hit, Fade, CursorGone, Crit, Gone, Wait; }
-    public class Bubble { public Monster M = null!; public double X, Y; public Writer W = null!; }
+    public class Bubble { public Monster? M; public double X, Y; public Writer W = null!; public bool Wide, Hold; public string? Img; }
 
     // ---- state (the JS S)
-    public int T, Turn, MyFight, MnFight, BMenuNo, Page, SkipT = -1, TurnTimer = -1, Talked, TalkT, TalkLen, TalkLenMin, SparePause, FightWait;
+    public int T, Turn, MyFight, MnFight, BMenuNo, Page, SkipT = -1, TurnTimer = -1, Talked, TalkT, TalkLen, TalkLenMin, TalkLenExact, SparePause, FightWait;
+    // the border preset in use (-1: a free rect), the SOUL's mode for the enemy's turn
+    public int BorderNo;
+    public string SoulMode = "red";
+    // box wall opacity, a black fade over everything, cinematic (no box / HUD), game speed
+    public double BoxAlpha = 1, Fade, SpeedMul = 1;
+    public bool Cinematic;
+    public int BgFrame = 1;
     public int[] Coord = new int[7];
     public double Hp, MaxHp, At, Df, WStrength, Sp = 4;
     public int Lv, Inv = 30, Invc;
@@ -72,10 +88,10 @@ public class Fight
         return (lv == 20 ? 99 : 16 + lv * 4, (lv - 1) * 2, df[lv - 1]);
     }
 
-    public Fight(string[] monsters, int lv, string name, List<Item> items, double weaponAtk = 0)
+    public Fight(string[] monsters, int lv, string name, List<Item> items, double weaponAtk = 0, double armorDf = 0)
     {
         var st = LvStats(lv);
-        Lv = lv; Hp = MaxHp = st.hp; At = st.at + 10; Df = st.df + 10; WStrength = weaponAtk;
+        Lv = lv; Hp = MaxHp = st.hp; At = st.at + 10; Df = st.df + 10 + armorDf; WStrength = weaponAtk;
         PlayerName = name.ToUpperInvariant(); Items = items; MinHp = Hp;
         int n = monsters.Length;
         for (int i = 0; i < n; i++) Mons.Add(MakeMonster(monsters[i], i, n));
@@ -83,6 +99,9 @@ public class Fight
         Flavor = intro;
         Wr = new Writer(this, Writer.PagesOf(intro, ""));
         Input.ClearAll();
+        BgFrame = Mons.Count > 0 ? Mons[0].Def.BgFrame : 1;
+        PlayMusic(Mons.Count > 0 ? Mons[0].Def.MusicKey : "battle");
+        foreach (var m in Mons) m.Def.Setup(this, m);
     }
 
     static double[] SlotCentres(int n) => n <= 1 ? new double[] { 320 } : n == 2 ? new double[] { 220, 424 } : new double[] { 118, 320, 522 };
@@ -105,7 +124,18 @@ public class Fight
     public IEnumerable<Monster> AliveMons => Mons.Where(m => m.Alive);
     public List<Monster> Alive() => Mons.Where(m => m.Alive).ToList();
     public (double l, double r, double t, double b) Inner() => (EL + 5, ER, ET + 5, EB);
-    public void SetBorder(int n) => Ideal = (int[])(Borders.TryGetValue(n, out var b) ? b : Borders[0]).Clone();
+    public void SetBorder(int n) { BorderNo = n; Ideal = (int[])(Borders.TryGetValue(n, out var b) ? b : Borders[0]).Clone(); }
+    public void SetBorderRect(int l, int r, int t, int b) { BorderNo = -1; Ideal = new[] { l, r, t, b }; }
+    public void EndTurn() => TurnTimer = 0;
+    public void PlayMusic(string? key) { if (key == null) Music.Stop(); else Music.Play(key); }
+    public void StopMusic() => Music.Stop();
+    // GameMaker motion: friction shrinks the speed, then gravity is added (the move is the caller's)
+    public static void Gm(Bullet b)
+    {
+        if (b.Fric != 0) { double sp = Math.Sqrt(b.VX * b.VX + b.VY * b.VY); if (sp > 0) { double n = b.Fric > 0 ? Math.Max(0, sp - b.Fric) : sp - b.Fric; b.VX = b.VX / sp * n; b.VY = b.VY / sp * n; } }
+        if (b.Grav != 0) { b.VX += DCos(b.GDir) * b.Grav; b.VY -= DSin(b.GDir) * b.Grav; }
+    }
+    public bool HeartMoving() => Math.Abs(H.X - H.XPrev) > .01 || Math.Abs(H.Y - H.YPrev) > .01;
     bool BorderSettled() => EL == Ideal[0];
     public bool Spareable(Monster m) => m.Alive && m.Hp - At - WStrength + m.Df - m.MercyMod < 0;
     public void Turntimer(int n) => TurnTimer = n;
@@ -126,12 +156,17 @@ public class Fight
         if (Invc > 0) Invc--;
         h.Frame = Invc > 0 ? (h.Frame + .5) % 2 : 0;
         if (MnFight != 2 || !h.Visible) return;
+        if (h.Mode == "green") { ClampHeart(); return; }
         double slow = Held(K.Cancel) ? Sp / 2 : 0;
         if (Held(K.Up)) h.Y -= Sp - slow;
         if (Held(K.Down)) h.Y += Sp - slow;
         if (Held(K.Left)) h.X -= Sp - slow;
         if (Held(K.Right)) h.X += Sp - slow;
-        var f = Inner();
+        ClampHeart();
+    }
+    void ClampHeart()
+    {
+        var h = H; var f = Inner();
         if (h.X < f.l) h.X = f.l;
         if (h.X + 16 > f.r) h.X = f.r - 16;
         if (h.Y < f.t) h.Y = f.t;
@@ -162,7 +197,8 @@ public class Fight
         if (Items.Count > 4) s += " &                     PAGE " + (Page + 1);
         return s;
     }
-    string MercyText() => (AliveMons.Any(Spareable) ? "\\Y" : "\\W") + "   * Spare&\\W   * Flee";
+    bool NoFlee() => AliveMons.Any(m => m.Def.NoFlee(this, m));
+    string MercyText() => (AliveMons.Any(Spareable) ? "\\Y" : "\\W") + "   * Spare" + (NoFlee() ? "" : "&\\W   * Flee");
 
     void OpenMenu(int n)
     {
@@ -243,7 +279,8 @@ public class Fight
         }
         if (BMenuNo == 4)
         {
-            if (Pressed(K.Up) || Pressed(K.Down)) { Coord[4] = Coord[4] == 1 ? 0 : 1; Assets.Play("move"); }
+            if ((Pressed(K.Up) || Pressed(K.Down)) && !NoFlee()) { Coord[4] = Coord[4] == 1 ? 0 : 1; Assets.Play("move"); }
+            if (NoFlee()) Coord[4] = 0;
             h.X = Ideal[0] + 32; h.Y = Ideal[2] + 28 + Coord[4] * 32;
             if (Pressed(K.Confirm)) { Clear(K.Confirm); if (Coord[4] == 0) DoSpare(); else DoFlee(); }
         }
@@ -280,6 +317,7 @@ public class Fight
             double stretch = (546 - bonus) / 546; f.Crit = bonus <= 12;
             dmg = bonus <= 12 ? Math.Round(dmg * 2.2) : Math.Round(dmg * stretch * 2);
             f.Hit = true;
+            dmg = m.Def.OnHitCalc(this, m, dmg);
             m.TakeDamage = Math.Max(0, dmg); f.Fade = true;
             double isp = Math.Max(.1, .5 - stretch / 4), sc = stretch * 2 - .5;
             FxList.Add(new Fx { Kind = "slice", X = m.X + m.Wd / 2.0 - 5, Y = m.Y - 5, Cx = m.X + m.Wd / 2.0 + 5, Cy = m.Y + 45, Sc = sc, Isp = isp });
@@ -292,13 +330,14 @@ public class Fight
     {
         var m = Mons[Target];
         StatAttacks++; StatDmg += (int)m.TakeDamage; if (Bar?.Crit == true) StatCrits++;
-        m.Hurt = true; m.Shudder = 16; m.ShakeT = 0; Assets.Play("damage");
+        m.Hurt = true; m.Shudder = m.Def.ShudderSteps.start; m.ShakeT = 0; Assets.Play("damage");
         SpawnDmgWriter(m, m.TakeDamage);
         m.HurtAnim = 3;
     }
     void SpawnDmgWriter(Monster m, double dmg)
     {
-        double x = m.X + m.Wd / 2.0 - 48, y = m.Y - 24;
+        var p = m.Def.DmgPos(m);
+        double x = p?.x ?? m.X + m.Wd / 2.0 - 48, y = p?.y ?? m.Y - 24;
         Dmgw.Add(new DmgWriter { X = x, Y = y, YStart = y, Vy = dmg != 0 ? -4 : 0, Dmg = dmg, M = m, MaxHp = m.MaxHp, Apparent = m.Hp, Actual = m.Hp });
     }
     void MonsterHurtStep(Monster m)
@@ -306,20 +345,28 @@ public class Fight
         if (m.HurtAnim != 3) return;
         if (++m.ShakeT < 2) return; m.ShakeT = 0;
         m.X += m.Shudder;
-        if (m.Shudder < 0) m.Shudder = -(m.Shudder + 2); else m.Shudder = -m.Shudder;
+        int sd = m.Def.ShudderSteps.step;
+        if (m.Shudder < 0) m.Shudder = -(m.Shudder + sd); else m.Shudder = -m.Shudder;
         if (m.Shudder == 0)
         {
             m.HurtAnim = 0; m.X = m.X0; m.Hurt = false;
             m.Hp -= m.TakeDamage;
             foreach (var w in Dmgw) if (w.M == m && w.Life < 0) w.Life = 15;
+            m.Def.OnDamaged(this, m, m.TakeDamage);
+            if (m.Hp < 1 && m.Def.OnLethal(this, m)) return;
             if (m.Hp < 1) KillMonster(m);
             EndPlayerTurn();
         }
     }
-    void KillMonster(Monster m)
+    public void KillMonster(Monster m)
     {
         m.Alive = false; m.Killed = true; XpTotal += m.Xp; GoldTotal += m.Gold;
-        FxList.Add(new Fx { Kind = "vapor", M = m, Parts = new() });
+        if (m.Def.Vapor(m) is { } v) AddVapor(v.key, v.x, v.y, v.w, v.h);
+    }
+    // obj_vaporized on a sprite drawn at (x, y, w, h)
+    public void AddVapor(string key, double x, double y, double w, double h)
+    {
+        FxList.Add(new Fx { Kind = "vapor", Key = key, X = x, Y = y, W = w, H = h, Parts = new() });
         Assets.Play("vaporized");
     }
     public void SpareMonster(Monster m)
@@ -364,6 +411,7 @@ public class Fight
     void DoSpare()
     {
         MyFight = 4; H.Visible = false; Wr = null; Assets.Play("select");
+        foreach (var m in Alive()) m.Def.OnMercy(this, m);
         bool any = false;
         foreach (var m in Alive()) if (Spareable(m)) { SpareMonster(m); any = true; }
         if (!AliveMons.Any()) { Win(); return; }
@@ -400,25 +448,30 @@ public class Fight
             int? border = null;
             foreach (var m in Alive())
             {
-                var sp = m.Def.Speech(this, m);
-                if (sp != null)
+                var o = m.Def.SpeechEx(this, m);
+                if (o != null)
                 {
-                    double bx = m.X + m.W, by = m.Y;
-                    var w = new Writer(this, new[] { sp.Replace("\n", "&") }, typer: 2, x: bx + 15, y: by + 10);
-                    Bubbles.Add(new Bubble { M = m, X = bx, Y = by, W = w });
+                    var pos = o.Pos ?? m.Def.BubblePos(m) ?? (m.X + m.W, m.Y);
+                    var pages = o.Pages.Select(t => t.Replace("\n", "&")).ToArray();
+                    var voice = o.Voice ?? m.Def.Voice;
+                    var w = new Writer(this, pages, typer: o.Typer ?? m.Def.Typer, x: pos.x + (o.Tx ?? (o.Wide ? 20 : 15)), y: pos.y + (o.Ty ?? 10),
+                        instant: o.Instant, sound: voice != null ? new[] { voice } : null) { OnFace = o.OnFace };
+                    Bubbles.Add(new Bubble { M = m, X = pos.x, Y = pos.y, W = w, Wide = o.Wide, Hold = o.Hold, Img = o.Img });
                 }
                 var b = m.Def.Border(this, m); if (b != null && border == null) border = b;
             }
             SetBorder(border ?? 3);
-            TalkLen = Math.Max(60, TalkLenMin); TalkLenMin = 0;
+            TalkLen = TalkLenExact > 0 ? TalkLenExact : Math.Max(60, TalkLenMin); TalkLenMin = 0; TalkLenExact = 0;
         }
         TalkT++;
-        foreach (var b in Bubbles) b.W.Step();
-        if (Pressed(K.Confirm) && TalkLen - TalkT > 5 && BorderSettled()) TalkLen = TalkT + 2;
-        if (TalkT >= TalkLen)
+        foreach (var b in Bubbles.ToList()) b.W.Step();
+        var holds = Bubbles.Where(b => b.Hold).ToList();
+        if (holds.Count > 0) TalkLen = holds.All(b => b.W.Done) ? TalkT : TalkT + 999;
+        else if (Pressed(K.Confirm) && TalkLen - TalkT > 5 && BorderSettled()) TalkLen = TalkT + 2;
+        if (TalkT >= TalkLen && MnFight == 1)
         {
             Bubbles.Clear(); MnFight = 2; TurnTimer = -1;
-            H.Visible = true;
+            H.Visible = true; H.Mode = SoulMode;
             H.X = Math.Round((Ideal[0] + Ideal[1]) / 2.0) - 8; H.Y = Math.Round((Ideal[2] + Ideal[3]) / 2.0) - 8;
             NextFlavor = "";
             foreach (var m in Alive())
@@ -446,7 +499,7 @@ public class Fight
     {
         if (BorderSettled() && ET == Ideal[2] && ER == Ideal[1])
         {
-            MnFight = 0; MyFight = 0; BMenuNo = 0; Turn++; H.Visible = true;
+            MnFight = 0; MyFight = 0; BMenuNo = 0; Turn++; H.Visible = true; H.Mode = SoulMode == "green" ? "green" : "red";
             var al = Alive();
             var flav = NextFlavor;
             if (string.IsNullOrEmpty(flav)) { var m = al[(int)Rnd(al.Count)]; flav = m.Def.Flavor(this, m); }
@@ -455,10 +508,13 @@ public class Fight
     }
     public void Win()
     {
+        StopMusic();
         Won = true; MyFight = 0; MnFight = 0; H.Visible = false; Bullets.Clear();
         Write($"* YOU WON!&* You earned {XpTotal} XP and {GoldTotal} gold.", "/%", () => ExitBattle("win"));
     }
-    void ExitBattle(string reason) { Exited = true; OnExit?.Invoke(reason, this); }
+    void ExitBattle(string reason) { Exited = true; StopMusic(); foreach (var m in Mons) m.Def.OnExit(this, m, reason); OnExit?.Invoke(reason, this); }
+    // the script ends the battle right here (api.end)
+    public void End(string reason) { Bullets.Clear(); Bubbles.Clear(); ExitBattle(reason); }
 
     // ---- bullets
     public Bullet Spawn(Bullet b) { b.Owner ??= CurMon; Bullets.Add(b); return b; }
@@ -467,6 +523,7 @@ public class Fight
         var h = H; if (!h.Visible || b.Hidden) return false;
         double x0 = b.X + b.Box[0], y0 = b.Y + b.Box[1], bw = b.Box[2], bh = b.Box[3];
         if (x0 > h.X + 16 || x0 + bw < h.X || y0 > h.Y + 16 || y0 + bh < h.Y) return false;
+        if (b.Mask != null) return b.Mask(h);
         foreach (var (i, j) in HeartPx) { double px = h.X + i + .5, py = h.Y + j + .5; if (px >= x0 && px < x0 + bw && py >= y0 && py < y0 + bh) return true; }
         return false;
     }
@@ -501,7 +558,8 @@ public class Fight
             }
             if (b.Alive && MnFight == 2 && HeartHit(b))
             {
-                if (DamagePlayer(b.Dmg) && b.Kill) b.Alive = false;
+                bool hit = b.OnHit != null ? b.OnHit(b) : DamagePlayer(b.Dmg);
+                if (hit && b.Kill) b.Alive = false;
             }
         }
         foreach (var b in Bullets) if (!b.Alive && b.OnDie != null && !b.DiedOnce) { b.DiedOnce = true; CurMon = b.Owner; b.OnDie(b); }
@@ -513,6 +571,7 @@ public class Fight
     void StartGameOver()
     {
         if (GameOver != null) return;
+        StopMusic();
         GameOver = new GameOverState { X = H.X, Y = H.Y };
         Bullets.Clear(); Bubbles.Clear(); Wr = null;
     }
@@ -537,8 +596,9 @@ public class Fight
     // ---- effects
     void FxStep()
     {
-        foreach (var e in FxList)
+        foreach (var e in FxList.ToList())
         {
+            if (e.StepFn != null) { e.StepFn(e); continue; }
             if (e.Kind == "slice") { e.Frame += e.Isp; e.T++; if (e.Frame >= 6) e.Dead = true; }
             else if (e.Kind == "gen") { e.Frame += 1; if (e.Frame >= 3) e.Dead = true; }
             else if (e.Kind == "dust")
@@ -549,16 +609,15 @@ public class Fight
             else if (e.Kind == "vapor")
             {
                 // obj_vaporized_new: read the sprite 2px a line, 4 lines a step; each run of pixels turns to dust
-                var m = e.M!;
-                e.Lines ??= VaporLines(m);
-                bool wide = m.W > 120;
+                e.Lines ??= VaporLines(e.Key!, (int)e.W, (int)e.H);
+                bool wide = e.W > 120;
                 for (int r = 0; r < 4 && e.Line < e.Lines.Length; r++, e.Line++)
                 {
-                    double y = m.Y + e.Line * 2;
+                    double y = e.Y + e.Line * 2;
                     foreach (var (x0, n) in e.Lines[e.Line])
                     {
-                        if (wide) e.Parts!.Add(new[] { m.X + x0, y, n * 2, Rnd(4) - 2, 0, Rnd(.5) + .2, 0 });
-                        else for (int k = 0; k < n; k++) e.Parts!.Add(new[] { m.X + x0 + k * 2, y + 2, 2, Rnd(4) - 2, 0, Rnd(.5) + .2, 0 });
+                        if (wide) e.Parts!.Add(new[] { e.X + x0, y, n * 2, Rnd(4) - 2, 0, Rnd(.5) + .2, 0 });
+                        else for (int k = 0; k < n; k++) e.Parts!.Add(new[] { e.X + x0 + k * 2, y + 2, 2, Rnd(4) - 2, 0, Rnd(.5) + .2, 0 });
                     }
                 }
                 foreach (var p in e.Parts!) { p[4] -= p[5]; p[0] += p[3]; p[1] += p[4]; p[6]++; }
@@ -587,23 +646,22 @@ public class Fight
 
     // the dying sprite in 2px lines: runs of opaque pixels per line
     static readonly Dictionary<string, List<(int, int)>[]> vaporCache = new();
-    List<(int, int)>[] VaporLines(Monster m)
+    List<(int, int)>[] VaporLines(string key, int W, int H)
     {
-        var key = m.Def.VaporSprite(m);
-        if (key == null || Assets.Tex(key) is not { } tex) return Array.Empty<List<(int, int)>>();
-        var ck = $"{key}|{m.W}|{m.H}";
+        if (Assets.Tex(key) is not { } tex) return Array.Empty<List<(int, int)>>();
+        var ck = $"{key}|{W}|{H}";
         if (vaporCache.TryGetValue(ck, out var cached)) return cached;
         var img = Raylib.LoadImageFromTexture(tex);
-        var lines = new List<(int, int)>[(m.H + 1) / 2];
+        var lines = new List<(int, int)>[(H + 1) / 2];
         for (int ly = 0; ly < lines.Length; ly++)
         {
             lines[ly] = new();
-            int sy = Math.Min(tex.Height - 1, (int)(ly * 2.0 * tex.Height / m.H));
+            int sy = Math.Min(tex.Height - 1, (int)(ly * 2.0 * tex.Height / H));
             int run = -1;
-            for (int lx = 0; lx <= m.W / 2; lx++)
+            for (int lx = 0; lx <= W / 2; lx++)
             {
                 bool on = false;
-                if (lx < m.W / 2) { int sx = Math.Min(tex.Width - 1, (int)(lx * 2.0 * tex.Width / m.W)); on = Raylib.GetImageColor(img, sx, sy).A > 0; }
+                if (lx < W / 2) { int sx = Math.Min(tex.Width - 1, (int)(lx * 2.0 * tex.Width / W)); on = Raylib.GetImageColor(img, sx, sy).A > 0; }
                 if (on && run < 0) run = lx;
                 if (!on && run >= 0) { lines[ly].Add((run * 2, lx - run)); run = -1; }
             }
@@ -631,9 +689,9 @@ public class Fight
             if (SparePause > 0 && --SparePause <= 0) { SparePause = 0; EndPlayerTurn(); }
         }
         if (MnFight == 1) MonsterTalkStep();
-        else if (MnFight == 2) { AttackStep(); BulletsStep(); }
+        else if (MnFight == 2) { AttackStep(); BulletsStep(); foreach (var b in Bubbles.ToList()) b.W.Step(); }
         else if (MnFight == 3) ReturnStep();
-        foreach (var m in Mons) { CurMon = m; MonsterHurtStep(m); if (m.Alive) m.Def.Step(this, m); }
+        foreach (var m in Mons.ToList()) { CurMon = m; MonsterHurtStep(m); if (m.Alive && !Exited) m.Def.Step(this, m); }
         CurMon = null;
         HeartStep();
         FxStep();
@@ -652,16 +710,16 @@ public class Fight
     {
         Raylib.ClearBackground(Color.Black);
         if (GameOver != null) { DrawGameOver(); return; }
-        Gfx.Draw(Assets.Frame("nbBattleBg", 1), 20, 3, 601, Assets.Frame("nbBattleBg", 1)?.Height ?? 236);
+        if (BgFrame == 1) Gfx.Draw(Assets.Frame("nbBattleBg", 1), 20, 3, 601, Assets.Frame("nbBattleBg", 1)?.Height ?? 236);
         foreach (var m in Mons)
         {
             if (m.Killed || m.Gone) continue;
             m.Def.Draw(this, m);
         }
         DrawFx();
-        foreach (var b in Bubbles) { Gfx.Draw(Assets.Tex("torielBubbleSmall"), b.X, b.Y); b.W.Draw(); }
-        DrawBox();
-        if (Wr != null && !Wr.Done) Wr.Draw();
+        foreach (var b in Bubbles) { Gfx.Draw(Assets.Tex(b.Img ?? (b.Wide ? "torielBubbleWide" : "torielBubbleSmall")), b.X, b.Y); b.W.Draw(); }
+        if (!Cinematic) DrawBox();
+        if (!Cinematic && Wr != null && !Wr.Done) Wr.Draw();
         if (BMenuNo == 1 && MyFight == 0 && MnFight == 0)
         {
             var al = Alive().Skip(Page * 3).Take(3).ToList();
@@ -675,17 +733,20 @@ public class Fight
         }
         DrawBar();
         DrawBullets();
-        DrawHud(); DrawButtons(); DrawHeart();
+        foreach (var m in Mons) if (m.Alive) m.Def.DrawOver(this, m);
+        if (!Cinematic) { DrawHud(); DrawButtons(); DrawHeart(); }
+        if (Fade > 0) Gfx.Rect(-40, -40, 720, 560, Gfx.A(Color.Black, Math.Min(1, Fade)));
         foreach (var w in Dmgw) DrawDmg(w);
     }
 
     void DrawBox()
     {
         Gfx.Rect(EL, ET, ER + 5 - EL, EB + 5 - ET, Color.Black);
-        Gfx.Rect(EL, ET, ER - EL, 5, Color.White);
-        Gfx.Rect(EL, EB, ER - EL + 5, 5, Color.White);
-        Gfx.Rect(EL, ET, 5, EB - ET, Color.White);
-        Gfx.Rect(ER, ET, 5, EB - ET + 5, Color.White);
+        var c = Gfx.A(Color.White, BoxAlpha);
+        Gfx.Rect(EL, ET, ER - EL, 5, c);
+        Gfx.Rect(EL, EB, ER - EL + 5, 5, c);
+        Gfx.Rect(EL, ET, 5, EB - ET, c);
+        Gfx.Rect(ER, ET, 5, EB - ET + 5, c);
     }
     void DrawHud()
     {
@@ -710,6 +771,8 @@ public class Fight
         var h = H; if (!h.Visible) return;
         var im = Assets.Frame("nbHeart", h.Frame);
         if (h.Gtfo) im = Assets.Frame("nbHeartGtfo", T / 2) ?? im;
+        // spr_heartgreen (exports reversed: _1 is image_index 0)
+        if (h.Mode == "green" && Assets.Frames("nbHeartGreen") is { } g) im = g[1 - (int)Math.Floor(h.Frame) % 2];
         Gfx.Draw(im, Math.Round(h.X), Math.Round(h.Y), 16, 16);
     }
     void DrawBar()
@@ -744,6 +807,7 @@ public class Fight
     {
         foreach (var e in FxList)
         {
+            if (e.DrawFn != null) { e.DrawFn(e); continue; }
             if (e.Kind == "slice")
             {
                 var im = Assets.Frame("strike", Math.Min(5, Math.Floor(e.Frame)));
@@ -753,15 +817,13 @@ public class Fight
             else if (e.Kind == "dust") Gfx.Draw(Assets.Frame("dustCloud", Math.Min(2, Math.Floor(e.Frame))), e.X, e.Y, 16 * e.Sc, 16 * e.Sc, alpha: Math.Max(0, e.Alpha));
             else if (e.Kind == "vapor")
             {
-                var m = e.M!;
-                var key = m.Def.VaporSprite(m);
-                if (key != null && Assets.Tex(key) is { } tex)
+                if (e.Key != null && Assets.Tex(e.Key) is { } tex)
                 {
                     int top = e.Line * 2;
-                    if (top < m.H)
+                    if (top < e.H)
                     {
-                        double sy = (double)tex.Height / m.H;
-                        Gfx.DrawPart(tex, 0, (int)(top * sy), tex.Width, (int)((m.H - top) * sy), m.X, m.Y + top, m.W, m.H - top, Color.White);
+                        double sy = tex.Height / e.H;
+                        Gfx.DrawPart(tex, 0, (int)(top * sy), tex.Width, (int)((e.H - top) * sy), e.X, e.Y + top, e.W, e.H - top, Color.White);
                     }
                 }
                 int[] grey = { 255, 251, 251, 251, 251, 251, 251, 219, 182, 146, 109, 73 };
@@ -771,10 +833,13 @@ public class Fight
     }
     void DrawBullets()
     {
+        var f = Inner();
         foreach (var b in Bullets)
         {
-            if (b.Hidden || b.Img == null) continue;
-            Gfx.Draw(Assets.Frame(b.Img, b.Frame), Math.Round(b.X), Math.Round(b.Y), alpha: b.Alpha);
+            if (b.Clip) Raylib.BeginScissorMode((int)f.l, (int)f.t, (int)(f.r - f.l), (int)(f.b - f.t));
+            if (b.Draw != null) b.Draw(b);
+            else if (!b.Hidden && b.Img != null) Gfx.Draw(Assets.Frame(b.Img, b.Frame), Math.Round(b.X), Math.Round(b.Y), alpha: b.Alpha);
+            if (b.Clip) Raylib.EndScissorMode();
         }
     }
     void DrawGameOver()

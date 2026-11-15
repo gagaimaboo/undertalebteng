@@ -35,6 +35,18 @@ public static class Gfx
     public static void Rect(double x, double y, double w, double h, Color c) =>
         Raylib.DrawRectangle((int)Math.Round(x), (int)Math.Round(y), (int)Math.Round(w), (int)Math.Round(h), c);
 
+    public static void RectLines(double x, double y, double w, double h, Color c) =>
+        Raylib.DrawRectangleLinesEx(new Rectangle((float)x, (float)y, (float)w, (float)h), 1, c);
+
+    // a line of the given width; round caps like canvas lineCap 'round'
+    public static void Line(double x1, double y1, double x2, double y2, double width, Color c, bool round = false)
+    {
+        var a = new Vector2((float)x1, (float)y1); var b = new Vector2((float)x2, (float)y2);
+        if (width <= 1) Raylib.DrawLineV(a, b, c); else Raylib.DrawLineEx(a, b, (float)width, c);
+        if (round && width > 1) { Raylib.DrawCircleV(a, (float)width / 2, c); Raylib.DrawCircleV(b, (float)width / 2, c); }
+    }
+
+    // a sprite at its own size, or (x, y, w, h)
     public static void Draw(Texture2D? t, double x, double y, double w = -1, double h = -1, Color? tint = null, double alpha = 1)
     {
         if (t is not { } tex) return;

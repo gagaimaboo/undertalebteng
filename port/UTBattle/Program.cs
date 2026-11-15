@@ -4,6 +4,7 @@ using UTBattle.Battle;
 using UTBattle.Battle.Monsters;
 using UTBattle.Engine;
 using static UTBattle.Engine.Input;
+using Music = UTBattle.Engine.Music;
 
 namespace UTBattle;
 
@@ -14,14 +15,27 @@ public static class Program
 {
     const double StepSec = 1.0 / 30;
     static Fight? fight;
-    static readonly (string id, string label)[] Roster = { ("froggit", "FROGGIT"), ("dummy", "DUMMY") };
-    static int sel, lv = 1, menuT;
+
+    // the gear each fight starts with (the web build's AUTO LOADOUT: that stage of the game)
+    record Loadout(int Lv, string Weapon, double Atk, string Armor, double Df, (string name, int heal, int n)[] Items);
+    static readonly Loadout Tutorial = new(1, "Stick", 0, "Bandage", 0, new[] { ("Monster Candy", 10, 2) });
+    static readonly Loadout Ruins = new(3, "Toy Knife", 3, "Faded Ribbon", 3, new[] { ("Monster Candy", 10, 3), ("Spider Donut", 12, 1) });
+    static readonly Loadout Waterfall = new(9, "Ballet Shoes", 7, "Old Tutu", 10, new[] { ("Crab Apple", 18, 2), ("Sea Tea", 10, 2), ("Nice Cream", 15, 2), ("Spider Donut", 12, 1) });
+    static readonly (string id, string label, Loadout gear, int lv)[] Roster =
+    {
+        ("froggit", "FROGGIT", Ruins, 3), ("dummy", "DUMMY", Tutorial, 1), ("toriel", "TORIEL", Ruins, 3),
+        ("undyne", "UNDYNE", Waterfall, 9), ("undyneex", "UNDYNE THE UNDYING", Waterfall, 14),
+    };
+    static int sel, lv = 3, menuT;
     static string notice = "";
 
     public static void Main(string[] args)
     {
         Fight.Defs["froggit"] = () => new Froggit();
         Fight.Defs["dummy"] = () => new Dummy();
+        Fight.Defs["toriel"] = () => new Toriel();
+        Fight.Defs["undyne"] = () => new Undyne();
+        Fight.Defs["undyneex"] = () => new UndyneEx();
 
         Raylib.SetConfigFlags(ConfigFlags.ResizableWindow | ConfigFlags.VSyncHint);
         Raylib.InitWindow(1280, 720, "Undertale and Deltarune Battle Engine (C#)");
@@ -34,38 +48,61 @@ public static class Program
         var screen = Raylib.LoadRenderTexture(640, 480);
         Raylib.SetTextureFilter(screen.Texture, TextureFilter.Point);
         double acc = 0;
-        // --test-steps N: run N steps of a Froggit fight with no input, then quit (used by CI / headless checks)
-        int testSteps = args.Length >= 2 && args[0] == "--test-steps" ? int.Parse(args[1]) : -1;
+        string Arg(string name, string def) { int i = Array.IndexOf(args, name); return i >= 0 && i + 1 < args.Length ? args[i + 1] : def; }
+        // --test-steps N: run N steps of a fight with no input, then quit (headless checks)
+        int testSteps = int.Parse(Arg("--test-steps", "-1"));
+        // --autotest DIR: plays a scripted fight, saving screenshots to DIR
+        //   --fight ID picks the monster, --mon-hp N starts it at N HP, --steps N how long
+        string? shotDir = Arg("--autotest", "") is { Length: > 0 } d ? d : null;
+        string testId = Arg("--fight", "froggit");
+        double monHp = double.Parse(Arg("--mon-hp", "-1"));
+        int testLen = int.Parse(Arg("--steps", "905"));
+        double playerHp = double.Parse(Arg("--player-hp", "-1"));
+        if (testSteps > 0 || shotDir != null) { sel = Math.Max(0, Array.FindIndex(Roster, r => r.id == testId)); lv = Roster[sel].lv; }
         if (testSteps > 0) StartFight();
-        // --autotest DIR: plays a scripted Froggit fight, saving screenshots to DIR
-        string? shotDir = args.Length >= 2 && args[0] == "--autotest" ? args[1] : null;
         int autoStep = 0;
-        var script = new Dictionary<int, string>
+        var froggitScript = new Dictionary<int, string>
         {
             [5] = "start", [40] = "shot:menu", [45] = "Z", [55] = "shot:target", [60] = "Z", [70] = "shot:bar", [80] = "Z", [92] = "shot:hit",
             [150] = "shot:talk", [230] = "shot:attack", [300] = "shot:attack2", [400] = "shot:next", [405] = "R", [410] = "Z", [418] = "Z", [425] = "shot:actmenu",
             [430] = "D", [436] = "Z", [480] = "shot:acted", [600] = "shot:turn3", [700] = "R", [705] = "R", [712] = "Z", [720] = "shot:mercy", [725] = "Z", [760] = "shot:spared", [900] = "shot:end", [905] = "quit",
         };
+        // the bosses: Z every 12 steps (FIGHT, aim, hit, read on), screenshots every 45, the
+        // arrow keys tapped through the enemy's turn so the green SOUL's shield turns
+        string? BossCmd(int s)
+        {
+            if (s == 5) return "start";
+            if (s == testLen) return "quit";
+            if (s % 45 == 0) return "shot:t" + s;
+            if (s % 12 == 0) return "Z";
+            if (s % 12 == 6) return new[] { "U", "L", "D", "R" }[s / 12 % 4];
+            return null;
+        }
 
         while (!Raylib.WindowShouldClose())
         {
             if (Raylib.IsKeyPressed(KeyboardKey.F11) || (Raylib.IsKeyPressed(KeyboardKey.Enter) && Raylib.IsKeyDown(KeyboardKey.LeftAlt)))
                 Raylib.ToggleBorderlessWindowed();
             Input.Poll();
-            acc += Math.Min(Raylib.GetFrameTime(), .25);
+            Music.Update();
+            acc += Math.Min(Raylib.GetFrameTime(), .25) * (fight?.SpeedMul ?? 1);
             if (testSteps > 0 || shotDir != null) acc = StepSec * 4;
             string? shot = null;
             while (acc >= StepSec)
             {
                 acc -= StepSec;
-                if (shotDir != null && script.TryGetValue(++autoStep, out var cmd))
+                if (shotDir != null)
                 {
-                    if (cmd == "start") StartFight();
+                    ++autoStep;
+                    string? cmd = testId == "froggit" ? (froggitScript.TryGetValue(autoStep, out var c) ? c : null) : BossCmd(autoStep);
+                    if (cmd == "start") { StartFight(); if (monHp > 0) foreach (var m in fight!.Mons) m.Hp = monHp; if (playerHp > 0) fight!.Hp = fight.MaxHp = playerHp; }
                     else if (cmd == "Z") Input.Inject(K.Confirm);
                     else if (cmd == "X") Input.Inject(K.Cancel);
                     else if (cmd == "R") Input.Inject(K.Right);
+                    else if (cmd == "L") Input.Inject(K.Left);
+                    else if (cmd == "U") Input.Inject(K.Up);
                     else if (cmd == "D") Input.Inject(K.Down);
-                    else if (cmd.StartsWith("shot:")) shot = cmd[5..];
+                    else if (cmd?.StartsWith("shot:") == true) shot = cmd[5..];
                     else if (cmd == "quit") { Console.WriteLine($"autotest done: {(fight == null ? "back at menu" : $"fight turn {fight.Turn} hp {fight.Hp}")} notice='{notice}'"); goto done; }
                 }
                 if (fight != null) { fight.Step(); if (fight.Exited) fight = null; }
@@ -83,7 +120,8 @@ public static class Program
                 Raylib.ImageFlipVertical(ref im);
                 Raylib.ExportImage(im, Path.Combine(shotDir!, $"{autoStep:0000}_{shot}.png"));
                 Raylib.UnloadImage(im);
-                Console.WriteLine($"step {autoStep} {shot}: hp {fight?.Hp} mnfight {fight?.MnFight} myfight {fight?.MyFight} bullets {fight?.Bullets.Count} froggit hp {fight?.Mons.FirstOrDefault()?.Hp}");
+                var mon = fight?.Mons.FirstOrDefault();
+                Console.WriteLine($"step {autoStep} {shot}: hp {fight?.Hp} mnfight {fight?.MnFight} myfight {fight?.MyFight} bullets {fight?.Bullets.Count} soul {fight?.H.Mode} {mon?.Name} hp {mon?.Hp} music {Music.Key}");
             }
 
             Raylib.BeginDrawing();
@@ -96,25 +134,32 @@ public static class Program
             Raylib.EndDrawing();
         }
         done:
+        Music.Stop();
         Raylib.CloseAudioDevice();
         Raylib.CloseWindow();
     }
 
     static void StartFight()
     {
-        var items = new List<Fight.Item>
+        var g = Roster[sel].gear;
+        var items = new List<Fight.Item>();
+        foreach (var (name, heal, n) in g.Items) for (int i = 0; i < n; i++) items.Add(new() { Name = name, Heal = heal });
+        var name0 = Roster[sel].label;
+        fight = new Fight(new[] { Roster[sel].id }, lv, "Frisk", items, g.Atk, g.Df)
         {
-            new() { Name = "Monster Candy", Heal = 10 }, new() { Name = "Spider Donut", Heal = 12 },
-            new() { Name = "Butterscotch Pie", Heal = 99 }, new() { Name = "Monster Candy", Heal = 10 },
+            OnExit = (reason, f) => notice = reason switch
+            {
+                "win" => "* YOU WON.", "flee" => "* You ran away.", "gameover" => "* Stay determined...",
+                "spare" => "* You spared " + (f.Mons.FirstOrDefault()?.Name ?? "them") + ".", _ => "",
+            },
         };
-        fight = new Fight(new[] { Roster[sel].id }, lv, "Frisk", items) { OnExit = (reason, f) => notice = reason switch { "win" => "* YOU WON.", "flee" => "* You ran away.", "gameover" => "* Stay determined...", _ => "" } };
     }
 
     static void MenuStep()
     {
         Input.Step(); menuT++;
-        if (Pressed(K.Up)) { sel = (sel + Roster.Length - 1) % Roster.Length; Assets.Play("move"); }
-        if (Pressed(K.Down)) { sel = (sel + 1) % Roster.Length; Assets.Play("move"); }
+        if (Pressed(K.Up)) { sel = (sel + Roster.Length - 1) % Roster.Length; lv = Roster[sel].lv; Assets.Play("move"); }
+        if (Pressed(K.Down)) { sel = (sel + 1) % Roster.Length; lv = Roster[sel].lv; Assets.Play("move"); }
         if (Pressed(K.Left) && lv > 1) { lv--; Assets.Play("move"); }
         if (Pressed(K.Right) && lv < 20) { lv++; Assets.Play("move"); }
         if (Pressed(K.Confirm)) { Assets.Play("select"); notice = ""; StartFight(); }
@@ -123,18 +168,19 @@ public static class Program
     static void MenuDraw()
     {
         Raylib.ClearBackground(Color.Black);
-        Gfx.Text("UNDERTALE BATTLE ENGINE", 320 - 23 * 8, 40, Color.White);
-        Gfx.Text("C# PORT (WORK IN PROGRESS)", 320 - 26 * 8, 76, Gfx.Hex("#808080"));
+        Gfx.Text("UNDERTALE BATTLE ENGINE", 320 - 23 * 8, 30, Color.White);
+        Gfx.Text("C# PORT (WORK IN PROGRESS)", 320 - 26 * 8, 62, Gfx.Hex("#808080"));
         for (int i = 0; i < Roster.Length; i++)
         {
             bool on = i == sel;
-            Gfx.Text(Roster[i].label, 220, 160 + i * 40, on ? Gfx.Hex("#ffff00") : Color.White);
-            if (on) Gfx.Draw(Assets.Frame("nbHeart", 0), 190, 162 + i * 40, 16, 16);
+            Gfx.Text(Roster[i].label, 150, 120 + i * 36, on ? Gfx.Hex("#ffff00") : Color.White);
+            if (on) Gfx.Draw(Assets.Frame("nbHeart", 0), 120, 122 + i * 36, 16, 16);
         }
-        var st = Fight.LvStats(lv);
-        Gfx.Text($"LV {lv}  (< >)", 220, 300, Color.White);
-        Gfx.Text($"HP {st.hp}  AT {st.at}  DF {st.df}", 220, 336, Gfx.Hex("#808080"));
-        Gfx.Text("Z  FIGHT     F11  FULLSCREEN", 120, 420, Gfx.Hex("#808080"));
-        if (notice != "") Gfx.Text(notice, 220, 380, Gfx.Hex("#ffff00"));
+        var st = Fight.LvStats(lv); var g = Roster[sel].gear;
+        Gfx.Text($"LV {lv}  (< >)", 150, 310, Color.White);
+        Gfx.Text($"HP {st.hp}  AT {st.at}({g.Atk})  DF {st.df}({g.Df})", 150, 342, Gfx.Hex("#808080"));
+        Gfx.Text($"{g.Weapon} / {g.Armor}", 150, 374, Gfx.Hex("#808080"));
+        Gfx.Text("Z  FIGHT     F11  FULLSCREEN", 120, 440, Gfx.Hex("#808080"));
+        if (notice != "") Gfx.Text(notice, 150, 406, Gfx.Hex("#ffff00"));
     }
 }
