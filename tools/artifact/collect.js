@@ -25,7 +25,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
  const stat=await p.evaluate(()=>{
   const out=new Set();
   const walk=v=>{if(typeof v==='string'){if(/^https?:/.test(v))out.add(v)}else if(Array.isArray(v))v.forEach(walk);else if(v&&typeof v==='object')Object.values(v).forEach(walk)};
-  for(const t of [IMG,NB_ASSETS,SFX,MUSIC,EMBED])walk(t);
+  for(const t of [IMG,NB_ASSETS,SFX,MUSIC,EMBED,typeof BATTLE_BORDER_URLS!=='undefined'?BATTLE_BORDER_URLS:{}])walk(t);
   for(const [n,[w,h,xo,yo,ids]] of Object.entries(DR_ASSETS.spr))ids.forEach(g=>out.add(DR_RAW+`sprites/${n}/${g}.png`));
   for(const f of Object.keys(DR_ASSETS.font))out.add(DR_RAW+`fonts/${f}/${f}.png`);
   for(const [n,[w,h,xo,yo,ids]] of Object.entries(DR1_ASSETS.spr))ids.forEach(g=>out.add(DR_RAW1+`sprites/${n}/${g}.png`));

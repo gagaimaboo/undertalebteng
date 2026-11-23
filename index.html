@@ -927,6 +927,65 @@ const W=1448,H=1086,CW=1930,OFFX=Math.floor((CW-W)/2),UISX=CW/W; // CW: the 16:9
 // UNDERTALE battles are authored in a native 640x480 coordinate space.
 // Keep gameplay placement/sizing in that space, then scale it to this 1448x1086 canvas.
 const UT_W=640,UT_H=480,UT_SCALE=W/UT_W;
+// ---------- Battle borders ----------
+// UNDERTALE's console borders (the Switch / Xbox / PS4 frames XBOXTALE brings to PC) round the
+// battles. On console the game sits in a 1280x960 window at (320,60) of a 1920x1080 border, so
+// with a border on, the 4:3 battle shrinks into that window and the border fills the screen.
+// AUTO picks the border of the area the enemy comes from: Undyne fights in Waterfall, Lemon
+// Bread in the True Lab, ASGORE and Sans in New Home.
+const BORDER_RAW='https://cdn.jsdelivr.net/gh/gagaimaboo/sd25online@8db930fe599ea65b1e639dc3979303a410548644/assets/borders/';
+const BATTLE_BORDERS=[['ruins','RUINS'],['snowdin','SNOWDIN'],['waterfall','WATERFALL'],['hotland','HOTLAND'],['truelab','TRUE LAB'],['newhome','NEW HOME'],
+ ['simple','SIMPLE'],['sepia','SEPIA'],['beauty','BEAUTY'],['casino','CASINO'],['dog','SUPER DOG, HOI'],['notreal','NOT REAL']];
+const BORDER_SETTINGS=[['auto','AUTO'],['off','OFF'],...BATTLE_BORDERS];
+// for the artifact build's asset collector
+const BATTLE_BORDER_URLS=Object.fromEntries(BATTLE_BORDERS.map(([id])=>[id,BORDER_RAW+id+'.png']));
+let battleBorderSetting=(()=>{try{const v=localStorage.getItem('innertale_border');return BORDER_SETTINGS.some(o=>o[0]===v)?v:'auto'}catch(_){return 'auto'}})();
+// where the battle stage sits on the canvas this frame: scale, x, y
+let STG_S=UT_SCALE,STG_X=OFFX,STG_Y=0;
+const battleBorderImgs={};
+function battleBorderImage(id){
+ if(!id)return null;
+ let e=battleBorderImgs[id];
+ if(!e){e=battleBorderImgs[id]={im:null};loadImage(BORDER_RAW+id+'.png').then(im=>{if(im)e.im=im}).catch(()=>{})}
+ return e.im;
+}
+// AUTO: the enemy's area
+function battleBorderAuto(id){
+ if(['asgore','sans','sans5000','flowey'].includes(id))return id==='flowey'?'ruins':'newhome';
+ if(['mettaton','mettatonex','mettatonneo'].includes(id))return 'hotland';
+ if(id==='madmewmew')return 'waterfall';
+ if(id==='dummy')return 'ruins';
+ const b=(typeof BOSS_OPTIONS!=='undefined'?BOSS_OPTIONS.find(o=>o.id===id):null)||(typeof baseSupportDataById==='function'?baseSupportDataById(id):null);
+ const a=String(b?.area||'').toUpperCase();
+ if(a.startsWith('RUINS'))return 'ruins';
+ if(a.startsWith('SNOWDIN'))return 'snowdin';
+ if(a.startsWith('WATERFALL'))return 'waterfall';
+ if(a.startsWith('HOTLAND')||a==='CORE')return 'hotland';
+ if(a==='TRUE LAB')return 'truelab';
+ return 'simple';
+}
+function battleBorderKey(){
+ if(battleBorderSetting==='off')return null;
+ if(battleBorderSetting!=='auto')return battleBorderSetting;
+ return battleBorderAuto(typeof currentBoss!=='undefined'?currentBoss:'');
+}
+// called by render() each frame: the border to draw (or null), and where the stage goes
+function battleBorderNow(){
+ STG_S=UT_SCALE;STG_X=OFFX;STG_Y=0;
+ if(screen!=='nb'||!NB.S)return null;
+ const im=battleBorderImage(battleBorderKey());if(!im)return null;
+ const wx=320*CW/1920,wy=60*H/1080,ww=1280*CW/1920,wh=960*H/1080,s=Math.min(ww/UT_W,wh/UT_H);
+ STG_S=s;STG_X=wx+(ww-UT_W*s)/2;STG_Y=wy+(wh-UT_H*s)/2;
+ return im;
+}
+function battleBorderLabel(){return (BORDER_SETTINGS.find(o=>o[0]===battleBorderSetting)||BORDER_SETTINGS[0])[1]}
+function cycleBorderSetting(dir=1){
+ const ids=BORDER_SETTINGS.map(o=>o[0]),i=ids.indexOf(battleBorderSetting);
+ battleBorderSetting=ids[(i+dir+ids.length)%ids.length];
+ try{localStorage.setItem('innertale_border',battleBorderSetting)}catch(_){}
+ if(battleBorderSetting!=='auto'&&battleBorderSetting!=='off')battleBorderImage(battleBorderSetting);
+}
+
 const ut=n=>Math.round(n*UT_SCALE);
 const utRect=(x,y,w,h)=>({x:ut(x),y:ut(y),w:ut(w),h:ut(h)});
 const images={},sounds={},music={};
@@ -9070,6 +9129,7 @@ function settingsActivate(i,dir=1){
  if(i===0)startTutorial(true);
  else if(i===1)cycleFpsSetting(dir);
  else if(i===2)toggleAutoLoadout();
+ else if(i===3)cycleBorderSetting(dir);
  else backToTitle('settings');
 }
 function drawSettings(now=performance.now()){
@@ -9079,6 +9139,7 @@ function drawSettings(now=performance.now()){
    {label:'SANS TUTORIAL',value:'',d:'* Replay the tour of every menu and the battle controls.'},
    {label:'FRAME RATE',value:`${newEngineFps} FPS`,cycle:true,d:'* 60 FPS smooths the drawing.\n* The battle itself always runs at UNDERTALE\'s 30.'},
    {label:'AUTO LOADOUT',value:on(autoLoadout),cycle:true,d:'* ON: every fight starts with the LV, weapon, armor and items that suit that stage of the game.\n* OFF: fights use the plain starting loadout. Build your own in the CUSTOM HUB.'},
+   {label:'BATTLE BORDER',value:battleBorderLabel(),cycle:true,d:'* UNDERTALE\'s console borders round the battle.\n* AUTO: the border of the area the enemy is from.'},
    {label:'EXIT',value:'',d:'* Back to the title.'}
  ];
  const box={x:164,y:150,w:1120,h:500};
@@ -9215,7 +9276,12 @@ function render(now){
  if(hub)ui6Backdrop(now);
  ctx.save();
  if(ui){ctx.scale(UISX,1);uiStretch=true}
- else{ctx.translate(OFFX,0);if(!hub){ctx.beginPath();ctx.rect(0,0,W,H);ctx.clip()}}
+ else{
+  // a battle with a border: the border fills the canvas and the stage shrinks into its window
+  const bd=battleBorderNow();
+  if(bd){ctx.drawImage(bd,0,0,CW,H);ctx.beginPath();ctx.rect(STG_X,STG_Y,UT_W*STG_S,UT_H*STG_S);ctx.clip();ctx.translate(OFFX,0)}
+  else{ctx.translate(OFFX,0);if(!hub){ctx.beginPath();ctx.rect(0,0,W,H);ctx.clip()}}
+ }
  try{renderStage(now)}finally{uiStretch=false;ctx.restore()}
 }
 function renderStage(now){
@@ -9703,11 +9769,12 @@ function keyDown(e){
  }
 
  if(screen==='settings'){
-   if(!e.repeat&&(k==='ArrowUp'||low==='w')){settingsSelected=(settingsSelected+3)%4;play('move');return}
-   if(!e.repeat&&(k==='ArrowDown'||low==='s')){settingsSelected=(settingsSelected+1)%4;play('move');return}
+   if(!e.repeat&&(k==='ArrowUp'||low==='w')){settingsSelected=(settingsSelected+4)%5;play('move');return}
+   if(!e.repeat&&(k==='ArrowDown'||low==='s')){settingsSelected=(settingsSelected+1)%5;play('move');return}
    if(!e.repeat&&(k==='ArrowLeft'||k==='ArrowRight'||low==='a'||low==='d')){
      if(settingsSelected===1){cycleFpsSetting(k==='ArrowLeft'||low==='a'?-1:1);play('move')}
      else if(settingsSelected===2)toggleAutoLoadout();
+     else if(settingsSelected===3){cycleBorderSetting(k==='ArrowLeft'||low==='a'?-1:1);play('move')}
      return;
    }
    if(!e.repeat&&(low==='z'||k==='Enter')){play('select');settingsActivate(settingsSelected);return}
@@ -13451,7 +13518,7 @@ const NB=(()=>{
     // (same frames, correct offsets) at obj_slice's image_speed.
     const U=UT_SCALE,S2=NB.S,frames=typeof weaponSpriteAtlas!=='undefined'?weaponSpriteAtlas?.knife:null;
     if(frames&&typeof drawWeaponSequence==='function'){
-     g.save();g.setTransform(1,0,0,1,OFFX,0);g.translate(-S2.view.x*U,-S2.view.y*U);
+     g.save();g.setTransform(STG_S/U,0,0,STG_S/U,STG_X,STG_Y);g.translate(-S2.view.x*U,-S2.view.y*U);
      drawWeaponSequence(frames,e.t*NB.STEP_MS,e.cx*U,e.cy*U,{stepsPerFrame:1/e.isp,scale:Math.max(.5,e.sc)});
      g.restore();
     }else{
@@ -13504,7 +13571,7 @@ const NB=(()=>{
   const S=NB.S;if(!S)return;
   const U=UT_SCALE;
   ctx.save();
-  ctx.setTransform(U,0,0,U,OFFX,0);ctx.imageSmoothingEnabled=false;
+  ctx.setTransform(STG_S,0,0,STG_S,STG_X,STG_Y);ctx.imageSmoothingEnabled=false;
   ctx.fillStyle='#000';ctx.fillRect(0,0,640,480);
   if(S.gameover){drawGameOver(ctx,S);ctx.restore();return}
   ctx.translate(-S.view.x,-S.view.y);
@@ -28994,6 +29061,7 @@ function drawRankStamp(r,x,y,t,size){
 function nbResultsTitle(reason){return {win:'VICTORY',spare:'SPARED',flee:'ESCAPED',gameover:'GAME OVER'}[reason]||'FIGHT OVER'}
 function nbStartBattle(){withFightAssets(nbStartBattleNow)}
 function nbStartBattleNow(){
+ try{battleBorderImage(battleBorderKey())}catch(_){}
  screen='nb';
  NB.start({
   ...nbBattleOpts(),
