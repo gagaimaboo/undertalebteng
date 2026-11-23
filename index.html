@@ -3755,6 +3755,7 @@ function syncMenuMusic(){
 const MUSIC_LOADERS={
  menu:()=>loadAudioAsset(MUSIC.menu,.36,true),
  battle:()=>loadAudioAsset(MUSIC.battle,.48,true),
+ amalgam:()=>loadAudioAsset(MUSIC.amalgam,.50,true),
  core:()=>loadAudioAsset(MUSIC.core,.48,true),
  flowey:()=>loadAudioAsset(MUSIC.flowey,.48,true),
  toriel:()=>loadAudioAsset(MUSIC.toriel,.50,true),
@@ -25603,6 +25604,8 @@ function lemonBreadCard(){
  // obj_lemonbread_body: the masked head over a breathing torso. Every so often the face cracks
  // open (frames 0-3, then 3-6). When it attacks it melts into the floor (spr_lemonbread_melt)
  // and pulls itself back up once the turn is over.
+ const LB_HEAD_DY=[0,0,0,0,3,5,8];
+ const LB_MELT_OFF=[[3,2],[3,16],[3,40],[3,54],[3,67],[10,78],[19,87],[19,97],[25,98],[29,100]];
  NB.defs.set('lemonbread',{
   name:'Lemon Bread',hp:100,atk:8,def:9999,xp:0,gold:0,mercymod:-100,wd:100,
   encounter:'* Smells like sweet lemons.',
@@ -25624,12 +25627,20 @@ function lemonBreadCard(){
    if(v.melting===2){v.melt+=.5;if(v.melt>=9)v.melting=3}
    if(v.melting===4){v.melt-=.5;if(v.melt<1){v.melting=0;v.counter=v.changed?-50:80;v.face=0}}
   },
+  // The sprite rip trims every frame to its pixels, losing where each sat on its sprite's canvas;
+  // these put them back (found by matching the frames against the game's own animation):
+  // head frames 4-6 sit 3/5/8 px lower, and the melt frames are stored backwards (the rip's
+  // frame 9 is the game's frame 0, the full body) with these (x, y) offsets on their canvas.
   draw(g,m){
    const v=m.v;
    if(v.melting===0){
     dse(g,fr(images.nbLemonTorso,v.siner/10),m.x-12,m.y+96,2,2);
-    dse(g,fr(images.nbLemonHead,v.face),m.x,m.y,2,2,0,1,1,1);
-   }else if(v.melting!==3)dse(g,fr(images.nbLemonMelt,Math.floor(v.melt)),m.x-16,m.y+12,2,2);
+    const f=((Math.floor(v.face)%7)+7)%7;
+    dse(g,fr(images.nbLemonHead,f),m.x,m.y+LB_HEAD_DY[f]*2,2,2,0,1,1,1);
+   }else if(v.melting!==3){
+    const gf=Math.max(0,Math.min(9,Math.floor(v.melt))),o=LB_MELT_OFF[gf],im=Array.isArray(images.nbLemonMelt)?images.nbLemonMelt[9-gf]:null;
+    if(im)dse(g,im,m.x-16+o[0]*2,m.y+12+o[1]*2,2,2);
+   }
   },
   // its ACT menu has no Check: Call, Hum / Scream, Flex / Unhug, Cry
   acts:['Call','Hum','Scream','Flex','Unhug','Cry'],
