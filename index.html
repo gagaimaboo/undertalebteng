@@ -838,6 +838,8 @@ const MUSIC={
  menu:RAW+'sound/audio/mus_menu1.ogg',
  // UNDERTALE's real standard random-encounter battle theme (Enemy Approaching).
  battle:RAW+'sound/audio/mus_battle1.ogg',
+ // the True Lab amalgamates' fights
+ amalgam:RAW+'sound/audio/mus_amalgam.ogg',
  core:RAW+'sound/audio/mus_core.ogg',
  flowey:RAW+'sound/audio/mus_flowey.ogg',
  toriel:RAW+'sound/audio/mus_boss1.ogg',
@@ -1194,6 +1196,7 @@ const VANILLA_REWARDS={
  sans:{exp:0,killGold:0,spareGold:0},
  madmewmew:{exp:0,killGold:0,spareGold:0},
  roaringknight:{exp:0,killGold:0,spareGold:0},
+ lemonbread:{exp:0,killGold:0,spareGold:0},
  glyde:{exp:100,killGold:140,spareGold:120},
  royalguards:{exp:220,killGold:120,spareGold:100},
  moldessa:{exp:10,killGold:6,spareGold:6},
@@ -1385,7 +1388,7 @@ function confirmLevelSelect(){
 function progressionInventoryCount(){return Object.values(progression.itemStock||{}).reduce((a,v)=>a+Math.max(0,Number(v)||0),0)}
 function progressionRewardEligible(){return screen==='nb'&&vanillaMode&&practiceMode==='classic'&&currentBoss!==SECRET_SANS_BOSS.id}
 // canon pays 0 G for a lot of fights (most bosses, some spares): here everything pays something
-const GOLD_FLOOR={dummy:5,toriel:150,papyrus:200,napstablook:50,maddummy:50,undyne:500,undyneex:1500,mettaton:300,mettatonex:800,mettatonneo:2000,asgore:1000,sans:1000,madmewmew:500,roaringknight:2000,custom:10};
+const GOLD_FLOOR={dummy:5,toriel:150,papyrus:200,napstablook:50,maddummy:50,undyne:500,undyneex:1500,mettaton:300,mettatonex:800,mettatonneo:2000,asgore:1000,sans:1000,madmewmew:500,lemonbread:50,roaringknight:2000,custom:10};
 function rewardData(id){
  const r=VANILLA_REWARDS[id]||{exp:0,killGold:0,spareGold:0};
  let kg=r.killGold||0,sg=r.spareGold||0;
@@ -3751,6 +3754,7 @@ function battleMusicKey(){
  if(currentBoss==='asgore')return asgoreMusic;
  if(currentBoss==='sans')return sansMusic;
  if(currentBoss==='madmewmew')return mmmMusic;
+ if(currentBoss==='lemonbread')return 'amalgam';
  if(currentBoss==='roaringknight')return 'knight';
  if(currentBoss==='custom')return crbMusicKey();
  return 'battle';
@@ -4295,6 +4299,7 @@ const BOSS_OPTIONS=[
  {id:'tsunderplane',label:'TSUNDERPLANE',area:'HOTLAND',hp:80,atk:25,def:26,encounter:'* Tsunderplane swoops into your way... accidentally, apparently.',noelleEncounter:'* Noelle encountered Tsunderplane.'},
  {id:'madjick',label:'MADJICK',area:'CORE',hp:190,atk:29,def:24,encounter:'* Madjick blocks the way!',noelleEncounter:'* Noelle encountered Madjick.'},
  {id:'knightknight',label:'KNIGHT KNIGHT',area:'CORE',hp:230,atk:36,def:36,encounter:'* Knight Knight blocks the way!',noelleEncounter:'* Noelle encountered Knight Knight.'},
+ {id:'lemonbread',label:'LEMON BREAD',area:'TRUE LAB',hp:100,atk:8,def:9999,encounter:'* Smells like sweet lemons.',noelleEncounter:'* Smells like sweet lemons.'},
  {id:'astigmatism',label:'ASTIGMATISM',area:'CORE',hp:120,atk:32,def:26,encounter:'* Astigmatism blocks the way!',noelleEncounter:'* Noelle encountered Astigmatism.'},
  {id:'muffet',label:'MUFFET',area:'HOTLAND // SPIDER BAKE SALE',hp:1250,atk:38,def:18,encounter:'* Muffet traps you!',noelleEncounter:'* Muffet traps Noelle!'},
  {id:'pyrope',label:'PYROPE',area:'HOTLAND',hp:110,atk:8,def:1,encounter:'* Pyrope bounces into view!',noelleEncounter:'* Noelle encountered Pyrope.'},
@@ -6644,6 +6649,7 @@ function bossImage(b,now=performance.now()){
  if(b.id==='tsunderplane')return tsunderplaneVisual();
  if(['snowdrake','loox','moldsmal','migosp','aaron','vulkin','moldbygg','temmie','lesserdog','greaterdog','dogi','woshua','pyrope','madjick','knightknight','astigmatism','muffet','undyneex','mettatonex','mettatonneo'].includes(b.id))return addedEnemyIdleImage(b.id,now,false);
  if(b.id==='whimsun')return whimsunDrawImage(now,false);
+ if(b.id==='lemonbread')return lemonBreadCard()||images.dummy;
  if(b.id==='whimsalot')return images.whimsalot||images.whimsalotHurt||images.dummy;
  if(b.id==='asgore')return images.asgPrebrandish||images.dummy;
  if(b.id==='sans')return images.sans||images.dummy;
@@ -8244,7 +8250,7 @@ function drawGamePickOld(now=performance.now()){
 // The roster in groups, each a carousel of cards. Anything not listed lands in EXTRAS.
 const ENEMY_CATEGORIES=[
  {id:'bosses',label:'BOSSES',color:'#ff3355',ids:['toriel','papyrus','undyne','undyneex','muffet','mettaton','mettatonex','mettatonneo','asgore','sans']},
- {id:'minibosses',label:'MINI BOSSES',color:'#c04dff',ids:['napstablook','maddummy','doggo','lesserdog','greaterdog','dogi','glyde','royalguards']},
+ {id:'minibosses',label:'MINI BOSSES',color:'#c04dff',ids:['napstablook','maddummy','doggo','lesserdog','greaterdog','dogi','glyde','royalguards','lemonbread']},
  {id:'enemies',label:'ENEMIES',color:'#2fd36b',ids:['dummy','froggit','whimsun','moldsmal','loox','vegetoid','migosp','parsnik','moldessa','snowdrake','icecap','gyftrot','aaron','woshua','moldbygg','shyren','temmie','vulkin','tsunderplane','pyrope','finalfroggit','whimsalot','astigmatism','madjick','knightknight']},
  {id:'extras',label:'EXTRAS',color:'#2aa8ff',ids:[]}
 ];
@@ -13405,6 +13411,8 @@ const NB=(()=>{
   }
  }
  function drawDmg(g,w){
+  // obj_dmgwriter special 1 (the amalgamates): a red line picked again every frame instead of a number
+  if(w.special){NB.drawText(g,['Don\'t worry about it.','Absorbed','I\'m lovin\' it.','But it didn\'t work.','nope','FAILURE'][Math.floor(Math.random()*6)],w.x-10,w.y-10,'#ff0000');return}
   const sf=(w.m.wd||100)/w.maxhp;
   if(w.dmg>0){
    if(!w.nobar){ // drawbar = 0: just the number
@@ -25371,6 +25379,262 @@ if(c.lesson > 20) {
   }
  });
 })();
+// Lemon Bread's roster card: head over torso, as obj_lemonbread_body stands, from its first frames.
+var lemonCardCv=null,lemonCardIm={};
+function lemonBreadCard(){
+ if(lemonCardCv)return lemonCardCv;
+ for(const [k,f] of [['head','spr_lemonbread_head_0'],['torso','spr_lemonbread_torso_0']])
+  if(!lemonCardIm[k]){lemonCardIm[k]=1;loadImage(RAW+'sprites/images/'+f+'.png').then(im=>{if(im)lemonCardIm[k]=im}).catch(()=>{})}
+ const h=lemonCardIm.head,t=lemonCardIm.torso;if(!h||h===1||!t||t===1)return null;
+ const c=document.createElement('canvas');c.width=65;c.height=113;const g=c.getContext('2d');g.imageSmoothingEnabled=false;
+ g.drawImage(t,0,49);g.drawImage(h,5,0);
+ return lemonCardCv=c;
+}
+/* ---- NB content: True Lab, Lemon Bread (obj_lemonbread + obj_lemonbread_body; obj_melonbulgen with
+        obj_melontooth / obj_meloneye / obj_melonbullet, obj_amalgam_biter with obj_amalgam_tooth) ---- */
+(()=>{
+ const {rnd,dcos,dsin,snd}=NB;
+ const {dse,sprBullet,pixHit}=NB.hl;
+ const R=Math.round;
+ const tick=(o,k)=>{if(o[k]>0){o[k]-=1;if(o[k]<=0){o[k]=-1;return true}}return false};
+ const fr=(a,i)=>Array.isArray(a)?a[((Math.floor(i)%a.length)+a.length)%a.length]:a;
+ const choose=(...a)=>a[Math.floor(rnd(a.length))];
+ const talkLen=n=>{NB.S.talkLenExact=Math.max(NB.S.talkLenExact||0,n)};
+ const ptDir=(x0,y0,x1,y1)=>Math.atan2(-(y1-y0),x1-x0)*180/Math.PI;
+ // the melon bullets flash between these two (image_blend choose(4235519, 16776960), BGR)
+ const MELON_COL=['#ffa040','#00ffff'];
+
+ // ------------------------------------------------------- obj_melonbulgen --
+ // A face closes round the SOUL: ten chattering teeth for a mouth and two eyes above the box
+ // that spit melon bullets at it.
+ function melonTooth(api,m,x,y){
+  const h=api.heart;
+  sprBullet(api,{x,y,xs0:x,ys0:y,im:images.nbMelonTooth,ox:7,oy:7,xs:2,ys:2,siner:rnd(360),overall:0,dmg:m.atk,
+   rot:ptDir(x,y,h.x+8,h.y+8)+(x-h.x)/2,
+   step(b){
+    const hx=api.heart.x,hy=api.heart.y+8;
+    let a=ptDir(b.x,b.y,hx+8,hy);
+    if(b.ys0<hy){a+=(b.x-hx+8)/1.5;b.overall++}
+    if(b.ys0>hy){a-=(b.x-hx+8)/1.5;b.overall--}
+    b.rot=a;b.siner++;
+    b.x=b.xs0+dcos(a)*Math.sin(b.siner/2)*4;
+    b.y=b.ys0-dsin(a)*Math.sin(b.siner/2)*2+Math.sin(b.overall/4)*6;
+   }});
+ }
+ function melonBullet(api,m,x,y){
+  const h=api.heart,d=ptDir(x,y,h.x+8,h.y+8);
+  sprBullet(api,{x,y,im:images.nbMelonBullet,ox:11,oy:11,sp:1,vx:dcos(d),vy:-dsin(d),col:MELON_COL[0],dmg:m.atk,
+   step(b){
+    // friction -0.3: it speeds up along its line
+    b.sp+=.3;const s=Math.hypot(b.vx,b.vy)||1;b.vx=b.vx/s*b.sp;b.vy=b.vy/s*b.sp;
+    b.x+=b.vx;b.y+=b.vy;b.col=choose(...MELON_COL);
+    if(b.x<-40||b.x>680||b.y<-40||b.y>520)b.alive=false;
+   },
+   draw(g,b){const im=images.nbMelonBullet;if(im)dse(g,NB.multiplied(im,b.col),b.x,b.y,1,1,0,1,11,11)}});
+ }
+ function melonEye(api,m,x,y){
+  sprBullet(api,{x,y,im:images.nbMelonBullet,ox:11,oy:11,ss:0,rr:0,ssin:0,rsin:0,siner:0,timer:0,a0:-1,dmg:m.atk,
+   step(b){
+    if(tick(b,'a0')){melonBullet(api,m,b.x+b.ssin,b.y+b.rsin);b.a0=17}
+    b.timer++;if(b.timer===15)b.a0=5;
+    if(b.timer<15){
+     b.ss+=rnd(1)-rnd(.8);b.rr+=rnd(.8)-rnd(1);
+     b.ssin=Math.sin(b.ss/3)*5;b.rsin=Math.sin(b.rr/3)*5;
+    }else{
+     const h=api.heart,d=ptDir(b.x,b.y,h.x+8,h.y+8),si=dcos(d)*5,ri=-dsin(d)*5;
+     if(b.rsin<ri-1)b.rsin++;if(b.rsin>ri+1)b.rsin--;
+     if(b.ssin<si-1)b.ssin++;if(b.ssin>si+1)b.ssin--;
+    }
+    b.siner++;
+   },
+   draw(g,b){
+    const im=images.nbMelonBullet;if(!im)return;const sz=Math.sin(b.siner/4)*.2;
+    dse(g,im,b.x-b.ssin/2+Math.sin(b.siner/6),b.y-b.rsin/2,2,2,0,1,11,11);
+    dse(g,im,b.x+b.ssin,b.y+b.rsin,.8+sz,.8+sz,0,1,11,11);
+   }});
+ }
+ function melonGen(api,m){
+  const h=api.heart,xx=h.x-160,yy=h.y-214;
+  for(const [dx,dy] of [[112,230],[140,248],[198,248],[172,256],[228,228],[112,176],[136,186],[170,190],[200,188],[228,178]])melonTooth(api,m,xx+dx,yy+dy);
+  melonEye(api,m,xx+128,yy+132);melonEye(api,m,xx+210,yy+134);
+ }
+
+ // ------------------------------------------------------- obj_amalgam_biter --
+ // The box turns into a mouth: a great eye opens over it, lines pull its top corners up into
+ // jaws, a row of teeth grows from the top and the bottom with one gap, and the top slams down
+ // onto the SOUL. Twice more, the gap moving each time.
+ function amTooth(api,m,x,top){
+  sprBullet(api,{x,y:0,im:top?images.nbAmTooth:images.nbAmToothD,top,con:1,a0:1,a2:-1,a4:-1,vy:0,anchor:0,hidden:true,clip:true,
+   amTooth:true,dmg:m.atk+1,kill:false,
+   onHit:b=>api.damageStd(b.dmg),
+   mask(h){if(this.hidden)return false;const mk=this.top?images.nbAmToothMask:images.nbAmToothMaskD;return mk?pixHit(h,this.x,this.y,mk,0,0,1,1,0):true},
+   step(b){
+    const [,,T,B]=api.S.ideal;
+    if(tick(b,'a0')){if(b.top){b.y=T-41;b.vy=2}else{b.y=B;b.vy=-2}b.a4=20;b.hidden=false}
+    if(tick(b,'a2')){b.anchor=0;b.vy=b.top?-15:4;b.a4=10;b.hidden=false}
+    if(tick(b,'a4'))b.con++;
+    if(b.con===2){b.vy=0;b.anchor=1;b.con=3}
+    if(b.anchor)b.y=b.top?T:B-41;
+    if(b.con===11){b.alive=false;return}
+    b.y+=b.vy;
+   }});
+ }
+ function biterTeeth(api,m,g){
+  if(g.miss===-1)g.miss=Math.floor(rnd(11));
+  else{const add=1+Math.floor(rnd(6));g.miss+=choose(1,-1)*add;if(g.miss<0)g.miss=add;if(g.miss>10)g.miss=10-add}
+  let no=0,tx=api.S.ideal[0]-25;
+  for(let k=0;k<5;k++){
+   if(no!==g.miss)amTooth(api,m,tx,false);no++;tx+=25;
+   if(no!==g.miss)amTooth(api,m,tx,true);no++;tx+=25;
+  }
+  if(no!==g.miss)amTooth(api,m,tx,false);
+ }
+ const biterRetract=api=>{for(const b of api.S.bullets)if(b.amTooth&&b.alive){b.con=10;b.a2=1}};
+ // con is kept in tenths (5.1 -> 51) so the alarm's con++ lands exactly on the next state
+ function biterStep(api,m,g){
+  const st=api.S,id=st.ideal,h=api.heart,push=()=>{if(h.y<id[2]+4)h.y=id[2]+4};
+  if(tick(g,'a4'))g.c+=10;
+  if(g.c===10){g.instant=true;g.eye=1;biterTeeth(api,m,g);g.c=40;g.a4=20}
+  if(g.c===40){g.x1-=2;g.y1-=3;g.x2+=2;g.y2-=3}
+  if(g.c===50){g.c=51;g.a4=8}
+  if(g.c===61){g.c=60;g.a4=8}
+  if(g.c===60){g.y1--;g.y2--;id[2]-=2}
+  if(g.c===70){g.c=80;g.a4=8}
+  if(g.c===90){
+   if(id[2]<330){g.y1+=8;g.y2+=8;id[2]+=20;push()}
+   else{id[2]=340;g.c=100;g.a4=10;g.yy=id[2];g.xx=g.x1;g.xx2=g.x2}
+  }
+  if(g.c===100){g.x1=g.xx+rnd(2)-2;g.x2=g.xx2+rnd(2)-2;id[2]=g.yy+rnd(2)-2;push()}
+  if(g.c===110){if(g.times>=g.maxtimes)g.c=500;else{g.c=120;biterRetract(api)}}
+  if(g.c===120){
+   if(id[2]>260){g.y1-=8;g.y2-=8;id[2]-=20;push()}
+   else{biterTeeth(api,m,g);g.times++;id[2]=250;g.c=51;g.a4=(g.miss===10||g.miss===0)?26:20;g.yy=id[2];g.xx=g.x1;g.xx2=g.x2}
+  }
+  if(g.c===500){g.eye=0;biterRetract(api);g.c=510;g.a4=15}
+  if(g.c===510){
+   if(id[2]>260)id[2]-=10;else{id[2]=250;g.instant=false}
+   g.x1=g.x1<id[0]-5?g.x1+4:id[0];g.y1=g.y1<id[2]-5?g.y1+4:id[2];
+   g.x2=g.x2>id[1]+5?g.x2-4:id[1];g.y2=g.y2<id[2]-5?g.y2+4:id[2];
+  }
+  if(g.eye)g.eyestretch=Math.min(1,g.eyestretch+.05);else g.eyestretch=Math.max(0,g.eyestretch-.1);
+  // obj_uborder.instant: the top of the box follows its ideal at once
+  if(g.instant)st.edge.T=id[2];
+ }
+ function biterFx(api,m,g){
+  api.S.fx.push({step(e){if(m.v.gen!==g)e.dead=true},
+   draw(ctx){
+    const [L,Rr,T,B]=api.S.ideal;
+    if(images.nbAmEye&&g.eyestretch>0)dse(ctx,images.nbAmEye,L+120,T-80,1,g.eyestretch,0,1,84,33);
+    ctx.save();ctx.strokeStyle='#ffffff';ctx.lineWidth=3;ctx.beginPath();
+    ctx.moveTo(g.x1,g.y1);ctx.lineTo(L,T);ctx.moveTo(g.x1,g.y1);ctx.lineTo(L,B);
+    ctx.moveTo(g.x2,g.y2);ctx.lineTo(Rr,T);ctx.moveTo(g.x2,g.y2);ctx.lineTo(Rr,B);
+    ctx.stroke();ctx.restore();
+   }});
+ }
+
+ // ------------------------------------------------------------ Lemon Bread --
+ // obj_lemonbread_body: the masked head over a breathing torso. Every so often the face cracks
+ // open (frames 0-3, then 3-6). When it attacks it melts into the floor (spr_lemonbread_melt)
+ // and pulls itself back up once the turn is over.
+ NB.defs.set('lemonbread',{
+  name:'Lemon Bread',hp:100,atk:8,def:9999,xp:0,gold:0,mercymod:-100,wd:100,
+  encounter:'* Smells like sweet lemons.',
+  bgFrame:99, // obj_lemonbread destroys obj_battlebg
+  size:()=>({w:120,h:224}),
+  pos:(i,n,cx)=>n===1?{x:280,y:20}:{x:R(cx-60),y:20},
+  shudder:[8,1],shudderAbs:true,
+  dmgPos:m=>({x:m.x+12,y:m.y+90}),
+  setup(m){Object.assign(m.v,{counter:-90,siner:0,face:0,melting:0,melt:0,changed:0,turns:0,hum:0,flex:0,hug:0,cmd:20,gen:null,reform:false})},
+  step(m){
+   const v=m.v;
+   if(v.reform&&v.melting===3){v.melting=4;v.reform=false}
+   v.counter++;v.siner++;
+   if(v.counter>100&&v.counter<150){v.face+=.25;if(v.face>=3)v.counter=150}
+   if(v.counter>200&&v.counter<230){v.changed=1;v.face+=.5;if(v.face>6)v.face--}
+   if(v.counter===230)v.face=3;
+   if(v.counter>260){v.face-=.25;if(v.face<1){v.face=0;v.counter=-90}}
+   if(v.melting===1){v.melt=0;v.melting=2}
+   if(v.melting===2){v.melt+=.5;if(v.melt>=9)v.melting=3}
+   if(v.melting===4){v.melt-=.5;if(v.melt<1){v.melting=0;v.counter=v.changed?-50:80;v.face=0}}
+  },
+  draw(g,m){
+   const v=m.v;
+   if(v.melting===0){
+    dse(g,fr(images.nbLemonTorso,v.siner/10),m.x-12,m.y+96,2,2);
+    dse(g,fr(images.nbLemonHead,v.face),m.x,m.y,2,2,0,1,1,1);
+   }else if(v.melting!==3)dse(g,fr(images.nbLemonMelt,Math.floor(v.melt)),m.x-16,m.y+12,2,2);
+  },
+  // its ACT menu has no Check: Call, Hum / Scream, Flex / Unhug, Cry
+  acts:['Call','Hum','Scream','Flex','Unhug','Cry'],
+  act(m,i,name){
+   const v=m.v,all=()=>v.hum&&v.hug&&v.flex;
+   const won=t=>{if(all()){m.mercymod=99999;return t+'^1.&* Lemon Bread seems to&  remember something.'}return null};
+   if(name==='Call')return '* You called for help^1.&* But nobody came.';
+   if(name==='Scream')return '* You screamed out^1.&* But nobody came.';
+   if(name==='Cry')return '* You cried as loud as you&  could^1.&* But nobody came.';
+   if(name==='Hum'){const first=!v.hum;v.hum=1;return won('* You hum a familiar tune')||(first?'* You hum a familiar tune^1.&* Lemon Bread\'s body shakes...':'* You hum a familiar tune^1.&* Nothing else happened.')}
+   if(name==='Flex'){const first=!v.flex;v.flex=1;return won('* You flexed your arm')||(first?'* You flexed your arm^1.&* Lemon Bread\'s muscle shakes...':'* You flexed your arm^1.&* Nothing else happened.')}
+   const first=!v.hug;v.hug=1;
+   return won('* You let Lemon Bread be')||(first?'* You let Lemon Bread be^1.&* Lemon Bread\'s teeth shake...':'* You let Lemon Bread be^1.&* Nothing else happened.');
+  },
+  // it talks through twelve small bubbles at once, two rows of six across the top of the screen
+  speech(m,api){
+   const v=m.v;v.cmd=R(rnd(100));
+   let t='But&nobody&came.';
+   if(v.cmd<75)t='Do you&think&I\'m&pretty?';
+   if(v.cmd<50)t='That\'s&what&they all&say.';
+   if(v.cmd<25)t='Stay&here&with&me...';
+   if(v.turns===0){t='Welcome&to my&special&hell.';v.turns=1;v.cmd=20}
+   if(v.turns===2)t='...';
+   if(m.mercymod>50000&&v.turns===1){t='I\'ve&felt&this&before.';v.turns=2}
+   talkLen(110);
+   for(let by=0;by<2;by++)for(let bx=0;bx<6;bx++){
+    const x=10+bx*101,y=10+by*119;
+    api.S.bubbles.push({m,x,y,wide:false,img:images.nbBlconSm||images.torielBubbleSmall||null,hold:false,w:new NB.Writer([t],{typer:2,x:x+15,y:y+10,sound:null})});
+   }
+   return null;
+  },
+  border:()=>5,
+  // DEF 9999: FIGHT does nothing. It still flinches, and the damage writer says something odd instead.
+  hurt(m,api){
+   m.takedamage=0;m.hurt=true;m.shudder=8;m.shakeT=0;snd('damage');
+   const x=m.x+12,y=m.y+90;
+   api.S.dmgw.push({x,y,ystart:y,vy:0,dmg:0,special:1,m,maxhp:m.maxhp,apparent:m.hp,actual:m.hp,life:-1,tick:0});
+   m.hurtanim=3;
+  },
+  attack(m,api){
+   const v=m.v;
+   // talking over: the body melts (event_user 0), and 16 frames later the attack starts
+   if(v.melting===0)v.melting=1;else if(v.melting===3)v.melting=4;
+   v.reform=false;
+   const melon=v.cmd>=60;
+   api.turntimer(16+(melon?150:190));
+   const [L,Rr,T]=api.S.ideal;
+   v.gen={kind:melon?'melon':'biter',wait:16,c:0,a4:-1,x1:L,y1:T,x2:Rr,y2:T,eye:0,eyestretch:0,miss:-1,times:0,maxtimes:2,instant:false};
+   let f='* Smells like sweet lemons.';
+   if(v.cmd>=90)f='* You hear the melody of&  pulsating flesh.';
+   if(m.mercymod>100)f='* Could this be goodbye!?';
+   if(m.hp<=m.maxhp/4)f='* Monster has low HP.';
+   return f;
+  },
+  attackStep(m,api){
+   const g=m.v.gen;if(!g)return;
+   if(g.wait>0){
+    if(--g.wait>0)return;
+    if(g.kind==='melon')melonGen(api,m);
+    else{const [L,Rr,T]=api.S.ideal;Object.assign(g,{x1:L,y1:T,x2:Rr,y2:T,a4:10});biterFx(api,m,g)}
+    return;
+   }
+   if(g.kind==='biter')biterStep(api,m,g);
+  },
+  endAttack(m,api){
+   const g=m.v.gen;m.v.gen=null;m.v.reform=true;
+   if(g&&g.instant&&api)api.S.edge.T=api.S.ideal[2];
+  },
+  onSpare(m){m.v.melting=m.v.melting||1}
+ });
+})();
+
 /* ---- NB content: Core I (obj_finalfroggit, obj_whimsalot, obj_astigmatism, obj_wizard = Madjick,
         obj_finalknight = Knight Knight, with their bodies; obj_megaflybulletgen, obj_frogbullet_gen,
         obj_butterflybullet_gen/_gen_2, obj_astigmatismgen, obj_stromboligen, obj_wizardorb_chaser,
@@ -28102,6 +28366,14 @@ if(c.lesson > 20) {
  });
 })();
 const NB_ASSETS={
+ // Lemon Bread
+ nbLemonHead:[0,1,2,3,4,5,6].map(i=>RAW+`sprites/images/spr_lemonbread_head_${i}.png`),
+ nbLemonTorso:[0,1,2,3].map(i=>RAW+`sprites/images/spr_lemonbread_torso_${i}.png`),
+ nbLemonMelt:[0,1,2,3,4,5,6,7,8,9].map(i=>RAW+`sprites/images/spr_lemonbread_melt_${i}.png`),
+ nbMelonTooth:RAW+'sprites/images/spr_melontooth_0.png',nbMelonBullet:RAW+'sprites/images/spr_melonbullet_0.png',
+ nbAmTooth:RAW+'sprites/images/spr_amalgam_tooth_0.png',nbAmToothD:RAW+'sprites/images/spr_amalgam_toothd_0.png',
+ nbAmToothMask:RAW+'sprites/images/spr_amalgam_toothmask_0.png',nbAmToothMaskD:RAW+'sprites/images/spr_amalgam_toothmask_d_0.png',
+ nbAmEye:RAW+'sprites/images/spr_amalgam_eye_0.png',nbBlconSm:RAW+'sprites/images/spr_blconsm_0.png',
  nbBattleBg:[0,1].map(i=>RAW+`sprites/images/spr_battlebg_${i}.png`),
  // Mettaton's quiz show
  nbAH_helper:[0].map(i=>RAW+`sprites/images/spr_alphyshelper_${i}.png`),
