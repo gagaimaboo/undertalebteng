@@ -840,6 +840,7 @@ const MUSIC={
  battle:RAW+'sound/audio/mus_battle1.ogg',
  // the True Lab amalgamates' fights
  amalgam:RAW+'sound/audio/mus_amalgam.ogg',
+ woofenstein:RAW+'sound/audio/mus_woofenstein_loop.ogg',dogsong:RAW+'sound/audio/mus_dogsong.ogg',
  core:RAW+'sound/audio/mus_core.ogg',
  flowey:RAW+'sound/audio/mus_flowey.ogg',
  toriel:RAW+'sound/audio/mus_boss1.ogg',
@@ -1256,6 +1257,7 @@ const VANILLA_REWARDS={
  madmewmew:{exp:0,killGold:0,spareGold:0},
  roaringknight:{exp:0,killGold:0,spareGold:0},
  lemonbread:{exp:0,killGold:0,spareGold:0},
+ endogeny:{exp:0,killGold:0,spareGold:0},
  glyde:{exp:100,killGold:140,spareGold:120},
  royalguards:{exp:220,killGold:120,spareGold:100},
  moldessa:{exp:10,killGold:6,spareGold:6},
@@ -1447,7 +1449,7 @@ function confirmLevelSelect(){
 function progressionInventoryCount(){return Object.values(progression.itemStock||{}).reduce((a,v)=>a+Math.max(0,Number(v)||0),0)}
 function progressionRewardEligible(){return screen==='nb'&&vanillaMode&&practiceMode==='classic'&&currentBoss!==SECRET_SANS_BOSS.id}
 // canon pays 0 G for a lot of fights (most bosses, some spares): here everything pays something
-const GOLD_FLOOR={dummy:5,toriel:150,papyrus:200,napstablook:50,maddummy:50,undyne:500,undyneex:1500,mettaton:300,mettatonex:800,mettatonneo:2000,asgore:1000,sans:1000,madmewmew:500,lemonbread:50,roaringknight:2000,custom:10};
+const GOLD_FLOOR={dummy:5,toriel:150,papyrus:200,napstablook:50,maddummy:50,undyne:500,undyneex:1500,mettaton:300,mettatonex:800,mettatonneo:2000,asgore:1000,sans:1000,madmewmew:500,lemonbread:50,endogeny:50,roaringknight:2000,custom:10};
 function rewardData(id){
  const r=VANILLA_REWARDS[id]||{exp:0,killGold:0,spareGold:0};
  let kg=r.killGold||0,sg=r.spareGold||0;
@@ -3756,6 +3758,9 @@ const MUSIC_LOADERS={
  menu:()=>loadAudioAsset(MUSIC.menu,.36,true),
  battle:()=>loadAudioAsset(MUSIC.battle,.48,true),
  amalgam:()=>loadAudioAsset(MUSIC.amalgam,.50,true),
+ // caster_loop(global.batmusic, 0.8, 0.85)
+ woofenstein:()=>loadAudioAsset(MUSIC.woofenstein,.50,true).then(a=>{if(a){a.playbackRate=.85;a.preservesPitch=a.mozPreservesPitch=a.webkitPreservesPitch=false}return a}),
+ dogsong:()=>loadAudioAsset(MUSIC.dogsong,.50,true),
  core:()=>loadAudioAsset(MUSIC.core,.48,true),
  flowey:()=>loadAudioAsset(MUSIC.flowey,.48,true),
  toriel:()=>loadAudioAsset(MUSIC.toriel,.50,true),
@@ -3815,6 +3820,7 @@ function battleMusicKey(){
  if(currentBoss==='sans')return sansMusic;
  if(currentBoss==='madmewmew')return mmmMusic;
  if(currentBoss==='lemonbread')return 'amalgam';
+ if(currentBoss==='endogeny')return 'woofenstein';
  if(currentBoss==='roaringknight')return 'knight';
  if(currentBoss==='custom')return crbMusicKey();
  return 'battle';
@@ -4359,6 +4365,7 @@ const BOSS_OPTIONS=[
  {id:'tsunderplane',label:'TSUNDERPLANE',area:'HOTLAND',hp:80,atk:25,def:26,encounter:'* Tsunderplane swoops into your way... accidentally, apparently.',noelleEncounter:'* Noelle encountered Tsunderplane.'},
  {id:'madjick',label:'MADJICK',area:'CORE',hp:190,atk:29,def:24,encounter:'* Madjick blocks the way!',noelleEncounter:'* Noelle encountered Madjick.'},
  {id:'knightknight',label:'KNIGHT KNIGHT',area:'CORE',hp:230,atk:36,def:36,encounter:'* Knight Knight blocks the way!',noelleEncounter:'* Noelle encountered Knight Knight.'},
+ {id:'endogeny',label:'ENDOGENY',area:'TRUE LAB',hp:100,atk:9,def:999,encounter:'* It\'s the Amalgamate.',noelleEncounter:'* It\'s the Amalgamate.'},
  {id:'lemonbread',label:'LEMON BREAD',area:'TRUE LAB',hp:100,atk:8,def:9999,encounter:'* Smells like sweet lemons.',noelleEncounter:'* Smells like sweet lemons.'},
  {id:'astigmatism',label:'ASTIGMATISM',area:'CORE',hp:120,atk:32,def:26,encounter:'* Astigmatism blocks the way!',noelleEncounter:'* Noelle encountered Astigmatism.'},
  {id:'muffet',label:'MUFFET',area:'HOTLAND // SPIDER BAKE SALE',hp:1250,atk:38,def:18,encounter:'* Muffet traps you!',noelleEncounter:'* Muffet traps Noelle!'},
@@ -6710,6 +6717,7 @@ function bossImage(b,now=performance.now()){
  if(['snowdrake','loox','moldsmal','migosp','aaron','vulkin','moldbygg','temmie','lesserdog','greaterdog','dogi','woshua','pyrope','madjick','knightknight','astigmatism','muffet','undyneex','mettatonex','mettatonneo'].includes(b.id))return addedEnemyIdleImage(b.id,now,false);
  if(b.id==='whimsun')return whimsunDrawImage(now,false);
  if(b.id==='lemonbread')return lemonBreadCard()||images.dummy;
+ if(b.id==='endogeny')return endogenyCard()||images.dummy;
  if(b.id==='whimsalot')return images.whimsalot||images.whimsalotHurt||images.dummy;
  if(b.id==='asgore')return images.asgPrebrandish||images.dummy;
  if(b.id==='sans')return images.sans||images.dummy;
@@ -8310,7 +8318,7 @@ function drawGamePickOld(now=performance.now()){
 // The roster in groups, each a carousel of cards. Anything not listed lands in EXTRAS.
 const ENEMY_CATEGORIES=[
  {id:'bosses',label:'BOSSES',color:'#ff3355',ids:['toriel','papyrus','undyne','undyneex','muffet','mettaton','mettatonex','mettatonneo','asgore','sans']},
- {id:'minibosses',label:'MINI BOSSES',color:'#c04dff',ids:['napstablook','maddummy','doggo','lesserdog','greaterdog','dogi','glyde','royalguards','lemonbread']},
+ {id:'minibosses',label:'MINI BOSSES',color:'#c04dff',ids:['napstablook','maddummy','doggo','lesserdog','greaterdog','dogi','glyde','royalguards','lemonbread','endogeny']},
  {id:'enemies',label:'ENEMIES',color:'#2fd36b',ids:['dummy','froggit','whimsun','moldsmal','loox','vegetoid','migosp','parsnik','moldessa','snowdrake','icecap','gyftrot','aaron','woshua','moldbygg','shyren','temmie','vulkin','tsunderplane','pyrope','finalfroggit','whimsalot','astigmatism','madjick','knightknight']},
  {id:'extras',label:'EXTRAS',color:'#2aa8ff',ids:[]}
 ];
@@ -12100,6 +12108,14 @@ const NB=(()=>{
   sans5000:{g:0,s:'* Susie flexed at SANS\n  SUPER 5000.\n* It does not compute.',n:'* Noelle waved at SANS\n  SUPER 5000.\n* It waved back. Slowly.'},
   madmewmew:{g:0,s:'* Susie flexed at Mad Mew\n  Mew.\n* "STOP BEING SO COOL!!!"',n:'* Noelle said the doll is\n  really cute.\n* "I KNOW, RIGHT!?"'},
   roaringknight:{g:0,s:'* Susie told the Knight to\n  get lost.\n* It didn\'t move.',n:'* Noelle tried to talk to\n  the Knight.\n* It only stared.'},
+  glyde:{g:15,s:'* Susie told Glyde it\'s\n  not that cool.\n* Glyde tried harder.',n:'* Noelle said Glyde\'s\n  wings were pretty.\n* "OBVIOUSLY."'},
+  gyftrot:{g:20,s:'* Susie ripped the junk\n  off Gyftrot\'s antlers.\n* It looked relieved.',n:'* Noelle gave Gyftrot a\n  present.\n* It really needed one.'},
+  moldessa:{g:20,s:'* Susie flexed at Moldessa.\n* It wobbled, impressed.',n:'* Noelle did a little\n  wiggle.\n* Moldessa wiggled back.'},
+  parsnik:{g:20,s:'* Susie bit Parsnik\'s\n  vines.\n* It took that as a\n  compliment.',n:'* Noelle asked Parsnik how\n  it grows so tall.\n* It blushed green.'},
+  rg01:{g:10,s:'* Susie challenged 01 to a\n  push-up contest.\n* 01 respects the hustle.',n:'* Noelle asked 01 how long\n  they\'ve known 02.\n* 01 got flustered.'},
+  rg02:{g:10,s:'* Susie told 02 the armor\n  looks hot.\n* 02 is sweating more.',n:'* Noelle said 02 seems\n  really nice.\n* 02 looked at 01.'},
+  lemonbread:{g:10,s:'* Susie told Lemon Bread\n  it\'s pretty.\n* All its mouths smiled.',n:'* Noelle held Lemon\n  Bread\'s hand.\n* It squeezed back. Gently.'},
+  endogeny:{g:10,s:'* Susie threw a stick.\n* Too many legs went\n  after it.',n:'* Noelle petted the\n  Amalgamate.\n* It drips happily.'},
   jayzee:{g:10,s:'* Susie threw the ball\n  back.\n* Jayzee liked that.',n:'* Noelle asked Jayzee\n  for coaching.\n* Jayzee is thrilled.'}
  };
  function partyCast(a){
@@ -25713,6 +25729,209 @@ function lemonBreadCard(){
  });
 })();
 
+// Endogeny's roster card: obj_endogeny_body as it stands, the head over the body.
+var endoCardCv=null,endoCardIm={};
+function endogenyCard(){
+ if(endoCardCv)return endoCardCv;
+ for(const [k,f] of [['head','spr_endogeny_head_0'],['body','spr_endogeny_0']])
+  if(!endoCardIm[k]){endoCardIm[k]=1;loadImage(RAW+'sprites/images/'+f+'.png').then(im=>{if(im)endoCardIm[k]=im}).catch(()=>{})}
+ const h=endoCardIm.head,b=endoCardIm.body;if(!h||h===1||!b||b===1)return null;
+ const c=document.createElement('canvas');c.width=132;c.height=78;const g=c.getContext('2d');g.imageSmoothingEnabled=false;
+ g.drawImage(b,0,0);g.drawImage(h,0,0);
+ return endoCardCv=c;
+}
+// Its music: mus_woofenstein_loop at pitch 0.85, bent by what you do (caster_set_pitch on
+// global.batmusic), and mus_dogsong over it once it's contented.
+function endoMusicRate(r){const a=music.woofenstein;if(!a)return;try{a.playbackRate=r;a.preservesPitch=a.mozPreservesPitch=a.webkitPreservesPitch=false}catch(_){}}
+function endoMusicVol(v){const a=music.woofenstein;if(a)try{a.volume=v}catch(_){}}
+function endoDogsong(on){
+ const go=a=>{if(!a)return;try{if(on){a.currentTime=0;a.loop=true;a.playbackRate=.8;a.preservesPitch=a.mozPreservesPitch=a.webkitPreservesPitch=false;playMusicElement(a)}else a.pause()}catch(_){}};
+ if(music.dogsong)go(music.dogsong);else if(on)ensureMusicTrack('dogsong').then(a=>{if(screen==='nb'&&currentBoss==='endogeny')go(a)});
+}
+/* ---- NB content: True Lab, Endogeny (obj_endogeny + obj_endogeny_body; obj_amalgam_rocketdog,
+        obj_amalgam_laserdog with obj_dogmissle) ---- */
+(()=>{
+ const {rnd,dcos,dsin,snd}=NB;
+ const {dse}=NB.hl;
+ const tick=(o,k)=>{if(o[k]>0){o[k]-=1;if(o[k]<=0){o[k]=-1;return true}}return false};
+ const fr=(a,i)=>Array.isArray(a)?a[((Math.floor(i)%a.length)+a.length)%a.length]:a;
+ const choose=(...a)=>a[Math.floor(rnd(a.length))];
+ const ptDir=(x0,y0,x1,y1)=>Math.atan2(-(y1-y0),x1-x0)*180/Math.PI;
+ // the dogs' collision boxes: each sprite's bbox at image_scale 3 (27x19 frames, origin 0,0)
+ const DOG_BOX={dog:[12,3,54,51],tuck:[15,24,42,30],rocket:[21,30,42,21]};
+ const dogIm=k=>k==='dog'?images.nbNofaceDog:k==='tuck'?images.nbNofaceTuck:images.nbNofaceRocket;
+
+ // The dogs are bullets the generator moves itself (attackStep), so the missiles can go in
+ // under the laser dog (obj_amalgam_laserdog is depth -1, obj_dogmissle 0).
+ function dogBullet(api,m,g,spr){
+  const [,R,,B]=api.S.ideal;
+  const b=api.spawn({x:R-81,y:B-57-2,spr,frame:0,box:DOG_BOX[spr],manual:true,wallKill:false,kill:false,dmg:m.atk,
+   draw(ctx,o){const im=fr(dogIm(o.spr),o.frame);if(im)dse(ctx,im,o.x,o.y,3,3)}});
+  Object.assign(g,{dog:b,nowx:b.x,nowy:b.y,isp:0,vx:0,vy:0});
+  return b;
+ }
+
+ // ---------------------------------------------------- obj_amalgam_rocketdog --
+ // It tucks its legs in, shakes, then rockets at the SOUL again and again, stopping to shake
+ // between dashes (a little longer when it stopped close to you).
+ function rocketStep(api,g){
+  const b=g.dog,h=api.heart;
+  if(tick(g,'a4'))g.con++;
+  if(tick(g,'a5')){
+   const d=ptDir(b.x,b.y,h.x-25,h.y-20),sp=7+rnd(3);g.vx=dcos(d)*sp;g.vy=-dsin(d)*sp;
+   g.a5=20+rnd(10);g.a6=14+rnd(5);g.shake=0;
+  }
+  if(tick(g,'a6')){
+   g.vx=g.vy=0;g.nowx=b.x;g.nowy=b.y;g.shake=1;
+   if(Math.hypot(h.x+8-b.x,h.y+8-b.y)<50)g.a5+=8;
+  }
+  if(g.con===1){g.nowx=b.x;g.nowy=b.y;g.isp=.25;if(b.frame>=3){g.isp=0;b.frame=3;g.con=2;g.a4=10}}
+  if(g.con===3){g.con=4;g.a4=15}
+  if(g.con===4||g.shake===1){b.x=g.nowx+rnd(3)-rnd(3);b.y=g.nowy+rnd(3)-rnd(3)}
+  if(g.con===5){g.a5=1;b.spr='rocket';b.box=DOG_BOX.rocket;b.frame=0;g.isp=.334;g.con=6}
+  b.x+=g.vx;b.y+=g.vy;b.frame+=g.isp;
+ }
+
+ // ----------------------------------------------------- obj_amalgam_laserdog --
+ // It unfolds (only the first time), shakes, then bobs up and down the right of the box,
+ // firing a missile out of its mouth every 7 frames.
+ function missile(api,m,g){
+  const dog=g.dog,st=api.S;
+  const b=api.spawn({x:dog.x+34,y:dog.y+16,anchor:1,a0:4,off:0,sp:0,fric:0,box:[-2,-2,6,4],manual:true,wallKill:false,kill:false,dmg:m.atk,
+   step(o){
+    if(tick(o,'a0')){
+     o.fric=-.22+rnd(.1);
+     const hh=api.heart;o.dir=ptDir(o.x,o.y,hh.x+8,hh.y+8)+rnd(30)-rnd(30);o.sp=2;
+     o.anchor=0;o.y=dog.y+20;o.x-=9;
+    }
+    if(o.anchor){o.x=dog.x+34;o.y=dog.y+16;o.off-=2;return}
+    o.sp=Math.max(0,o.sp-o.fric);o.x+=dcos(o.dir)*o.sp;o.y-=dsin(o.dir)*o.sp;
+    if(o.x<-10)o.alive=false;
+   },
+   draw(ctx,o){
+    const im=images.nbDogMissile;if(!im)return;
+    // draw_sprite_part_ext: the beam grows out of the mouth, 2 px wider each frame
+    if(o.anchor){const w=Math.min(im.width,-o.off);if(w>0){ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(im,0,0,w,im.height,Math.round(o.x+o.off*2),Math.round(o.y),w*2,im.height*2);ctx.restore()}}
+    else dse(ctx,im,o.x,o.y,2,2,0,1,4,3);
+   }});
+  // under the dog
+  const i=st.bullets.indexOf(b),j=st.bullets.indexOf(dog);
+  if(i>j&&j>=0){st.bullets.splice(i,1);st.bullets.splice(j,0,b)}
+ }
+ function laserStep(api,m,g){
+  const b=g.dog,[,,T,B]=api.S.ideal;
+  if(tick(g,'a4'))g.con++;
+  if(tick(g,'a5')){g.vy=3+rnd(4)*choose(1,-1);g.a5=15+rnd(20)}
+  if(tick(g,'a6')){missile(api,m,g);g.a6=7}
+  if(g.con===1){g.nowx=b.x;g.nowy=b.y;g.isp=.25;if(b.frame>=7){g.isp=0;b.frame=7;g.con=2;g.a4=10}}
+  if(g.con===3){g.con=4;g.a4=15}
+  if(g.con===4){b.x=g.nowx+rnd(3)-rnd(3);b.y=g.nowy+rnd(3)-rnd(3)}
+  if(g.con===5){g.con=6;g.vy=-6;g.a5=15;g.a6=5}
+  if(b.y<T){b.y+=6;if(g.vy<0)g.vy=-g.vy}
+  if(b.y>B-57+5){b.y-=6;if(g.vy>0)g.vy=-g.vy}
+  b.y+=g.vy;b.frame+=g.isp;
+ }
+
+ // --------------------------------------------------------------- Endogeny --
+ // obj_endogeny_body: the body and its mouth (spr_endogeny_head, 9 frames) at mouthspeed, shaking
+ // by shaker. Beckon it close, pet it (it runs off), play fetch until it's tired, pet it again
+ // and it froths, pet it once more and it's contented: spr_endogeny_2, and the dog song.
+ NB.defs.set('endogeny',{
+  name:'Amalgamate',hp:100,atk:9,def:999,xp:0,gold:0,mercymod:-25,wd:300,
+  encounter:'* It\'s the Amalgamate.',
+  bgFrame:99, // obj_endogeny destroys obj_battlebg
+  size:()=>({w:264,h:156}),
+  pos:(i,n,cx)=>n===1?{x:180,y:90}:{x:Math.round(cx-132),y:90},
+  shudder:[8,1],shudderAbs:true,
+  ownClock:true,
+  dmgPos:m=>({x:m.x+9,y:m.y-24}),
+  setup(m){
+   Object.assign(m.v,{shaker:0,mouthspeed:0,mouth:0,spared:0,close:0,pet:0,cmd:90,turns:0,gen:null,fade:1});
+   endoMusicRate(.85);endoMusicVol(.5);try{ensureMusicTrack('dogsong')}catch(_){}
+  },
+  step(m){const v=m.v;v.mouth+=v.mouthspeed;if(v.spared){v.mouthspeed=0;v.shaker=0}},
+  draw(g,m){
+   const v=m.v,xx=rnd(v.shaker)-rnd(v.shaker),yy=rnd(v.shaker)-rnd(v.shaker);
+   dse(g,v.spared?images.nbEndoBody2:images.nbEndoBody,m.x+xx,m.y+yy,2,2,0,v.fade);
+   dse(g,fr(images.nbEndoHead,v.spared?0:v.mouth),m.x+xx,m.y+yy,2,2,0,v.fade);
+  },
+  check:m=>`* ${m.v.spared?'ENDOGENY':'AMALGAMATE'} - It's unclear how&  many dogs this counts as.`,
+  // SCR_TEXT 224: "Check / Beckon / Ignore" and "Pet / Play" columns
+  acts:['Check','Pet','Beckon','Play','Ignore'],
+  act(m,i,name){
+   const v=m.v;
+   if(name==='Beckon'){
+    if(v.close)return '* The Amalgamate\'s feelers&  rotate quickly^1.&* Nothing else happens.';
+    v.close=1;v.mouthspeed=.1;endoMusicRate(.9);
+    return '* You call the Amalgamate./* It bounds towards you^1,&  flecking a strange liquid&  from an orifice.';
+   }
+   if(name==='Ignore')return '* You try looking away^1, but&  it seems to appear everywhere&  you look.';
+   if(name==='Pet'){
+    if(!v.close)return '* Amalgamate is too far&  away to pet^1.&* You just pet the air.';
+    if(v.pet===4)return '* You\'d give it a tummy rub^1,&  but it\'s not clear where its&  tummy begins or ends.';
+    if(v.pet===3){
+     v.pet=4;v.spared=1;m.mercymod=999999;m.name='Endogeny';
+     endoMusicVol(.5*.3/.8);endoMusicRate(.8);endoDogsong(true);
+     return '* You pet decisively^1.&* The Amalgamate seems to be&  satisfied by all this.';
+    }
+    if(v.pet===2){v.pet=3;v.mouthspeed=1;v.shaker=4;endoMusicRate(1.2);return '* You pet the Amalgamate^1.&* It starts to generate a&  Stage I Happiness Froth.'}
+    if(v.pet===1)return '* You try to pet the&  Amalgamate but your hand&  phases through it./* It must not want to be pet&  for now.';
+    v.pet=1;v.mouthspeed=.2;v.shaker=1;endoMusicRate(1);
+    return '* You pet the Amalgamate^1.&* It convulses rapidly..^1.&* Then calms down./* It rests quietly on your&  lap for a moment.../* Zzzzz.../* Suddenly^1, it shoots away and&  crawls wildly on the walls!';
+   }
+   if(name==='Play'){
+    if(v.pet>1)return '* Amalgamate seems too tired&  to play.';
+    if(v.pet===1){
+     v.pet=2;v.mouthspeed=.5;v.shaker=2;endoMusicRate(1.1);
+     return '* You throw your weapon into&  the corner of the room./* The Amalgamate brings it back&  to you..^1.&* Proudly?/* You repeat this process a&  few times./* Now Amalgamate is very tired..^1.&* It leans its dripping^1,&  amorphous body on you...';
+    }
+    return '* Amalgamate is not excited&  enough to play with...?';
+   }
+   return '* Nothing happened.';
+  },
+  // the dogs don't talk: alarm[5] = 20, then the attack
+  speech(m,api){api.S.talkLenExact=20;return null},
+  border:()=>5,
+  // DEF 999: FIGHT does nothing. It flinches, and the damage writer says something odd.
+  hurt(m,api){
+   m.takedamage=0;m.hurt=true;m.shudder=8;m.shakeT=0;snd('damage');
+   const x=m.x+9,y=m.y-24;
+   api.S.dmgw.push({x,y,ystart:y,vy:0,dmg:0,special:1,m,maxhp:m.maxhp,apparent:m.hp,actual:m.hp,life:-1,tick:0});
+   m.hurtanim=3;
+  },
+  attack(m,api){
+   const v=m.v;
+   // alarm[6] at the end of the talk: the command flips between 0 (laser dog) and 90 (rocket dog)
+   v.cmd=v.cmd>50?0:90;
+   let f='* Amalgamate is watching you&  intently.';
+   if(v.cmd>=45)f='* Amalgamate is waiting for&  your command.';
+   if(v.cmd>=90)f='* It smells like a bunch of dogs.';
+   if(v.close)f='* Amalgamate is hovering close^1,&  looking for affection.';
+   if(v.pet===1)f='* Amalgamate is striking the&  wall with its claws.';
+   if(v.pet===2)f='* Amalgamate is twitching&  affectionately.';
+   if(v.pet===3)f='* Amalgamate\'s convulsions&  intensify.';
+   if(v.pet===4)f='* Endogeny is contented.';
+   if(m.hp<=m.maxhp/4)f='* Monster has low HP.';
+   if(m.mercymod===999999){v.gen=null;v.endNow=true;return '* Endogeny is contented.'}
+   api.turntimer(200);
+   const g={kind:v.cmd>=50?'rocket':'laser',con:0,a4:-1,a5:-1,a6:-1,shake:0};
+   dogBullet(api,m,g,g.kind==='rocket'?'tuck':'dog');
+   if(g.kind==='rocket')g.a4=10;
+   else{g.a4=30;if(v.turns===1){g.con=4;g.dog.frame=7}}
+   v.turns=1;v.gen=g;
+   return f;
+  },
+  attackStep(m,api){
+   const v=m.v;
+   if(v.endNow){v.endNow=false;api.endTurn();return}
+   const g=v.gen;if(!g||!g.dog||!g.dog.alive)return;
+   if(g.kind==='rocket')rocketStep(api,g);else laserStep(api,m,g);
+  },
+  endAttack(m){m.v.gen=null},
+  onSpare(m){m.v.spared=1}
+ });
+})();
+
 /* ---- NB content: Core I (obj_finalfroggit, obj_whimsalot, obj_astigmatism, obj_wizard = Madjick,
         obj_finalknight = Knight Knight, with their bodies; obj_megaflybulletgen, obj_frogbullet_gen,
         obj_butterflybullet_gen/_gen_2, obj_astigmatismgen, obj_stromboligen, obj_wizardorb_chaser,
@@ -28444,6 +28663,13 @@ function lemonBreadCard(){
  });
 })();
 const NB_ASSETS={
+ // Endogeny
+ nbEndoBody:RAW+'sprites/images/spr_endogeny_0.png',nbEndoBody2:RAW+'sprites/images/spr_endogeny_2_0.png',
+ nbEndoHead:[0,1,2,3,4,5,6,7,8].map(i=>RAW+`sprites/images/spr_endogeny_head_${i}.png`),
+ nbNofaceDog:[0,1,2,3,4,5,6,7].map(i=>RAW+`sprites/images/spr_nofacedog_${i}.png`),
+ nbNofaceTuck:[0,1,2,3].map(i=>RAW+`sprites/images/spr_nofacedog_legtuck_${i}.png`),
+ nbNofaceRocket:[0,1,2].map(i=>RAW+`sprites/images/spr_nofacedog_rocket_${i}.png`),
+ nbDogMissile:RAW+'sprites/images/spr_dogmissle_0.png',
  // Lemon Bread
  nbLemonHead:[0,1,2,3,4,5,6].map(i=>RAW+`sprites/images/spr_lemonbread_head_${i}.png`),
  nbLemonTorso:[0,1,2,3].map(i=>RAW+`sprites/images/spr_lemonbread_torso_${i}.png`),
