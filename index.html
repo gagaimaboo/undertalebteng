@@ -1137,7 +1137,18 @@ const SUPPORT_OPTIONS=[
  {id:'whimsalot',label:'WHIMSALOT'},
  {id:'madjick',label:'MADJICK'},
  {id:'shyren',label:'SHYREN'},
- {id:'jerry',label:'JERRY'}
+ {id:'jerry',label:'JERRY'},
+ // everyone else the new engine runs (the roster's order)
+ {id:'finalfroggit',label:'FINAL FROGGIT'},{id:'parsnik',label:'PARSNIK'},{id:'lesserdog',label:'LESSER DOG'},
+ {id:'greaterdog',label:'GREATER DOG'},{id:'dogi',label:'DOGAMY & DOGARESSA'},{id:'royalguards',label:'ROYAL GUARDS'},
+ {id:'snowdrake',label:'SNOWDRAKE'},{id:'gyftrot',label:'GYFTROT'},{id:'glyde',label:'GLYDE'},{id:'loox',label:'LOOX'},
+ {id:'moldsmal',label:'MOLDSMAL'},{id:'moldessa',label:'MOLDESSAS'},{id:'aaron',label:'AARON'},{id:'moldbygg',label:'MOLDBYGG'},
+ {id:'temmie',label:'TEMMIE'},{id:'woshua',label:'WOSHUA'},{id:'undyne',label:'UNDYNE'},{id:'undyneex',label:'UNDYNE THE UNDYING'},
+ {id:'tsunderplane',label:'TSUNDERPLANE'},{id:'knightknight',label:'KNIGHT KNIGHT'},{id:'snowdrakemom',label:'SNOWDRAKE\'S MOTHER'},
+ {id:'endogeny',label:'ENDOGENY'},{id:'lemonbread',label:'LEMON BREAD'},{id:'astigmatism',label:'ASTIGMATISM'},{id:'muffet',label:'MUFFET'},
+ {id:'pyrope',label:'PYROPE'},{id:'vulkin',label:'VULKIN'},{id:'mettaton',label:'METTATON'},{id:'mettatonex',label:'METTATON EX'},
+ {id:'mettatonneo',label:'METTATON NEO'},{id:'asgore',label:'ASGORE'},{id:'madmewmew',label:'MAD MEW MEW'},
+ {id:'roaringknight',label:'THE ROARING KNIGHT'},{id:'jayzee',label:'JAYZEE'},{id:'custom',label:'CUSTOM (CREATOR)'}
 ];
 
 let supportEnemyId='whimsun'; // UI/current-context facade
@@ -3214,6 +3225,7 @@ function loadSandboxConfig(){
    if(!raw)return fallback;
    const p=JSON.parse(raw)||{};
    const validSupportIds=new Set(SUPPORT_OPTIONS.filter(v=>v.id!=='off').map(v=>v.id));
+   try{if(localStorage.getItem('utbg.sansUnlocked')==='1')validSupportIds.add('sans')}catch(_){}
    const party=(Array.isArray(p.supportParty)?p.supportParty:fallback.supportParty)
      .filter(id=>validSupportIds.has(id))
      .slice(0,20);
@@ -4333,6 +4345,7 @@ function syncSansRoster(){
  if(!sansUnlocked()||BOSS_OPTIONS.some(b=>b.id==='sans'))return;
  const i=BOSS_OPTIONS.findIndex(b=>b.id==='asgore');
  BOSS_OPTIONS.splice(i<0?BOSS_OPTIONS.length:i+1,0,SANS_BOSS);
+ if(!SUPPORT_OPTIONS.some(v=>v.id==='sans'))SUPPORT_OPTIONS.push({id:'sans',label:'SANS'});
 }
 function unlockSans(){if(!sansUnlocked()){try{localStorage.setItem(SANS_UNLOCK_KEY,'1')}catch(_){}}syncSansRoster()}
 
@@ -8868,12 +8881,24 @@ function itDrawLoading(){
 
 // ---------- Support select ----------
 const SUPPORT_GRID_COLS=2;
-function supportCardRect(i){const col=i%SUPPORT_GRID_COLS,row=Math.floor(i/SUPPORT_GRID_COLS);return{x:76+col*370,y:150+row*58,w:360,h:56}}
+const SUPPORT_ROWS=13;
+let supportScrollRow=0;
+function supportRowCount(){return Math.ceil(SUPPORT_OPTIONS.length/SUPPORT_GRID_COLS)}
+function supportScrollTo(row){supportScrollRow=Math.max(0,Math.min(Math.max(0,supportRowCount()-SUPPORT_ROWS),row))}
+function supportKeepInView(){const row=Math.floor(supportSelectIndex/SUPPORT_GRID_COLS);if(row<supportScrollRow)supportScrollTo(row);else if(row>=supportScrollRow+SUPPORT_ROWS)supportScrollTo(row-SUPPORT_ROWS+1)}
+function supportCardRect(i){const col=i%SUPPORT_GRID_COLS,row=Math.floor(i/SUPPORT_GRID_COLS)-supportScrollRow;return{x:76+col*370,y:150+row*58,w:360,h:56,hidden:row<0||row>=SUPPORT_ROWS}}
 function supportUseRect(){return ui6Marks.supAdd||{x:0,y:0,w:0,h:0}}
 function drawSupportSelect(now=performance.now()){
  ui6Header('SUPPORTS',`PARTY ${supportPartyIds.length} / ${supportCap()}`);
  const entries=supportChoiceEntries(),box={x:64,y:130,w:760,h:812};ui6Box(box);
+ supportKeepInView();
+ // more above / below: tap the arrows (or scroll the wheel) to move a page
+ const upR={x:box.x+box.w/2-60,y:box.y-4,w:120,h:24},dnR={x:box.x+box.w/2-60,y:box.y+box.h-22,w:120,h:24};
+ if(supportScrollRow>0){ui6Arrow(box.x+box.w/2,box.y+2,false);ui6Hit(upR,()=>{supportScrollTo(supportScrollRow-SUPPORT_ROWS+1);supportSelectIndex=Math.min(supportSelectIndex,(supportScrollRow+SUPPORT_ROWS)*SUPPORT_GRID_COLS-1);play('move')})}
+ if(supportScrollRow+SUPPORT_ROWS<supportRowCount()){ui6Arrow(box.x+box.w/2,box.y+box.h-20,true);ui6Hit(dnR,()=>{supportScrollTo(supportScrollRow+SUPPORT_ROWS-1);supportSelectIndex=Math.max(supportSelectIndex,supportScrollRow*SUPPORT_GRID_COLS);play('move')})}
+ ui6WheelArea(box,dy=>{const was=supportScrollRow;supportScrollTo(supportScrollRow+(dy>0?3:-3));if(was===supportScrollRow)return;const r0=supportScrollRow*SUPPORT_GRID_COLS,r1=(supportScrollRow+SUPPORT_ROWS)*SUPPORT_GRID_COLS-1;supportSelectIndex=Math.max(r0,Math.min(r1,supportSelectIndex,SUPPORT_OPTIONS.length-1));supportEnemyId=SUPPORT_OPTIONS[supportSelectIndex].id});
  for(let i=0;i<entries.length;i++){
+   if(supportCardRect(i).hidden)continue;
    const r=supportCardRect(i),e=entries[i],active=supportSelectFocus===0&&i===supportSelectIndex,count=supportPartyIds.filter(id=>id===e.id).length;
    const label=e.id==='off'?'CLEAR':e.label,ty=r.y+Math.round((r.h-39)/2);
    ui6T(ui6Fit(label,250,'text',3),r.x+56,ty,{s:3,c:active?UI6_C.yellow:(e.id==='off'?UI6_C.gray:UI6_C.white)});
@@ -9956,7 +9981,7 @@ canvas.addEventListener('pointerdown',e=>{
    const entries=supportChoiceEntries();
    for(let i=0;i<entries.length;i++){
      const q=supportCardRect(i);
-     if(x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h){
+     if(!q.hidden&&x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h){
        supportSelectIndex=i;supportEnemyId=SUPPORT_OPTIONS[i].id;supportSelectFocus=0;play('select');return;
      }
    }
