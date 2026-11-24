@@ -1145,7 +1145,7 @@ const SUPPORT_OPTIONS=[
  {id:'moldsmal',label:'MOLDSMAL'},{id:'moldessa',label:'MOLDESSAS'},{id:'aaron',label:'AARON'},{id:'moldbygg',label:'MOLDBYGG'},
  {id:'temmie',label:'TEMMIE'},{id:'woshua',label:'WOSHUA'},{id:'undyne',label:'UNDYNE'},{id:'undyneex',label:'UNDYNE THE UNDYING'},
  {id:'tsunderplane',label:'TSUNDERPLANE'},{id:'knightknight',label:'KNIGHT KNIGHT'},{id:'snowdrakemom',label:'SNOWDRAKE\'S MOTHER'},
- {id:'endogeny',label:'ENDOGENY'},{id:'lemonbread',label:'LEMON BREAD'},{id:'astigmatism',label:'ASTIGMATISM'},{id:'muffet',label:'MUFFET'},
+ {id:'endogeny',label:'ENDOGENY'},{id:'lemonbread',label:'LEMON BREAD'},{id:'reaperbird',label:'REAPER BIRD'},{id:'astigmatism',label:'ASTIGMATISM'},{id:'muffet',label:'MUFFET'},
  {id:'pyrope',label:'PYROPE'},{id:'vulkin',label:'VULKIN'},{id:'mettaton',label:'METTATON'},{id:'mettatonex',label:'METTATON EX'},
  {id:'mettatonneo',label:'METTATON NEO'},{id:'asgore',label:'ASGORE'},{id:'madmewmew',label:'MAD MEW MEW'},
  {id:'roaringknight',label:'THE ROARING KNIGHT'},{id:'jayzee',label:'JAYZEE'},{id:'custom',label:'CUSTOM (CREATOR)'}
@@ -1270,6 +1270,7 @@ const VANILLA_REWARDS={
  lemonbread:{exp:0,killGold:0,spareGold:0},
  endogeny:{exp:0,killGold:0,spareGold:0},
  snowdrakemom:{exp:0,killGold:0,spareGold:0},
+ reaperbird:{exp:0,killGold:0,spareGold:0},
  glyde:{exp:100,killGold:140,spareGold:120},
  royalguards:{exp:220,killGold:120,spareGold:100},
  moldessa:{exp:10,killGold:6,spareGold:6},
@@ -1461,7 +1462,7 @@ function confirmLevelSelect(){
 function progressionInventoryCount(){return Object.values(progression.itemStock||{}).reduce((a,v)=>a+Math.max(0,Number(v)||0),0)}
 function progressionRewardEligible(){return screen==='nb'&&vanillaMode&&practiceMode==='classic'&&currentBoss!==SECRET_SANS_BOSS.id}
 // canon pays 0 G for a lot of fights (most bosses, some spares): here everything pays something
-const GOLD_FLOOR={dummy:5,toriel:150,papyrus:200,napstablook:50,maddummy:50,undyne:500,undyneex:1500,mettaton:300,mettatonex:800,mettatonneo:2000,asgore:1000,sans:1000,madmewmew:500,lemonbread:50,endogeny:50,snowdrakemom:50,roaringknight:2000,custom:10};
+const GOLD_FLOOR={dummy:5,toriel:150,papyrus:200,napstablook:50,maddummy:50,undyne:500,undyneex:1500,mettaton:300,mettatonex:800,mettatonneo:2000,asgore:1000,sans:1000,madmewmew:500,lemonbread:50,endogeny:50,snowdrakemom:50,reaperbird:50,roaringknight:2000,custom:10};
 function rewardData(id){
  const r=VANILLA_REWARDS[id]||{exp:0,killGold:0,spareGold:0};
  let kg=r.killGold||0,sg=r.spareGold||0;
@@ -3834,7 +3835,7 @@ function battleMusicKey(){
  if(currentBoss==='asgore')return asgoreMusic;
  if(currentBoss==='sans')return sansMusic;
  if(currentBoss==='madmewmew')return mmmMusic;
- if(currentBoss==='lemonbread')return 'amalgam';
+ if(currentBoss==='lemonbread'||currentBoss==='reaperbird')return 'amalgam';
  if(currentBoss==='endogeny')return 'woofenstein';
  if(currentBoss==='snowdrakemom')return 'snowy';
  if(currentBoss==='roaringknight')return 'knight';
@@ -4382,6 +4383,7 @@ const BOSS_OPTIONS=[
  {id:'tsunderplane',label:'TSUNDERPLANE',area:'HOTLAND',hp:80,atk:25,def:26,encounter:'* Tsunderplane swoops into your way... accidentally, apparently.',noelleEncounter:'* Noelle encountered Tsunderplane.'},
  {id:'madjick',label:'MADJICK',area:'CORE',hp:190,atk:29,def:24,encounter:'* Madjick blocks the way!',noelleEncounter:'* Noelle encountered Madjick.'},
  {id:'knightknight',label:'KNIGHT KNIGHT',area:'CORE',hp:230,atk:36,def:36,encounter:'* Knight Knight blocks the way!',noelleEncounter:'* Noelle encountered Knight Knight.'},
+ {id:'reaperbird',label:'REAPER BIRD',area:'TRUE LAB',hp:100,atk:9,def:9999,encounter:'* ,',noelleEncounter:'* ,'},
  {id:'snowdrakemom',label:'SNOWDRAKE\'S MOTHER',area:'TRUE LAB',hp:400,atk:0,def:0,encounter:'* It\'s so cold.',noelleEncounter:'* It\'s so cold.'},
  {id:'endogeny',label:'ENDOGENY',area:'TRUE LAB',hp:100,atk:9,def:999,encounter:'* It\'s the Amalgamate.',noelleEncounter:'* It\'s the Amalgamate.'},
  {id:'lemonbread',label:'LEMON BREAD',area:'TRUE LAB',hp:100,atk:8,def:9999,encounter:'* Smells like sweet lemons.',noelleEncounter:'* Smells like sweet lemons.'},
@@ -6737,6 +6739,7 @@ function bossImage(b,now=performance.now()){
  if(b.id==='lemonbread')return lemonBreadCard()||images.dummy;
  if(b.id==='endogeny')return endogenyCard()||images.dummy;
  if(b.id==='snowdrakemom')return snowdrakeMomCard()||images.dummy;
+ if(b.id==='reaperbird')return reaperBirdCard()||images.dummy;
  if(b.id==='whimsalot')return images.whimsalot||images.whimsalotHurt||images.dummy;
  if(b.id==='asgore')return images.asgPrebrandish||images.dummy;
  if(b.id==='sans')return images.sans||images.dummy;
@@ -8337,7 +8340,7 @@ function drawGamePickOld(now=performance.now()){
 // The roster in groups, each a carousel of cards. Anything not listed lands in EXTRAS.
 const ENEMY_CATEGORIES=[
  {id:'bosses',label:'BOSSES',color:'#ff3355',ids:['toriel','papyrus','undyne','undyneex','muffet','mettaton','mettatonex','mettatonneo','asgore','sans']},
- {id:'minibosses',label:'MINI BOSSES',color:'#c04dff',ids:['napstablook','maddummy','doggo','lesserdog','greaterdog','dogi','glyde','royalguards','lemonbread','endogeny','snowdrakemom']},
+ {id:'minibosses',label:'MINI BOSSES',color:'#c04dff',ids:['napstablook','maddummy','doggo','lesserdog','greaterdog','dogi','glyde','royalguards','lemonbread','endogeny','snowdrakemom','reaperbird']},
  {id:'enemies',label:'ENEMIES',color:'#2fd36b',ids:['dummy','froggit','whimsun','moldsmal','loox','vegetoid','migosp','parsnik','moldessa','snowdrake','icecap','gyftrot','aaron','woshua','moldbygg','shyren','temmie','vulkin','tsunderplane','pyrope','finalfroggit','whimsalot','astigmatism','madjick','knightknight']},
  {id:'extras',label:'EXTRAS',color:'#2aa8ff',ids:[]}
 ];
@@ -12147,6 +12150,7 @@ const NB=(()=>{
   rg01:{g:0,s:'* Susie challenged 01 to a\n  push-up contest.\n* 01 is too focused to care.',n:'* Noelle asked 01 how long\n  they\'ve known 02.\n* 01 got flustered, but\n  stayed on guard.'},
   rg02:{g:0,s:'* Susie told 02 the armor\n  looks hot.\n* 02 is sweating more.',n:'* Noelle said 02 seems\n  really nice.\n* 02 looked at 01. Still\n  on duty.'},
   lemonbread:{g:10,s:'* Susie told Lemon Bread\n  it\'s pretty.\n* All its mouths smiled.',n:'* Noelle held Lemon\n  Bread\'s hand.\n* It squeezed back. Gently.'},
+  reaperbird:{g:10,s:'* Susie told , it looks\n  cool.\n* , flapped, confused.',n:'* Noelle asked , if it was\n  lonely.\n* It ribbited softly.'},
   snowdrakemom:{g:10,s:'* Susie told a joke about\n  ice.\n* Something almost laughed.',n:'* Noelle told her an ice\n  pun.\n* "ha...ha..."'},
   endogeny:{g:10,s:'* Susie threw a stick.\n* Too many legs went\n  after it.',n:'* Noelle petted the\n  Amalgamate.\n* It drips happily.'},
   jayzee:{g:10,s:'* Susie threw the ball\n  back.\n* Jayzee liked that.',n:'* Noelle asked Jayzee\n  for coaching.\n* Jayzee is thrilled.'}
@@ -26101,6 +26105,268 @@ function snowmomMusicRate(r){const a=music.snowy;if(!a)return;try{a.playbackRate
  });
 })();
 
+// Reaper Bird's roster card: the head over the top of the stretched torso, as obj_reaperbird_body stands.
+var reaperCardCv=null,reaperCardIm={};
+function reaperBirdCard(){
+ if(reaperCardCv)return reaperCardCv;
+ for(const [k,f] of [['head','spr_reaperbird_head_0'],['torso','spr_reaperbird_torso_0']])
+  if(!reaperCardIm[k]){reaperCardIm[k]=1;loadImage(RAW+'sprites/images/'+f+'.png').then(im=>{if(im)reaperCardIm[k]=im}).catch(()=>{})}
+ const h=reaperCardIm.head,t=reaperCardIm.torso;if(!h||h===1||!t||t===1)return null;
+ // half the battle scale: torso at (7, 45) stretched 2x down, head at (0, 8)
+ const c=document.createElement('canvas');c.width=70;c.height=45+126;const g=c.getContext('2d');g.imageSmoothingEnabled=false;
+ g.drawImage(t,7,45,58,126);g.drawImage(h,0,8);
+ return reaperCardCv=c;
+}
+/* ---- NB content: True Lab, Reaper Bird (obj_reaperbird + obj_reaperbird_body; obj_strangeman_intro,
+        obj_butterflyhead and obj_strangeman_headloss with obj_strangeman_butterfly / obj_strangeman_head) ---- */
+(()=>{
+ const {rnd,dcos,dsin,snd}=NB;
+ const {dse,sprBullet}=NB.hl;
+ const R=Math.round;
+ const tick=(o,k)=>{if(o[k]>0){o[k]-=1;if(o[k]<=0){o[k]=-1;return true}}return false};
+ const fr=(a,i)=>Array.isArray(a)?a[((Math.floor(i)%a.length)+a.length)%a.length]:a;
+ const ptDir=(x0,y0,x1,y1)=>Math.atan2(-(y1-y0),x1-x0)*180/Math.PI;
+ // obj_amalgambul_parent: every hit goes through scr_damagestandard_x
+ const hitStd=(b,api)=>api.damageStd(b.dmg);
+
+ // The sprite rip trims each head frame to its pixels. These put them back where they sit on the
+ // sprite's canvas (in sprite pixels), found by matching every frame against the game's own battle
+ // animation; they land exactly on spr_reaperbird_head's bounding box (0-69 x 0-67). The bite
+ // frames are all one size and sit at (12, 9). The torso frames all sit at (0, 0).
+ const RB_HEAD_OFF=[[0,8],[4,9],[15,0],[15,0],[15,0],[15,9],[11,8]];
+ const RB_BITE_OFF=[12,9];
+
+ // --------------------------------------------------------- the strange man --
+ // The walking man in the box (spr_strangeman_walk, origin 14,9, scale 2), standing in from
+ // behind the box's right side.
+ const manY=api=>api.S.ideal[3]-120+15;
+ const manX=api=>api.S.ideal[1]-56+19;
+ // obj_strangeman_butterfly: flutters round its king, re-aiming at it every 15 frames
+ function butterfly(api,m,x,y,king,o={}){
+  const b=sprBullet(api,Object.assign({x,y,im:images.nbRbButterfly,ox:7,oy:7,xs:1,ys:1,frame:0,dmg:m.atk,kill:false,onHit:hitStd,
+   king,dir:0,sp:1,siner:0,a0:10,
+   step(o){
+    if(o.a0!==-2&&tick(o,'a0')){
+     if(o.king&&o.king.alive!==false){o.dir=ptDir(o.x,o.y,o.king.x,o.king.y)+rnd(20)-rnd(20);o.sp=1+rnd(2);o.a0=15}
+     else{o.alive=false;return}
+    }
+    o.rot=o.dir;
+    o.x+=Math.sin(o.siner/2)*2;o.y+=Math.cos(o.siner/2)*2;o.siner+=rnd(2);
+    o.x+=dcos(o.dir)*o.sp;o.y-=dsin(o.dir)*o.sp;o.frame+=.2;
+    if(o.x<-20||o.x>660||o.y<-20||o.y>500)o.alive=false;
+   }},o));
+  if(king){b.dir=ptDir(x,y,king.x,king.y);b.sp=1}
+  return b;
+ }
+ // one sent off on its own (king = obj_heart, no re-aiming)
+ const freeFly=(api,m,x,y,dir)=>butterfly(api,m,x,y,null,{a0:-2,dir,sp:4});
+
+ // obj_strangeman_intro (turn 1): he stands at the right of the box. After 2 s butterflies gather
+ // round his head (40 at most), then he strikes one pose and another, shaking harder and harder.
+ // He isn't a bullet himself; only the butterflies hurt.
+ function introGen(api,m,g){
+  const man={x:manX(api),y:manY(api),nowx:0,nowy:0,con:0,shake:0,a4:-1,a5:-1,frame:0,isp:.1,spr:'walk',alive:true};
+  g.man=man;
+  // drawn with the bullets (above the box, depth -1), but never hits
+  api.spawn({x:0,y:0,box:[0,0,0,0],manual:true,wallKill:false,kill:false,dmg:0,mask:()=>false,onHit:()=>false,
+   step(o){if(m.v.gen!==g)o.alive=false},draw(ctx){
+   const im=man.spr==='walk'?fr(images.nbRbWalk,man.frame):man.spr==='poseb'?images.nbRbPoseB:images.nbRbPose;
+   const o=man.spr==='walk'?[14,9]:man.spr==='poseb'?[20,11]:[13,14];
+   if(im)dse(ctx,im,man.x,man.y,2,2,0,1,o[0],o[1]);
+   // draw_rectangle past the box's right edge: he steps in from behind it
+   const [,Rr,T,B]=api.S.ideal;ctx.fillStyle='#000';ctx.fillRect(Rr+1,T,100,B-T+1);
+  }});
+  return man;
+ }
+ function introStep(api,m,g){
+  const man=g.man;
+  if(tick(man,'a5')){if(api.S.bullets.filter(b=>b.rbFly&&b.alive).length<40){const b=butterfly(api,m,man.x-30+rnd(60),man.y-50-rnd(40),man);b.rbFly=true}man.a5=3}
+  if(tick(man,'a4'))man.con++;
+  man.x-=man.con===0?1:0;man.frame+=man.isp;
+  if(man.x<api.S.ideal[1]-56+20&&man.con===0){man.nowx=man.x;man.nowy=man.y;man.frame=0;man.isp=0;man.con=1}
+  if(man.con===1){man.con=2;man.a5=60;man.a4=130}
+  if(man.con===3){man.shake=1;man.spr='poseb';man.con=4;man.a4=80}
+  if(man.con===5){man.nowy+=14;man.shake=2;man.spr='pose';man.y+=14;man.con=6}
+  if(man.shake>0){man.shake+=.03;man.x=man.nowx+rnd(man.shake)-rnd(man.shake);man.y=man.nowy+rnd(man.shake)-rnd(man.shake)}
+ }
+
+ // obj_butterflyhead (turn 2, 4, ...): the headless man, wrapped in 50 butterflies, shuffles left.
+ // Every 15 frames (slowing down) three of them break off to the left; every 40 one flies at you.
+ // Touching him hurts too.
+ function headlessBullet(api,m,o){
+  return sprBullet(api,Object.assign({x:manX(api),y:manY(api),im:images.nbRbHeadless,ox:14,oy:9,xs:2,ys:2,frame:0,dmg:m.atk,kill:false,onHit:hitStd,
+   nowx:manX(api),nowy:manY(api),shake:2,walking:0,isp:0},o));
+ }
+ function butterflyHeadGen(api,m,g){
+  const man=headlessBullet(api,m,{a0:20,a1:-1,a5:10,a6:30,factor:15,
+   step(o){
+    if(tick(o,'a0')){o.walking=1;o.frame=1;o.isp=.2;o.a1=20}
+    if(tick(o,'a1')){o.frame=0;o.a0=20;o.walking=0;o.isp=0}
+    if(tick(o,'a5')){o.a5=o.factor;for(let k=0;k<3;k++)freeFly(api,m,o.x,o.y,160+rnd(100))}
+    if(tick(o,'a6')){o.a6=40;const h=api.heart;freeFly(api,m,o.x,o.y,ptDir(o.x,o.y,h.x+6,h.y+6))}
+    if(o.shake>0){o.x=o.nowx+rnd(o.shake)-rnd(o.shake);o.y=o.nowy+rnd(o.shake)-rnd(o.shake)}
+    if(o.walking===1)o.nowx--;
+    o.factor+=.04;o.frame+=o.isp;
+   }});
+  for(let k=0;k<50;k++)butterfly(api,m,man.x+rnd(20)-rnd(20),man.y+rnd(20)-rnd(20),man);
+  g.man=man;
+ }
+
+ // obj_strangeman_headloss (turn 3, 5, ...): he stands still while a neck grows out of him, and
+ // every 15 frames his head pops off and floats at you (obj_strangeman_head).
+ function floatHead(api,m,x,y){
+  const h=api.heart;let d=ptDir(x,y,h.x,h.y)+rnd(50)-rnd(50);
+  d=((d%360)+360)%360;if(d<165)d=170;if(d>270)d=270;
+  const sp=2+rnd(.5),hm=dcos(d)*sp;
+  sprBullet(api,{x,y,im:images.nbRbFloatHead,ox:12,oy:8,xs:2,ys:2,frame:0,dmg:m.atk,kill:false,onHit:hitStd,
+   vy:-dsin(d)*sp,hm,siner:rnd(360),sf:1+rnd(1),sf2:1+rnd(1),s:3+rnd(1),siner2:rnd(360),siner2v:.5+rnd(1.5),counter:0,
+   step(o){
+    o.siner++;o.siner2+=o.siner2v;
+    o.x+=Math.sin(o.siner/o.s)*o.sf/2;o.y+=Math.sin(o.siner2/o.s)*o.sf2/2;
+    o.counter++;
+    if(o.counter>30){const hy=api.heart.y+6;if(hy<o.y)o.vy-=.05;if(hy>o.y)o.vy+=.05}
+    o.x+=o.hm;o.y+=o.vy;o.frame+=.5;
+    if(o.x<-100)o.alive=false;
+   }});
+ }
+ function headLossGen(api,m,g){
+  g.man=headlessBullet(api,m,{a5:30,active:0,atimer:0,trueindex:5,
+   step(o){
+    if(tick(o,'a5')){o.active=1;o.trueindex=0;floatHead(api,m,o.x,o.y);o.a5=15;o.atimer=0}
+    if(o.shake>0){o.x=o.nowx+rnd(o.shake)-rnd(o.shake);o.y=o.nowy+rnd(o.shake)-rnd(o.shake)}
+    if(o.active===1){o.atimer++;if(o.atimer>5&&o.trueindex<5)o.trueindex++}
+   },
+   draw(ctx,o){
+    dse(ctx,fr(images.nbRbHeadless,0),o.x,o.y,2,2,0,1,14,9);
+    dse(ctx,fr(images.nbRbGrowNeck,o.trueindex),o.x,o.y,2,2,0,1,12,9);
+   }});
+ }
+
+ // --------------------------------------------------------------- Reaper Bird --
+ // obj_reaperbird_body: the head turns (spr_reaperbird_head 0-6 and back), then bites
+ // (spr_reaperbird_bite) over a wobbling torso stretched 4x tall. While it talks the torso
+ // squashes to 2x; when it dies the torso flattens and the head is pressed down.
+ // Pick On + Mystify + Pray and it remembers something.
+ NB.defs.set('reaperbird',{
+  name:',',hp:100,atk:9,def:9999,xp:0,gold:0,mercymod:10,wd:100,
+  encounter:'* ,',
+  bgFrame:99, // obj_reaperbird destroys obj_battlebg
+  size:()=>({w:140,h:340}),
+  pos:(i,n,cx)=>n===1?{x:240,y:20}:{x:R(cx-70),y:20},
+  shudder:[8,1],shudderAbs:true,
+  dmgPos:m=>({x:m.x+9,y:m.y-24}),
+  setup(m){Object.assign(m.v,{counter:0,head:0,bite:false,torso:0,bodycounter:0,siner:0,stretchup:0,ystretch:4,mstretch:0,
+   turns:0,pickon:0,mystify:0,pray:0,clean:0,cmd:0,gen:null})},
+  draw(g,m){
+   const v=m.v;
+   if(!m.alive&&!m.spared)v.stretchup=2;
+   v.counter++;v.bodycounter++;v.siner++;
+   if(v.counter>60&&v.counter<80){v.head+=.5;if(v.head>=6)v.counter=100}
+   if(v.counter>130&&v.counter<160){v.head-=.5;if(v.head<1){v.head=0;v.counter=160}}
+   if(v.counter>200&&v.counter<210){v.head=0;v.bite=true;v.counter=210}
+   if(v.counter>210){v.head+=.5;if(v.head>14){v.head=0;v.counter=-30;v.bite=false}}
+   if(v.bodycounter>150){v.torso+=.2;if(v.torso>7){v.bodycounter=0;v.torso=0}}
+   const sx=Math.sin(v.siner/10)*5,sy=Math.abs(Math.cos(v.siner/8)*6);
+   if(v.ystretch>0)dse(g,fr(images.nbRbTorso,v.torso),m.x+14+sx,m.y+90+sy-v.mstretch*20,2,v.ystretch);
+   if(v.stretchup===2){v.ystretch=v.ystretch>0?Math.max(0,v.ystretch-.1):0;v.mstretch=Math.min(2,v.mstretch+.05)}
+   if(v.stretchup===1)v.ystretch=v.ystretch>2?Math.max(2,v.ystretch-.2):2;
+   if(v.stretchup===0)v.ystretch=v.ystretch<4?Math.min(4,v.ystretch+.2):4;
+   const hy=2-v.mstretch;
+   if(hy>0){
+    const f=Math.floor(v.head);
+    if(v.bite)dse(g,fr(images.nbRbBite,f),m.x+RB_BITE_OFF[0]*2,m.y+RB_BITE_OFF[1]*hy,2,hy);
+    else{const k=Math.max(0,Math.min(6,f)),o=RB_HEAD_OFF[k];dse(g,fr(images.nbRbHead,k),m.x+o[0]*2,m.y+o[1]*hy,2,hy)}
+   }
+  },
+  // Check: three writers at once while it's still lost, the three monsters it's made of
+  check(m,api){
+   const at=m.atk,df=m.df;
+   if(m.mercymod>=100)return '* REAPER BIRD - ATK ?? DEF ??&* This relentless future finally&  looks brighter and brighter.';
+   const st=api.S,extra=[`* ASTIGMATISM ${at} ATK ${df} DEF&* This relentless bully ALWAYS&  gets its way.`,`* WHIMSALOT ${at} ATK ${df} DEF&* It finally stopped worrying.`];
+   // on the bullet layer, so they draw over the text box like the main writer (never hits)
+   for(const t of extra){
+    const w=new NB.Writer([t],{sound:null});let main=null,gone=false,lastT=-1;
+    api.spawn({x:0,y:0,box:[0,0,0,0],manual:true,wallKill:false,kill:false,dmg:0,mask:()=>false,onHit:()=>false,
+     step(o){if(gone)o.alive=false},
+     draw(g){
+      if(gone)return;
+      if(!main)main=st.writer;
+      if(st.writer!==main||!main||main.done||st.myfight!==2){gone=true;return}
+      if(lastT!==st.t){lastT=st.t;w.step()}
+      w.draw(g);
+     }});
+   }
+   return `* FINAL FROGGIT ${at} ATK ${df} DEF&* Its future looks brighter and&  brighter         .`;
+  },
+  // SCR_TEXT: "Check / Mystify / Hum" and "Pick On / Clean / Pray" columns
+  acts:['Check','Pick On','Mystify','Clean','Hum','Pray'],
+  act(m,i,name){
+   const v=m.v,all=()=>v.pray&&v.pickon&&v.mystify;
+   const won=t=>{m.mercymod=999999;m.name='Reaper Bird';return t+'^1.&* Reaper Bird seems to&  remember something.'};
+   if(name==='Pick On'){
+    const t=v.pickon?'* But^1, it was already&  picked on.':'* You pick on , ^1.&* It seemed effective.';
+    v.pickon=1;return all()?won('* You pick on Reaper Bird'):t;
+   }
+   if(name==='Mystify'){
+    const t=v.mystify?'* But^1, it was already&  mystified.':'* You did something mysterious.&* , recognizes it has more to&  learn from this world.';
+    v.mystify=1;return all()?won('* You did something mysterious'):t;
+   }
+   if(name==='Pray'){
+    const t=v.pray?'* But , already remembered its&  conscience.':'* You kneel and pray for safety^1.&* , remembers its conscience.';
+    v.pray=1;return all()?won('* You kneel and pray for safety'):t;
+   }
+   if(name==='Clean'){const t=v.clean?'* Your hands are clean enough&  to eat!':'* You wash your hands^1.&* Nothing happened.';v.clean=1;return t}
+   if(name==='Hum')return '* You hum a familiar tune^1.&* But no one heard you.';
+   return '* Nothing happened.';
+  },
+  // alarm[6]: three writers in one small bubble, talking over each other; once placated, three
+  // bubbles with one line each. alarm[5] = 110.
+  speech(m,api){
+   const v=m.v,st=api.S,img=images.nbBlconSm||null;
+   const pick=a=>{const c=Math.round(rnd(100));v.cmd=c;return c<25?a[3]:c<50?a[2]:c<75?a[1]:a[0]};
+   const bub=(x,y,t,im,first)=>st.bubbles.push({m,x,y,wide:false,img:im,hold:false,w:new NB.Writer([t],{typer:2,x:x+15,y:y+10,sound:first?undefined:null})});
+   if(m.mercymod<100){
+    const x=m.x+140,y=m.y;
+    bub(x,y,pick(['Don\'t&pick on&me.','What are&you so&afraid&of?','Take&your&last&look.','You\'ve&seen&enough.']),img,true);
+    bub(x,y,pick(['Robbit,&robbit.','Shudder,&shudder.','Creak,&creak.','Skip,&jump.']),false,false);
+    bub(x,y,pick(['I\'ve&made my&choice.','Not this&time.','I\'m not&afraid&of you.','There\'s&still&hope.']),false,false);
+   }else{
+    v.cmd=Math.round(rnd(100));
+    bub(m.x+140,m.y,'Someone&finally&gets it.',img,true);
+    bub(m.x+140,m.y+110,'Courage&...',img,false);
+    bub(m.x+250,m.y,'Ribbit&ribbit.',img,false);
+   }
+   v.stretchup=1;
+   st.talkLenExact=110;
+   return null;
+  },
+  border:()=>5,
+  // DEF 9999: the damage writer shows the amalgamates' line, and the (tiny) hit still lands
+  hurt(m,api){
+   m.hurt=true;m.shudder=8;m.shakeT=0;snd('damage');
+   const x=m.x+9,y=m.y-24;
+   api.S.dmgw.push({x,y,ystart:y,vy:0,dmg:0,special:1,m,maxhp:m.maxhp,apparent:m.hp,actual:m.hp,life:-1,tick:0});
+   m.hurtanim=3;
+  },
+  attack(m,api){
+   const v=m.v;
+   let kind;
+   if(v.turns>0){if(v.turns===1){kind='butterflyhead';v.turns=2}else{kind='headloss';v.turns=1}}
+   else{kind='intro';v.turns=1}
+   api.turntimer(kind==='intro'?250:200);
+   const g={kind,man:null};v.gen=g;
+   if(kind==='intro')introGen(api,m,g);else if(kind==='butterflyhead')butterflyHeadGen(api,m,g);else headLossGen(api,m,g);
+   let f='* ,';
+   if(v.cmd>=98)f='* Smells like a ,';
+   if(m.mercymod>100)f='* Reaper Bird seems placated.';
+   if(m.hp<=m.maxhp/4)f='* Monster has low HP.';
+   return f;
+  },
+  attackStep(m,api){const g=m.v.gen;if(g&&g.kind==='intro'&&g.man)introStep(api,m,g)},
+  endAttack(m){m.v.gen=null;m.v.stretchup=0}
+ });
+})();
+
 /* ---- NB content: Core I (obj_finalfroggit, obj_whimsalot, obj_astigmatism, obj_wizard = Madjick,
         obj_finalknight = Knight Knight, with their bodies; obj_megaflybulletgen, obj_frogbullet_gen,
         obj_butterflybullet_gen/_gen_2, obj_astigmatismgen, obj_stromboligen, obj_wizardorb_chaser,
@@ -28832,6 +29098,15 @@ function snowmomMusicRate(r){const a=music.snowy;if(!a)return;try{a.playbackRate
  });
 })();
 const NB_ASSETS={
+ // Reaper Bird
+ nbRbHead:[0,1,2,3,4,5,6].map(i=>RAW+`sprites/images/spr_reaperbird_head_${i}.png`),
+ nbRbBite:[0,1,2,3,4,5,6,7].map(i=>RAW+`sprites/images/spr_reaperbird_bite_${i}.png`),
+ nbRbTorso:[0,1,2,3,4,5,6,7].map(i=>RAW+`sprites/images/spr_reaperbird_torso_${i}.png`),
+ nbRbWalk:[0,1].map(i=>RAW+`sprites/images/spr_strangeman_walk_${i}.png`),nbRbPose:RAW+'sprites/images/spr_strangeman_pose_0.png',nbRbPoseB:RAW+'sprites/images/spr_strangeman_poseb_0.png',
+ nbRbHeadless:[0,1].map(i=>RAW+`sprites/images/spr_strangeman_headless_walk_${i}.png`),
+ nbRbGrowNeck:[0,1,2,3,4,5].map(i=>RAW+`sprites/images/spr_growneck_${i}.png`),
+ nbRbFloatHead:[0,1,2,3,4,5,6,7,8,9,10,11].map(i=>RAW+`sprites/images/spr_strangeman_floathead_${i}.png`),
+ nbRbButterfly:[0,1].map(i=>RAW+`sprites/images/spr_butterfly_bullet2_${i}.png`),
  // Snowdrake's Mother
  nbSnowmom:[0,1,2,3].map(i=>RAW+`sprites/images/spr_snowdrakesmom_${i}.png`),
  // Endogeny
