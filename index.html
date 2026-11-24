@@ -840,7 +840,7 @@ const MUSIC={
  battle:RAW+'sound/audio/mus_battle1.ogg',
  // the True Lab amalgamates' fights
  amalgam:RAW+'sound/audio/mus_amalgam.ogg',
- woofenstein:RAW+'sound/audio/mus_woofenstein_loop.ogg',dogsong:RAW+'sound/audio/mus_dogsong.ogg',
+ woofenstein:RAW+'sound/audio/mus_woofenstein_loop.ogg',snowy:RAW+'sound/audio/mus_snowy.ogg',dogsong:RAW+'sound/audio/mus_dogsong.ogg',
  core:RAW+'sound/audio/mus_core.ogg',
  flowey:RAW+'sound/audio/mus_flowey.ogg',
  toriel:RAW+'sound/audio/mus_boss1.ogg',
@@ -1258,6 +1258,7 @@ const VANILLA_REWARDS={
  roaringknight:{exp:0,killGold:0,spareGold:0},
  lemonbread:{exp:0,killGold:0,spareGold:0},
  endogeny:{exp:0,killGold:0,spareGold:0},
+ snowdrakemom:{exp:0,killGold:0,spareGold:0},
  glyde:{exp:100,killGold:140,spareGold:120},
  royalguards:{exp:220,killGold:120,spareGold:100},
  moldessa:{exp:10,killGold:6,spareGold:6},
@@ -1449,7 +1450,7 @@ function confirmLevelSelect(){
 function progressionInventoryCount(){return Object.values(progression.itemStock||{}).reduce((a,v)=>a+Math.max(0,Number(v)||0),0)}
 function progressionRewardEligible(){return screen==='nb'&&vanillaMode&&practiceMode==='classic'&&currentBoss!==SECRET_SANS_BOSS.id}
 // canon pays 0 G for a lot of fights (most bosses, some spares): here everything pays something
-const GOLD_FLOOR={dummy:5,toriel:150,papyrus:200,napstablook:50,maddummy:50,undyne:500,undyneex:1500,mettaton:300,mettatonex:800,mettatonneo:2000,asgore:1000,sans:1000,madmewmew:500,lemonbread:50,endogeny:50,roaringknight:2000,custom:10};
+const GOLD_FLOOR={dummy:5,toriel:150,papyrus:200,napstablook:50,maddummy:50,undyne:500,undyneex:1500,mettaton:300,mettatonex:800,mettatonneo:2000,asgore:1000,sans:1000,madmewmew:500,lemonbread:50,endogeny:50,snowdrakemom:50,roaringknight:2000,custom:10};
 function rewardData(id){
  const r=VANILLA_REWARDS[id]||{exp:0,killGold:0,spareGold:0};
  let kg=r.killGold||0,sg=r.spareGold||0;
@@ -3761,6 +3762,8 @@ const MUSIC_LOADERS={
  // caster_loop(global.batmusic, 0.8, 0.85)
  woofenstein:()=>loadAudioAsset(MUSIC.woofenstein,.50,true).then(a=>{if(a){a.playbackRate=.85;a.preservesPitch=a.mozPreservesPitch=a.webkitPreservesPitch=false}return a}),
  dogsong:()=>loadAudioAsset(MUSIC.dogsong,.50,true),
+ // caster_loop(global.batmusic, 0.9, 0.5)
+ snowy:()=>loadAudioAsset(MUSIC.snowy,.55,true).then(a=>{if(a){a.playbackRate=.5;a.preservesPitch=a.mozPreservesPitch=a.webkitPreservesPitch=false}return a}),
  core:()=>loadAudioAsset(MUSIC.core,.48,true),
  flowey:()=>loadAudioAsset(MUSIC.flowey,.48,true),
  toriel:()=>loadAudioAsset(MUSIC.toriel,.50,true),
@@ -3821,6 +3824,7 @@ function battleMusicKey(){
  if(currentBoss==='madmewmew')return mmmMusic;
  if(currentBoss==='lemonbread')return 'amalgam';
  if(currentBoss==='endogeny')return 'woofenstein';
+ if(currentBoss==='snowdrakemom')return 'snowy';
  if(currentBoss==='roaringknight')return 'knight';
  if(currentBoss==='custom')return crbMusicKey();
  return 'battle';
@@ -4365,6 +4369,7 @@ const BOSS_OPTIONS=[
  {id:'tsunderplane',label:'TSUNDERPLANE',area:'HOTLAND',hp:80,atk:25,def:26,encounter:'* Tsunderplane swoops into your way... accidentally, apparently.',noelleEncounter:'* Noelle encountered Tsunderplane.'},
  {id:'madjick',label:'MADJICK',area:'CORE',hp:190,atk:29,def:24,encounter:'* Madjick blocks the way!',noelleEncounter:'* Noelle encountered Madjick.'},
  {id:'knightknight',label:'KNIGHT KNIGHT',area:'CORE',hp:230,atk:36,def:36,encounter:'* Knight Knight blocks the way!',noelleEncounter:'* Noelle encountered Knight Knight.'},
+ {id:'snowdrakemom',label:'SNOWDRAKE\'S MOTHER',area:'TRUE LAB',hp:400,atk:0,def:0,encounter:'* It\'s so cold.',noelleEncounter:'* It\'s so cold.'},
  {id:'endogeny',label:'ENDOGENY',area:'TRUE LAB',hp:100,atk:9,def:999,encounter:'* It\'s the Amalgamate.',noelleEncounter:'* It\'s the Amalgamate.'},
  {id:'lemonbread',label:'LEMON BREAD',area:'TRUE LAB',hp:100,atk:8,def:9999,encounter:'* Smells like sweet lemons.',noelleEncounter:'* Smells like sweet lemons.'},
  {id:'astigmatism',label:'ASTIGMATISM',area:'CORE',hp:120,atk:32,def:26,encounter:'* Astigmatism blocks the way!',noelleEncounter:'* Noelle encountered Astigmatism.'},
@@ -6718,6 +6723,7 @@ function bossImage(b,now=performance.now()){
  if(b.id==='whimsun')return whimsunDrawImage(now,false);
  if(b.id==='lemonbread')return lemonBreadCard()||images.dummy;
  if(b.id==='endogeny')return endogenyCard()||images.dummy;
+ if(b.id==='snowdrakemom')return snowdrakeMomCard()||images.dummy;
  if(b.id==='whimsalot')return images.whimsalot||images.whimsalotHurt||images.dummy;
  if(b.id==='asgore')return images.asgPrebrandish||images.dummy;
  if(b.id==='sans')return images.sans||images.dummy;
@@ -8318,7 +8324,7 @@ function drawGamePickOld(now=performance.now()){
 // The roster in groups, each a carousel of cards. Anything not listed lands in EXTRAS.
 const ENEMY_CATEGORIES=[
  {id:'bosses',label:'BOSSES',color:'#ff3355',ids:['toriel','papyrus','undyne','undyneex','muffet','mettaton','mettatonex','mettatonneo','asgore','sans']},
- {id:'minibosses',label:'MINI BOSSES',color:'#c04dff',ids:['napstablook','maddummy','doggo','lesserdog','greaterdog','dogi','glyde','royalguards','lemonbread','endogeny']},
+ {id:'minibosses',label:'MINI BOSSES',color:'#c04dff',ids:['napstablook','maddummy','doggo','lesserdog','greaterdog','dogi','glyde','royalguards','lemonbread','endogeny','snowdrakemom']},
  {id:'enemies',label:'ENEMIES',color:'#2fd36b',ids:['dummy','froggit','whimsun','moldsmal','loox','vegetoid','migosp','parsnik','moldessa','snowdrake','icecap','gyftrot','aaron','woshua','moldbygg','shyren','temmie','vulkin','tsunderplane','pyrope','finalfroggit','whimsalot','astigmatism','madjick','knightknight']},
  {id:'extras',label:'EXTRAS',color:'#2aa8ff',ids:[]}
 ];
@@ -12116,6 +12122,7 @@ const NB=(()=>{
   rg01:{g:0,s:'* Susie challenged 01 to a\n  push-up contest.\n* 01 is too focused to care.',n:'* Noelle asked 01 how long\n  they\'ve known 02.\n* 01 got flustered, but\n  stayed on guard.'},
   rg02:{g:0,s:'* Susie told 02 the armor\n  looks hot.\n* 02 is sweating more.',n:'* Noelle said 02 seems\n  really nice.\n* 02 looked at 01. Still\n  on duty.'},
   lemonbread:{g:10,s:'* Susie told Lemon Bread\n  it\'s pretty.\n* All its mouths smiled.',n:'* Noelle held Lemon\n  Bread\'s hand.\n* It squeezed back. Gently.'},
+  snowdrakemom:{g:10,s:'* Susie told a joke about\n  ice.\n* Something almost laughed.',n:'* Noelle told her an ice\n  pun.\n* "ha...ha..."'},
   endogeny:{g:10,s:'* Susie threw a stick.\n* Too many legs went\n  after it.',n:'* Noelle petted the\n  Amalgamate.\n* It drips happily.'},
   jayzee:{g:10,s:'* Susie threw the ball\n  back.\n* Jayzee liked that.',n:'* Noelle asked Jayzee\n  for coaching.\n* Jayzee is thrilled.'}
  };
@@ -13206,7 +13213,7 @@ const NB=(()=>{
   spawn,damage:damagePlayer,damageStd,border:n=>NB.setBorder(n),borderRect:(l,r,t,b)=>NB.setBorderRect(l,r,t,b),
   turntimer:n=>{S.turntimer=n},inner:()=>NB.inner(),ideal:()=>S.ideal,
   moving:()=>NB.heartMoving(),soul:mode=>{S.soulMode=mode;if(S.mnfight===2)S.heart.mode=mode},
-  write,alive,spareable:monsterSpareable,endTurn:()=>{S.turntimer=0},srcHp,
+  write,alive,spareable:monsterSpareable,spareNow:m=>{if(!m.alive)return;spareMonster(m);if(!alive().length)win()},endTurn:()=>{S.turntimer=0},srcHp,
   remove:m=>{m.alive=false;m.gone=true;S.goldTotal+=m.goldBonus||0},
   heal:n=>{S.hp=Math.min(S.maxhp,S.hp+n)},
   // online helpers (they do the plain thing offline): a hit check on my own SOUL as it
@@ -25762,11 +25769,12 @@ function endoDogsong(on){
  const DOG_BOX={dog:[12,3,54,51],tuck:[15,24,42,30],rocket:[21,30,42,21]};
  const dogIm=k=>k==='dog'?images.nbNofaceDog:k==='tuck'?images.nbNofaceTuck:images.nbNofaceRocket;
 
+ // obj_amalgambul_parent hits with scr_damagestandard_x (dmg + the HP-bracket bonus).
  // The dogs are bullets the generator moves itself (attackStep), so the missiles can go in
  // under the laser dog (obj_amalgam_laserdog is depth -1, obj_dogmissle 0).
  function dogBullet(api,m,g,spr){
   const [,R,,B]=api.S.ideal;
-  const b=api.spawn({x:R-81,y:B-57-2,spr,frame:0,box:DOG_BOX[spr],manual:true,wallKill:false,kill:false,dmg:m.atk,
+  const b=api.spawn({x:R-81,y:B-57-2,spr,frame:0,box:DOG_BOX[spr],manual:true,wallKill:false,kill:false,dmg:m.atk,onHit:o=>api.damageStd(o.dmg),
    draw(ctx,o){const im=fr(dogIm(o.spr),o.frame);if(im)dse(ctx,im,o.x,o.y,3,3)}});
   Object.assign(g,{dog:b,nowx:b.x,nowy:b.y,isp:0,vx:0,vy:0});
   return b;
@@ -25798,7 +25806,7 @@ function endoDogsong(on){
  // firing a missile out of its mouth every 7 frames.
  function missile(api,m,g){
   const dog=g.dog,st=api.S;
-  const b=api.spawn({x:dog.x+34,y:dog.y+16,anchor:1,a0:4,off:0,sp:0,fric:0,box:[-2,-2,6,4],manual:true,wallKill:false,kill:false,dmg:m.atk,
+  const b=api.spawn({x:dog.x+34,y:dog.y+16,anchor:1,a0:4,off:0,sp:0,fric:0,box:[-2,-2,6,4],manual:true,wallKill:false,kill:false,dmg:m.atk,onHit:o=>api.damageStd(o.dmg),
    step(o){
     if(tick(o,'a0')){
      o.fric=-.22+rnd(.1);
@@ -25930,6 +25938,141 @@ function endoDogsong(on){
   },
   endAttack(m){m.v.gen=null},
   onSpare(m){m.v.spared=1}
+ });
+})();
+
+// Snowdrake's Mother's roster card: spr_snowdrakesmom's first frame.
+var snowmomCardIm=null;
+function snowdrakeMomCard(){
+ if(snowmomCardIm&&snowmomCardIm!==1)return snowmomCardIm;
+ if(!snowmomCardIm){snowmomCardIm=1;loadImage(RAW+'sprites/images/spr_snowdrakesmom_0.png').then(im=>{if(im)snowmomCardIm=im}).catch(()=>{})}
+ return null;
+}
+// Her music: mus_snowy at pitch 0.5 (caster_loop(global.batmusic, 0.9, 0.5)). alarm[0] picks a new
+// pitch from 0.3 to 0.7 every 4 to 124 frames, and every frame it wobbles by sin(siner/2)*0.01.
+function snowmomMusicRate(r){const a=music.snowy;if(!a)return;try{a.playbackRate=Math.max(.25,r);a.preservesPitch=a.mozPreservesPitch=a.webkitPreservesPitch=false}catch(_){}}
+/* ---- NB content: True Lab, Snowdrake's Mother (obj_snowdrakemom + obj_snowdrakemom_body;
+        obj_clawfailuregen with obj_clawbullet_failure / obj_clawbullet_gravityfailure) ---- */
+(()=>{
+ const {rnd,dcos,dsin,snd}=NB;
+ const {dse}=NB.hl;
+ const tick=(o,k)=>{if(o[k]>0){o[k]-=1;if(o[k]<=0){o[k]=-1;return true}}return false};
+ const fr=(a,i)=>Array.isArray(a)?a[((Math.floor(i)%a.length)+a.length)%a.length]:a;
+ const choose=(...a)=>a[Math.floor(rnd(a.length))];
+
+ // ------------------------------------------------------- obj_clawfailuregen --
+ // Snowdrake's claws, failing: one hangs in the air drifting at random (type 0), or a handful
+ // drop from above the box and settle at its floor, shaking more and more (type 1), or a
+ // handful far off to the sides fall SIDEWAYS (gravity_direction 1) out of the room (type 2).
+ // dmg 0: through scr_damagestandard_x that's 1, plus the HP-bracket bonus.
+ function claw(api,x,y,o){
+  return api.spawn(Object.assign({x,y,box:[7,7,10,10],frame:0,isp:.2,vx:0,vy:0,gx:0,gy:0,shake:0,fall:false,manual:true,wallKill:false,kill:false,dmg:0,
+   onHit:()=>api.damageStd(0),
+   step(b){
+    const B=api.S.ideal[3];
+    if(b.fall){
+     if(b.y>B-24)b.vx=b.vy=0;
+     b.shake+=.02;b.x+=rnd(b.shake)-rnd(b.shake);b.y+=rnd(b.shake)-rnd(b.shake);
+     b.vx+=b.gx;b.vy+=b.gy;
+    }
+    b.x+=b.vx;b.y+=b.vy;b.frame+=b.isp;
+    if(b.x<-60||b.x>700||b.y>540)b.alive=false;
+   },
+   draw(g,b){const im=fr(images.clawBullet,b.frame);if(im)dse(g,im,b.x,b.y,1,1)}},o));
+ }
+ function clawGen(api){
+  const h=api.heart,[,,T,B]=api.S.ideal,type=choose(0,1,2);
+  if(type===0){
+   const d=rnd(360),sp=rnd(.2);
+   claw(api,choose(1,-1)*(50+rnd(240))+h.x,T+20+rnd(B-T-40),{vx:dcos(d)*sp,vy:-dsin(d)*sp});
+   return;
+  }
+  const n=Math.floor(1+rnd(7));
+  for(let k=0;k<n;k++){
+   const g=.05+rnd(.06),side=type===1?50+rnd(50):200+rnd(50);
+   // gravity_direction 270 (down) for type 1, 1 degree (to the right, a hair up) for type 2
+   const gd=type===1?270:1;
+   claw(api,choose(1,-1)*side+h.x,T-rnd(30),{fall:true,gx:dcos(gd)*g,gy:-dsin(gd)*g,vx:-.1+rnd(.2),isp:rnd(.2)+.2});
+  }
+ }
+
+ // --------------------------------------------------------- Snowdrake's Mother --
+ // obj_snowdrakemom_body: a random frame of spr_snowdrakesmom every 10 steps. FIGHT refills her
+ // HP before the hit lands, so only a single blow of 400 or more ends her.
+ // Three bad puns about snow and she's calmed down, and spared at once.
+ NB.defs.set('snowdrakemom',{
+  name:'Amalgamate',hp:400,atk:0,def:0,xp:0,gold:0,mercymod:-900,wd:200,
+  encounter:'* It\'s so cold.',
+  bgFrame:99, // obj_snowdrakemom destroys obj_battlebg
+  size:()=>({w:138,h:196}),
+  pos:(i,n,cx)=>n===1?{x:240,y:20}:{x:Math.round(cx-69),y:20},
+  shudder:[8,1],shudderAbs:true,
+  dmgPos:m=>({x:m.x+9,y:m.y+20}),
+  setup(m){
+   Object.assign(m.v,{frame:0,a0:10,pitch:.5,pa0:160,siner:0,laugh:0,heckle:0,joke:0,last:null,cmd:0,gen:null});
+   snowmomMusicRate(.5);
+  },
+  step(m){
+   const v=m.v;
+   if(tick(v,'a0')){v.frame=Math.floor(rnd(100));v.a0=10}
+   if(tick(v,'pa0')){v.pitch=.3+rnd(.4);v.pa0=4+rnd(120)}
+   v.siner++;snowmomMusicRate(v.pitch+Math.sin(v.siner/2)*.01);
+  },
+  draw(g,m){dse(g,fr(images.nbSnowmom,m.v.frame),m.x,m.y,2,2)},
+  check:()=>'* AMALGAMATE - ATK -12 DEF -5&* Seems like it\'s losing it',
+  // SCR_TEXT: "Check / Heckle" and "Laugh / Joke" columns
+  acts:['Check','Laugh','Heckle','Joke'],
+  act(m,i,name){
+   const v=m.v;v.last=name;
+   if(name==='Laugh'){
+    const t=v.laugh?'* But it\'s not funny.':'* You laugh^1, and keep laughing^1.&* It\'s SO funny^1, you can\'t stop^1.&* Tears run down your face./* ... what^1?&* You didn\'t do that?';
+    v.laugh=1;return t;
+   }
+   if(name==='Heckle'){
+    const t=v.heckle?'* You call this a performance?':'* You said something like..^1.&* "You look horrible.^1"&* "Why are you even alive?^1"/* ... what^1?&* You didn\'t say that?';
+    v.heckle=1;return t;
+   }
+   if(name==='Joke'){
+    const j=v.joke++;
+    if(j===0)return '* You told a bad pun about&  snow^1.&* Her expression starts to shift.';
+    if(j===1)return '* You told a bad pun about&  snow^1.&* Her expression changes more.';
+    if(j===2){
+     m.mercymod=22222;
+     // mercymod 22222: once the text is gone she's spared on the spot
+     return {text:'* You told a bad pun about&  snow^1.&* She\'s completely calmed down.',then:api=>{if(m.alive&&api.spareNow)api.spareNow(m)}};
+    }
+    return '* You told a bad pun about&  snow.';
+   }
+   return '* Nothing happened.';
+  },
+  // alarm[6]: a small bubble at (x+120, y), "sn... o... wy..."; alarm[5] = 110
+  speech(m,api){
+   const v=m.v;v.cmd=Math.round(rnd(100));
+   let t=' sn...& o...& wy...';
+   if(v.last==='Joke'){if(v.joke===1)t=' haha...& i...& remem..&  ber...';if(v.joke===2)t=' haha...& thank...& you...'}
+   api.S.talkLenExact=110;
+   return {text:t,img:images.nbBlconSm||null,pos:{x:m.x+120,y:m.y},typer:2};
+  },
+  border:()=>17,
+  // FIGHT: the HP is topped up, the writer shows the amalgamates' joke line, then the hit lands
+  hurt(m,api){
+   m.hp=m.maxhp;m.hurt=true;m.shudder=8;m.shakeT=0;snd('damage');
+   const x=m.x+9,y=m.y+20;
+   api.S.dmgw.push({x,y,ystart:y,vy:0,dmg:0,special:1,m,maxhp:m.maxhp,apparent:m.hp,actual:m.hp,life:-1,tick:0});
+   m.hurtanim=3;
+  },
+  attack(m,api){
+   const v=m.v;v.last=null;
+   api.border(18);api.turntimer(100);
+   v.gen={wait:1};
+   let f='* It\'s so cold.';
+   if(v.cmd>=90)f='* Smells like salty slush.';
+   if(m.mercymod>100)f='* Seems calmed down.';
+   if(m.hp<=m.maxhp/4)f='* Monster has low HP.';
+   return f;
+  },
+  attackStep(m,api){const g=m.v.gen;if(g&&g.wait>0&&--g.wait===0)clawGen(api)},
+  endAttack(m){m.v.gen=null}
  });
 })();
 
@@ -28664,6 +28807,8 @@ function endoDogsong(on){
  });
 })();
 const NB_ASSETS={
+ // Snowdrake's Mother
+ nbSnowmom:[0,1,2,3].map(i=>RAW+`sprites/images/spr_snowdrakesmom_${i}.png`),
  // Endogeny
  nbEndoBody:RAW+'sprites/images/spr_endogeny_0.png',nbEndoBody2:RAW+'sprites/images/spr_endogeny_2_0.png',
  nbEndoHead:[0,1,2,3,4,5,6,7,8].map(i=>RAW+`sprites/images/spr_endogeny_head_${i}.png`),
