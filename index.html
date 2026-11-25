@@ -33618,8 +33618,10 @@ const DR=(()=>{
    e.rings.push({x:e.mx,y:e.my,r:8,v:7,a:.9})}
   if(t>45&&t<70)for(const b of e.big){b.r=Math.min(44,b.r+(44-b.r)*.18);b.xs=Math.min(2.4,b.xs+(2.4-b.xs)*.15);b.a0+=6;b.ang+=8;b.x=e.mx+Math.cos(b.a0*Math.PI/180)*b.r;b.y=e.my-Math.sin(b.a0*Math.PI/180)*b.r}
   // 4. she throws them (spr_noelleb_attack), one after another, at the foe
-  if(t===62)h.pose={spr:'spr_noelleb_attack',sp:1/3,t0:S.t,hold:1};
-  if(t>=70&&t<70+6*3&&(t-70)%3===0){const b=e.big[(t-70)/3];if(b){b.go=1;b.sp=4;snd('icespell',1.2+rnd(.2))}}
+  // Noelle's throw; anyone else casting it keeps their own spell pose
+  if(t===62&&h.id==='noelle')h.pose={spr:'spr_noelleb_attack',sp:1/3,t0:S.t,hold:1};
+  // (the next one not thrown yet: landed ones leave the list, so not by position)
+  if(t>=70&&(t-70)%3===0){const b=e.big.find(q=>q.go===0);if(b){b.go=1;b.sp=4;snd('icespell',1.2+rnd(.2))}}
   for(const b of e.big)if(b.go===1){
    b.ang+=14;b.sp=Math.min(26,b.sp*1.25+1);const dx=e.x-b.x,dy=e.y-b.y,d=Math.hypot(dx,dy);
    if(d<=b.sp){b.go=2;b.x=e.x;b.y=e.y;e.hits++;
