@@ -30603,7 +30603,7 @@ const DR=(()=>{
   ralsei:{char:3,name:'Ralsei',hp:70,at:10,df:2,mag:7,spells:[3,2,13],idle:'spr_ralsei_idle',attackready:'spr_ralsei_attackready',attack:'spr_ralsei_attack',act:'spr_ralsei_act',actready:'spr_ralsei_actready',item:'spr_ralsei_item',itemready:'spr_ralsei_itemready',spellready:'spr_ralsei_spellready',spell:'spr_ralsei_spell',defend:'spr_ralsei_defend',hurtspr:'spr_ralsei_hurt_fixed',defeat:'spr_ralsei_defeat',victory:'spr_ralsei_victory',
    actframes:8,actreturnframes:12,attackframes:6,itemframes:6,defendframes:7,spellframes:10,attackspeed:.5,mywidth:52,myheight:86,head:'spr_headralsei',bname:'spr_bnameralsei',slash:'spr_attack_slap1',slashSpeed:.5,slashMax:4,pitch:1.15},
   // obj_heronoelle (obj_heroparent Create): Chapter 2 stats when she joins.
-  noelle:{char:4,name:'Noelle',hp:90,at:3,df:1,mag:11,spells:[2,8,9,10,14],idle:'spr_noelleb_idle',attackready:'spr_noelleb_attackready',attack:'spr_noelleb_attack',act:'spr_noelleb_act',actready:'spr_noelleb_actready',item:'spr_noelleb_item',itemready:'spr_noelleb_itemready',spellready:'spr_noelleb_spellready',spell:'spr_noelleb_spell',defend:'spr_noelleb_defend',hurtspr:'spr_noelleb_hurt',defeat:'spr_noelleb_defeat',victory:'spr_noelleb_victory',
+  noelle:{char:4,name:'Noelle',hp:90,at:3,df:1,mag:11,spells:[2,8,9,10],idle:'spr_noelleb_idle',attackready:'spr_noelleb_attackready',attack:'spr_noelleb_attack',act:'spr_noelleb_act',actready:'spr_noelleb_actready',item:'spr_noelleb_item',itemready:'spr_noelleb_itemready',spellready:'spr_noelleb_spellready',spell:'spr_noelleb_spell',defend:'spr_noelleb_defend',hurtspr:'spr_noelleb_hurt',defeat:'spr_noelleb_defeat',victory:'spr_noelleb_victory',
    actframes:7,actreturnframes:11,attackframes:4,itemframes:9,defendframes:0,spellframes:6,attackspeed:.5,mywidth:52,myheight:86,head:'spr_headnoelle',bname:'spr_bnamenoelle',slash:'spr_attack_slap2',slashSpeed:.5,slashMax:4,pitch:1.5}
  };
  // scr_iteminfo case 1.
@@ -36576,7 +36576,7 @@ function drSaveCustom(){drLS('utbg.drCustom',JSON.stringify(drCustom))}
 function drCustomCfg(){drCustomReady();const c=JSON.parse(JSON.stringify(drCustom));c.edited=JSON.stringify(drCustom.stats)!==JSON.stringify(drDefaultCustom().stats);return c}
 const drHub={tab:0,focus:0,row:0,hero:0,top:0},drShop={tab:0,row:0,top:0,msg:''};
 const DR_HUB_TABS=['PARTY','STATS','SPELLS','ITEMS','GEAR','MODES'];
-const DR_SPELL_LIST=[2,3,4,8,9,10,11,12,13];
+const DR_SPELL_LIST=[2,3,4,8,9,10,11,12,13,14];
 const STAT_KEYS=[['hp','HP',10,1,999],['at','ATTACK',1,0,99],['df','DEFENSE',1,0,99],['mag','MAGIC',1,0,99]];
 // one row = {label, value?, left?(), right?(), ok?(), on?}
 function drHubRows(){
@@ -36614,7 +36614,7 @@ function drHubDesc(){
  if(t===0){const r=drHubRows()[drHub.row];if(r&&r.label==='STYLE')return '* Fight in DELTARUNE\'s look or UNDERTALE\'s party look.\n* UNDERTALE art so far: KING (sprites by askywalker). The rest stay DELTARUNE.';
   return '* Turn CUSTOM on to fight with this setup.\n* Anyone in any slot. Three Susies? Go for it.\n* Only Kris can ACT.'}
  if(t===1)return '* LEFT/RIGHT to change. Z puts it back to normal.\n* HP moves in 10s.';
- if(t===2)return '* Any spell on anyone, up to 6 each.\n* SnowGrave and FrostBite work best with high MAGIC.';
+ if(t===2)return '* Any spell on anyone, up to 6 each.\n* SnowGrave, FrostBite and FrostNova work best with high MAGIC.';
  if(t===3){const row=drHubRows()[drHub.row],id=drCustom.items[drHub.row];return id?'* '+DR.items[id].name+': '+DR.items[id].desc.replace(/#/g,' ')+'.\n* Buy more kinds in the SHOP.':'* Up to 6 items. Buy more kinds in the SHOP.'}
  if(t===4){const w=drCustom.weapon[hero],a=drCustom.armor[hero],g=DR.gear,f=k=>{const x=g[k];return x.name+' ('+['at','df','mag','hp'].filter(s=>x[s]).map(s=>(x[s]>0?'+':'')+x[s]+' '+s.toUpperCase()).join(', ')+')'};
   return (w?'* '+f(w)+'\n':'')+(a?'* '+f(a)+'\n':'')+'* Gear comes from the SHOP.'}
