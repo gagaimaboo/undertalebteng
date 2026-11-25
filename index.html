@@ -30533,6 +30533,8 @@ const DR=(()=>{
   11:{name:'FrostBite',desc:'Double#ICE#strike',target:2,cost:125},
   // fanmade: IceShock's flakes gathered in the middle, split big and thrown back (60% TP)
   14:{name:'FrostNova',desc:'Huge ICE#blast',target:2,cost:150},
+  // fanmade: eight Rude Busters at once (80% TP); with the Devilsknife, two dodges after
+  15:{name:'RuderBuster',desc:'Ruder#Damage',target:2,cost:200},
   // K. Round's weird route: Rude Buster through an axe Noelle froze. 5% TP to start, then
   // dearer the more of K. Round's HP is gone.
   12:{name:'FrostBuster',desc:'Frozen#Rude#Damage',target:2,get cost(){return frostCost()}},
@@ -31667,7 +31669,7 @@ const DR=(()=>{
    for(const h of party){
     const st=cu.stats&&cu.stats[h.id],gw=DRGEAR[cu.weapon&&cu.weapon[h.id]],ga=DRGEAR[cu.armor&&cu.armor[h.id]],b=k=>((gw&&gw[k])||0)+((ga&&ga[k])||0);
     if(st&&!useCh2){h.maxhp=st.hp;h.at=st.at;h.df=st.df;h.mag=st.mag}
-    h.at+=b('at');h.df+=b('df');h.mag+=b('mag');h.maxhp+=b('hp');
+    h.at+=b('at');h.df+=b('df');h.mag+=b('mag');h.maxhp+=b('hp');h.wid=(cu.weapon&&cu.weapon[h.id])||'';
     if(gw&&gw.ut){h.ut=gw.ut;h.utw=cu.weapon[h.id];try{loadWeaponSpriteAtlas().catch(()=>{})}catch(_){}}
     if(cu.modes&&cu.modes.glass)h.maxhp=Math.max(1,Math.ceil(h.maxhp/2));
     h.hp=h.maxhp;
@@ -31695,7 +31697,7 @@ const DR=(()=>{
   else if(autoLoadout&&!cu){
    // AUTO LOADOUT: the gear and items that suit this fight (SETTINGS turns it off)
    const rec=drRecommended(eid);
-   for(const h of party){const gw=DRGEAR[rec.weapon[h.id]],ga=DRGEAR[rec.armor[h.id]],b=k=>((gw&&gw[k])||0)+((ga&&ga[k])||0);h.at+=b('at');h.df+=b('df');h.mag+=b('mag');h.maxhp+=b('hp');h.hp=h.maxhp}
+   for(const h of party){const gw=DRGEAR[rec.weapon[h.id]],ga=DRGEAR[rec.armor[h.id]],b=k=>((gw&&gw[k])||0)+((ga&&ga[k])||0);h.at+=b('at');h.df+=b('df');h.mag+=b('mag');h.maxhp+=b('hp');h.hp=h.maxhp;h.wid=rec.weapon[h.id]||''}
    S.items=rec.items.filter(id=>ITEM[id]);S.tempitem=[[...S.items],[...S.items],[...S.items]];
   }
   S.iceTries=0;S.weirdEnding=null;S.weirdDone=0;
@@ -31939,6 +31941,7 @@ const DR=(()=>{
   if(spell===6)return ['* '+h.name+' cast DUAL HEAL!/%'];
   if(spell===11)return ['* '+h.name+' cast FROSTBITE!/%'];
   if(spell===14)return ['* '+h.name+' cast FROSTNOVA!/%'];
+  if(spell===15)return ['* '+h.name+' cast RUDER BUSTER!/%'];
   if(spell===100){
    if(m.mercy>=100)return ['* '+h.name+' spared '+m.name+'!/%'];
    if(m.status)return ['* '+h.name+' spared '+m.name+'^2!&* But its name wasn\'t \\cYYELLOW\\cW.../','* (Try using Ralsei\'s \\cBPACIFY\\cW!)/%'];
@@ -31999,6 +32002,12 @@ const DR=(()=>{
    S.spelldelay=85;return;
   }
   if(S.weird&&weirdSpell(spell,caster,star))return;
+  if(spell===15){
+   if(!S.mons[star]||!S.mons[star].alive){star=S.mons.findIndex(m=>m.alive);if(star<0){S.spelldelay=30;return}}
+   const m=S.mons[star],per=Math.max(1,Math.ceil((h.mag*5+h.at*11-m.df*3)*.45));
+   S.fx.push({kind:'ruder',h,m,star,x:monsterx(m),y:monstery(m),per,timer:0,beams:[],hits:0,dodge:h.wid==='devilsknife'});
+   h.hideFor=62;S.spelldelay=105;return;
+  }
   if(spell===14){
    if(!S.mons[star]||!S.mons[star].alive){star=S.mons.findIndex(m=>m.alive);if(star<0){S.spelldelay=30;return}}
    const m=S.mons[star],minmag=Math.max(1,Math.min(999,h.mag-10)),base=Math.ceil(minmag*30+90+rnd(10));
@@ -33382,6 +33391,12 @@ const DR=(()=>{
   }
   let target=b.target;let h=S.party[target];
   if(!h||h.hp<=0){const alive=S.party.filter(p=>p.hp>0);h=alive[Math.floor(R()*alive.length)]||S.party[0];target=h.i}
+  if(h.id==='susie'&&h.ruderDodge>0&&h.hp>0){
+   h.ruderDodge--;S.tension=Math.min(S.maxtension,S.tension+S.maxtension*.15);
+   S.dmgw.push(dmgwriter(h.x,h.y+h.myheight-24,0,-1));snd('graze');
+   S.fx.push({kind:'ruderdodge',h,t:0});
+   if(!b.noInv)S.inv=invFrames();return;
+  }
   let td=b.dmg;
   if(S.mode&&S.mode.hard)td=Math.ceil(td*1.5);
   const thA=h.maxhp/5,thB=h.maxhp/8;
@@ -33596,6 +33611,67 @@ const DR=(()=>{
  }
  // FROSTBITE: a quick IceShock, then shards spiral in for a much heavier second hit
  // (big flash, shake, a burst of ice spikes and shockwaves).
+ // RUDER BUSTER
+ // where she flickers in: to the left of the foe, its own height
+ const ruderSpot=e=>({x:e.x-210,y:e.y-70});
+ function ruderStep(e){
+  const t=++e.timer,m=e.m,h=e.h,sp=ruderSpot(e),hx=sp.x+80,hy=sp.y+52;
+  // 1. gone, like Gerson: a white squash and a puff of streaks where she stood
+  if(t===1)snd('rbswing',1.6);
+  // 2. by the foe for a moment: four busters fanned at it, then four more nine frames (0.3 s) on
+  const aim=Math.atan2(-(e.y-hy),e.x-hx)*180/Math.PI;
+  const make=(set,spread,r)=>{snd('rbswing',1.1+set*.15);for(const a of spread){const d=aim+a;e.beams.push({set,x:hx+Math.cos(d*Math.PI/180)*r,y:hy-Math.sin(d*Math.PI/180)*r,dir:aim+a*.4,sp:0,a:0,fr:0,go:0,after:[],explode:0,et:0,bursts:[]})}};
+  if(t===12)make(0,[-36,-12,12,36],38);
+  if(t===21)make(1,[-48,-24,24,48],66);
+  // 3. thrown: the first four at 32, the second four at 41, the same nine frames apart
+  if(t===32||t===41){const set=t===32?0:1;snd('rbswing');for(const b of e.beams)if(b.set===set){b.go=1;b.sp=22}}
+  for(const b of e.beams){
+   b.fr+=.5;b.a=Math.min(1,b.a+.25);
+   if(b.go===1&&!b.explode){
+    const want=Math.atan2(-(e.y-b.y),e.x-b.x)*180/Math.PI;let d=((want-b.dir+540)%360)-180;b.dir+=d/3;
+    b.sp+=1.5;b.x+=Math.cos(b.dir*Math.PI/180)*b.sp;b.y-=Math.sin(b.dir*Math.PI/180)*b.sp;
+    b.after.push({x:b.x,y:b.y,dir:b.dir,ys:1.8,a:b.a-.2});
+    if(Math.hypot(b.x-e.x,b.y-e.y)<=40){
+     b.explode=1;b.et=0;e.hits++;snd('rbhit');S.shake={amt:4,t:0};
+     b.bursts=[0,1,2,3,4,5,6,7].map(i=>({x:e.x,y:e.y,ang:45+i*90,sp:25,xs:2,a:1,k:i<4?.75:.8}));
+     if(m.alive){
+      const star=e.star;if(e.hits===1)S.hittarget[star]=0;
+      S.dmgw.push(dmgwriter(monsterx(m)+rnd(30)-15,monstery(m)+20-(S.hittarget[star]%4)*20,e.per,1));S.hittarget[star]++;
+      m.hp-=e.per;hurtMon(m);m.flash=6;
+      if(m.hp<=0&&m.alive){m.alive=false;m.killed=true;defeatRun(m)}
+     }
+    }
+   }
+   for(const a of b.after){a.ys-=.1;if(b.explode){a.a-=.07;a.ys*=.9}}
+   b.after=b.after.filter(a=>a.ys>.1&&a.a>0);
+   if(b.explode){b.et++;for(const q of b.bursts){q.x+=Math.cos(q.ang*Math.PI/180)*q.sp;q.y-=Math.sin(q.ang*Math.PI/180)*q.sp;q.sp*=q.k;q.xs*=.8}}
+  }
+  e.beams=e.beams.filter(b=>!(b.explode&&b.et>=18));
+  // 4. with the Devilsknife: two dodges ready
+  if(t===62&&e.dodge){h.ruderDodge=2;snd('boost')}
+  if(t>62&&!e.beams.length)e.dead=1;
+  if(t>=140)e.dead=1;
+ }
+ function drawRuder(g,e){
+  const t=e.timer,h=e.h,sp=ruderSpot(e);
+  // the vanish (t 1-8) at her place and the return (t 56-62)
+  if(t<=8){const k=t/8;draw(g,h.idle,0,h.x+40*k,h.y-10*k,2*(1-k),2+k*.8,0,1-k*.3,{fog:'#ffffff'});
+   g.save();g.globalAlpha=1-k;g.fillStyle='#ffffff';for(let j=0;j<5;j++)g.fillRect(h.x+16+j*14,h.y+40-k*70-j*6,2,22);g.restore()}
+  if(t>=56&&t<=62){const k=(t-56)/6;draw(g,h.idle,0,h.x+40*(1-k),h.y,2*k,2,0,1,{fog:k<.7?'#ffffff':null})}
+  // by the foe, flickering, only while she makes them (t 10-30)
+  if(t>=10&&t<=30&&(t%3!==0)){
+   const k=t<13?(t-10)/3:t>27?(30-t)/3:1;
+   draw(g,'spr_susie_rudebuster',Math.min(7,(t-10)/2),sp.x+40*(1-k),sp.y,2*k,2,0,t<13||t>27?.7:1,t<13||t>27?{fog:'#ffffff'}:{});
+  }
+  if(t===10||t===30){g.save();g.globalAlpha=.6;g.fillStyle='#ffffff';g.fillRect(sp.x+30,sp.y-10,6,120);g.restore()}
+  for(const b of e.beams){
+   // held: flashing red and purple; thrown: Rude Buster's own trail and burst
+   const col=(Math.floor(t/2)%2)?'#ff3030':'#b040ff',rt={tint:col};
+   for(const a of b.after)draw(g,'spr_rudebuster_beam',4,a.x,a.y,2,a.ys,a.dir,Math.max(0,a.a),rt);
+   if(!b.explode)draw(g,'spr_rudebuster_beam',b.fr,b.x,b.y,2,2,b.dir,b.a,rt);
+   else for(const q of b.bursts)draw(g,'spr_rudebuster_beam',b.et/2,q.x,q.y,q.xs,2,q.ang,1,rt);
+  }
+ }
  // FROSTNOVA
  function frostnovaStep(e){
   const t=++e.timer,m=e.m,h=e.h;
@@ -33974,6 +34050,8 @@ const DR=(()=>{
    else if(e.kind==='hflash'){e.a-=.07;if(e.a<=0)e.dead=1}
    else if(e.kind==='frostbite')frostbiteStep(e);
    else if(e.kind==='frostnova')frostnovaStep(e);
+   else if(e.kind==='ruder')ruderStep(e);
+   else if(e.kind==='ruderdodge'){if(++e.t>=14)e.dead=1}
    else if(e.kind==='crystal'){e.t2++}
    else if(e.kind==='defeat'){if(++e.g>=15)e.tt++;if(e.tt>=15)e.dead=1}
    else if(e.kind==='rudebuster'){
@@ -34429,6 +34507,8 @@ const DR=(()=>{
    else if(e.kind==='hflash'){const [n,i]=heroSprite(e.h);draw(g,n,i,e.h.x,e.h.y,2,2,0,e.a*.8,{fog:e.color})}
    else if(e.kind==='frostbite')drawFrostbite(g,e);
    else if(e.kind==='frostnova')drawFrostnova(g,e);
+   else if(e.kind==='ruder')drawRuder(g,e);
+   else if(e.kind==='ruderdodge'){const k=1-e.t/14;draw(g,e.h.idle,0,e.h.x-20*Math.sin(e.t/14*Math.PI),e.h.y,2,2,0,k*.7,{fog:'#c040ff'})}
    else if(e.kind==='rudebuster'&&e.frost){drawFrostBuster(g,e);continue}
    else if(e.kind==='rudebuster'){
     if(e.t<=28)draw(g,'spr_susie_rudebuster',e.t/2,e.h.x,e.h.y,2,2);
@@ -36578,7 +36658,7 @@ function drSaveCustom(){drLS('utbg.drCustom',JSON.stringify(drCustom))}
 function drCustomCfg(){drCustomReady();const c=JSON.parse(JSON.stringify(drCustom));c.edited=JSON.stringify(drCustom.stats)!==JSON.stringify(drDefaultCustom().stats);return c}
 const drHub={tab:0,focus:0,row:0,hero:0,top:0},drShop={tab:0,row:0,top:0,msg:''};
 const DR_HUB_TABS=['PARTY','STATS','SPELLS','ITEMS','GEAR','MODES'];
-const DR_SPELL_LIST=[2,3,4,8,9,10,11,12,13,14];
+const DR_SPELL_LIST=[2,3,4,8,9,10,11,12,13,14,15];
 const STAT_KEYS=[['hp','HP',10,1,999],['at','ATTACK',1,0,99],['df','DEFENSE',1,0,99],['mag','MAGIC',1,0,99]];
 // one row = {label, value?, left?(), right?(), ok?(), on?}
 function drHubRows(){
