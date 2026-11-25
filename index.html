@@ -720,6 +720,7 @@ const IMG={
  }
 };
 const SFX={
+ asStar:RAW+'sound/audio/mus_sfx_star.ogg',asExplosion:RAW+'sound/audio/mus_explosion.ogg',asLithit:RAW+'sound/audio/mus_sfx_a_lithit.ogg',asLithit2:RAW+'sound/audio/mus_sfx_a_lithit2.ogg',
  glydeBreak:RAW+'sound/audio/snd_shakerbreaker.ogg',
  rgGrab:RAW+'sound/audio/snd_grab.wav',
  impact:RAW+'sound/audio/snd_impact.wav',
@@ -11745,6 +11746,7 @@ const NB=(()=>{
    {id:'starblazing',name:'StarBlazing',target:'none',cost:40,desc:'Stars hit ALL foes'},
    {id:'chaossaber',name:'ChaosSaber',target:'enemy',cost:50,desc:'Two slashes'},
    {id:'shockbreak',name:'ShockBreak',target:'none',cost:64,desc:'Lightning, ALL foes'},
+   {id:'starshatter',name:'StarShatter',target:'enemy',cost:80,desc:'20 stars, 5 DMG each'},
    {id:'hypergoner',name:'HyperGoner',target:'none',cost:100,desc:'Swallow ALL foes'}
   ],
   ralsei:[
@@ -11875,7 +11877,9 @@ const NB=(()=>{
  function partyMagicText(p,c){
   const sp=PARTY_SPELLS[p.role]||[],rows=[];
   const cell=s=>'\\'+(s.cost>S.tpCalc?'g':s.col||((s.id==='sleepmist'||s.id==='pacify')&&alive().some(partyTired)?'c':'W'))+'* '+s.name+'\\W';
-  for(let r=0;r<2;r++){const L=sp[r*2],R=sp[r*2+1];if(!L)break;rows.push('   '+cell(L)+(R?' '.repeat(Math.max(2,14-L.name.length))+cell(R):''))}
+  const pg=Math.floor((c||0)/4);
+  for(let r=0;r<2;r++){const L=sp[pg*4+r*2],R=sp[pg*4+r*2+1];if(!L)break;rows.push('   '+cell(L)+(R?' '.repeat(Math.max(2,14-L.name.length))+cell(R):''))}
+  if(sp.length>4&&rows.length)rows[rows.length-1]+=' '.repeat(Math.max(1,3))+'\\gPAGE '+(pg+1)+'\\W';
   return rows.join('&'); // the description line is drawn by the renderer ("%" ends a writer message)
  }
  function partyItemText(list,page){
@@ -11977,7 +11981,7 @@ const NB=(()=>{
    if(P.up&&c>=2)c-=2;
    if(P.down&&c+2<n)c+=2;
    if(c!==pm.c){pm.c=c;snd('move');partyMenuText()}
-   h.x=S.ideal[0]+(c%2?292:32);h.y=S.ideal[2]+28+Math.floor(c/2)*32;
+   h.x=S.ideal[0]+(c%2?292:32);h.y=S.ideal[2]+28+(Math.floor(c/2)%2)*32;
    if(P.confirm){
     NB.clearPressed('confirm');const s=sp[c];if(!s)return;
     if(s.cost>S.tpCalc){snd('move');return} // TPBar.ValidTPAmount
@@ -12249,6 +12253,11 @@ const NB=(()=>{
    partyFxPacify(m,t);
    if(t)spareMonster(m);
    partyWait(`* ${p.say} cast PACIFY!`+(t?'':`\n* But ${m.name} wasn't\n  TIRED...`));return;
+  }
+  if(id==='starshatter'){
+   if(!m){partyWait(`* ${p.say} cast STAR SHATTER!`);return}
+   const fx=partyFxStarShatter(p,m);
+   partyWait(`* ${p.say} cast STAR SHATTER!`,()=>fx.dead);return;
   }
   if(id==='chaossaber'){
    if(!m){partyWait(`* ${p.say} cast CHAOS SABER!`);return}
@@ -12663,26 +12672,197 @@ const NB=(()=>{
  // DrawSpriteExt for the spells (the battle helpers' dse lives in another block)
  function dse(g,im,x,y,xs=1,ys=1,rot=0,alpha=1,ox=0,oy=0){if(!im)return;g.save();g.globalAlpha*=alpha;g.imageSmoothingEnabled=false;g.translate(x,y);if(rot)g.rotate(-rot*Math.PI/180);g.scale(xs,ys);g.drawImage(im,-ox,-oy);g.restore()}
  const asDmg=(p,base,k)=>Math.max(1,Math.round(base+p.mag*k+Math.floor(rnd(10))-5));
- // STAR BLAZING: a great star drops onto each foe and bursts into six small ones
+ // GameMaker's make_color_hsv (0-255 each) as an rgb string
+ function gmHsv(h,s,v){
+  h=((h%256)+256)%256/255*360;s/=255;v/=255;
+  const c=v*s,x=c*(1-Math.abs((h/60)%2-1)),m=v-c;let r=0,g=0,b=0;
+  if(h<60){r=c;g=x}else if(h<120){r=x;g=c}else if(h<180){g=c;b=x}else if(h<240){g=x;b=c}else if(h<300){r=x;b=c}else{r=c;b=x}
+  return `rgb(${Math.round((r+m)*255)},${Math.round((g+m)*255)},${Math.round((b+m)*255)})`;
+ }
+ // image_blend: a multiplied copy (white takes the colour), cached by sprite, frame and colour step
+ const asBlends=new Map();
+ function asBlend(im,h,s,v){
+  if(!im)return null;
+  const hq=Math.round(((h%256)+256)%256/8),key=(im.src||'c')+'|'+hq+'|'+s+'|'+v;
+  let c=asBlends.get(key);if(c)return c;
+  c=document.createElement('canvas');c.width=im.width;c.height=im.height;const q=c.getContext('2d');
+  q.drawImage(im,0,0);q.globalCompositeOperation='multiply';q.fillStyle=gmHsv(hq*8,s,v);q.fillRect(0,0,c.width,c.height);
+  q.globalCompositeOperation='destination-in';q.drawImage(im,0,0);
+  if(asBlends.size>600)asBlends.clear();
+  asBlends.set(key,c);return c;
+ }
+ const fr2=(a,i)=>Array.isArray(a)?a[((Math.floor(i)%a.length)+a.length)%a.length]:a;
+ // obj_regstar_blt: a small star spun 4 degrees a frame, curving 1.5 degrees a frame and
+ // speeding up (negative friction); gone once it leaves the room
+ function asRegStar(list,x,y,dir,sp,fric,curve=1.5){list.push({x,y,dir,sp,fric,ang:Math.random()*360,curve})}
+ function asRegStep(list){
+  for(const s of list){s.ang+=4;s.dir+=s.curve;s.sp=Math.max(0,s.sp-s.fric);s.x+=Math.cos(s.dir*Math.PI/180)*s.sp;s.y-=Math.sin(s.dir*Math.PI/180)*s.sp}
+  return list.filter(s=>s.x>-40&&s.x<680&&s.y>-40&&s.y<520);
+ }
+ function asRegDraw(g,list){for(const s of list)dse(g,images.nbAsRegStar,s.x,s.y,1,1,s.ang,1,11,11)}
+ // obj_explodestar: the burst star's last frame, growing and fading for 20 frames
+ function asExplDraw(g,e){
+  const im=fr2(images.nbAsStormStar2,e.frame);if(!im||e.alpha<=0)return;
+  dse(g,e.white?im:asBlend(im,e.h,100,244),e.x,e.y,e.sc,e.sc,e.ang,e.alpha,63,60);
+ }
+ // STAR BLAZING, as obj_stormstar_gen throws it: rainbow storm stars dive in from the upper
+ // right (direction 215, speed 14-20) with two afterimages, and each one that reaches a foe
+ // turns white, bursts (obj_explodestar) and throws seven small stars that curve away. Last, a
+ // big star (twice the size, spinning) comes down on the middle of them all and bursts into
+ // three rings of twenty. sfx_star rings out every 16 frames; explosion.ogg for each burst.
  function partyFxStarBlazing(p){
-  const al=alive(),fx={t:0,stars:al.map((m,i)=>({m,x:m.x+m.w/2,y:m.y+m.h/2,delay:i*6,hit:false,bits:[]})),step(e){
+  const al=alive();
+  const mid={x:al.reduce((a,m)=>a+m.x+m.w/2,0)/Math.max(1,al.length),y:al.reduce((a,m)=>a+m.y+m.h/2,0)/Math.max(1,al.length)};
+  const fx={t:0,stars:[],regs:[],expl:[],sfxT:0,sent:0,done:false,step(e){
    e.t++;
-   for(const s of e.stars){
-    const k=e.t-s.delay;
-    if(k===12&&!s.hit){s.hit=true;snd('mexBurst');partyHit(s.m,asDmg(p,8,6));for(let j=0;j<6;j++)s.bits.push({x:s.x,y:s.y,a:j*60,sp:9,al:1})}
-    for(const b of s.bits){b.x+=Math.cos(b.a*Math.PI/180)*b.sp;b.y-=Math.sin(b.a*Math.PI/180)*b.sp;b.sp*=.9;b.al-=.04}
+   // alarm[0]: a star every 8 frames, two at each foe; alarm[1]: then the big one
+   const per=2,total=al.length*per;
+   if(e.sent<total&&(e.t-1)%8===0){
+    const m=al[e.sent%al.length],tx=m.x+m.w/2,ty=m.y+m.h/2,sp=14+rnd(6),d=380+rnd(60);
+    e.stars.push({m,tx,ty,x:tx+Math.cos(35*Math.PI/180)*d,y:ty-Math.sin(35*Math.PI/180)*d,sp,trail:[],siner:0,big:false,ang:0});
+    e.sent++;
    }
-   if(e.t===1)snd('power');
-   if(e.t>12+6*e.stars.length+26)e.dead=true;
+   if(e.sent>=total&&!e.bigSent&&e.t>=(total-1)*8+20){
+    e.bigSent=true;play('asStar',.4);
+    e.stars.push({m:null,tx:mid.x,ty:mid.y,x:mid.x+Math.cos(35*Math.PI/180)*420,y:mid.y-Math.sin(35*Math.PI/180)*420,sp:8,trail:[],siner:0,big:true,ang:0});
+   }
+   // alarm[2]: sfx_star every 16 frames while they fall
+   if(e.stars.length&&++e.sfxT>=16){e.sfxT=0;play('asStar',1+rnd(.2)-rnd(.3))}
+   for(const s of e.stars){
+    s.siner++;s.trail.unshift({x:s.x,y:s.y});if(s.trail.length>5)s.trail.pop();
+    if(s.big)s.ang+=2;
+    s.x+=Math.cos(215*Math.PI/180)*s.sp;s.y-=Math.sin(215*Math.PI/180)*s.sp;
+    if(s.y>=s.ty||s.x<=s.tx){
+     s.dead=true;const dir=rnd(360);
+     e.expl.push({x:s.tx,y:s.ty,frame:1,h:s.siner*12,white:true,alpha:1,sc:s.big?2:1,ang:s.ang,big:s.big,t:0});
+     if(!s.big){
+      for(let i=0;i<7;i++)asRegStar(e.regs,s.tx,s.ty,dir+360/7*i,1.5,-.25);
+      play('asExplosion',2);S.shake={h:5,v:5,speed:2,t:0};
+      if(s.m&&s.m.alive)partyHit(s.m,Math.max(1,Math.round((8+p.mag*6)/2+rnd(6)-3)));
+     }else{
+      for(let i=0;i<20;i++)asRegStar(e.regs,s.tx,s.ty,dir+22.5*i,1.6,-.3);
+      for(let i=0;i<20;i++)asRegStar(e.regs,s.tx,s.ty,dir+9+22.5*i,.8,-.24);
+      for(let i=0;i<20;i++)asRegStar(e.regs,s.tx,s.ty,dir+9+18*i,.2,-.18);
+      play('asExplosion',1.1);S.shake={h:7,v:7,speed:2,t:0};
+      for(const m of al)if(m.alive)partyHit(m,asDmg(p,6,4));
+     }
+    }
+   }
+   e.stars=e.stars.filter(s=>!s.dead);
+   e.regs=asRegStep(e.regs);
+   for(const x of e.expl){x.t++;x.alpha-=.05;x.sc+=x.big?.2:.1}
+   e.expl=e.expl.filter(x=>x.t<20);
+   if(e.bigSent&&!e.stars.length&&!e.expl.length&&(!e.regs.length||e.t>260))e.dead=true;
   },draw(g,e){
-   g.save();
+   const ims=images.nbAsStormStar2;
    for(const s of e.stars){
-    const k=e.t-s.delay;
-    if(k>=0&&k<12&&images.nbAsStormStar){const q=k/12,y=s.y-220*(1-q);dse(g,images.nbAsStormStar,s.x,y,.45,.45,e.t*10,1,63,60)}
-    for(const b of s.bits)if(b.al>0&&images.nbAsRegStar){g.globalAlpha=b.al;dse(g,images.nbAsRegStar,b.x,b.y,1,1,e.t*15,b.al,11,11)}
-    g.globalAlpha=1;
+    const sc=s.big?2:1,h=s.siner*12;
+    // the two afterimages (frame 1), then the star itself
+    if(s.trail[4])dse(g,asBlend(fr2(ims,1),h,100,244),s.trail[4].x,s.trail[4].y,sc,sc,s.ang,.35,63,60);
+    if(s.trail[2])dse(g,asBlend(fr2(ims,1),h,100,244),s.trail[2].x,s.trail[2].y,sc,sc,s.ang,.5,63,60);
+    dse(g,asBlend(fr2(ims,0),h,100,244),s.x,s.y,sc,sc,s.ang,1,63,60);
    }
-   g.restore();
+   for(const x of e.expl)asExplDraw(g,x);
+   asRegDraw(g,e.regs);
+  }};
+  S.fx.push(fx);return fx;
+ }
+ // SHOCKER BREAKER, as obj_rainbowbolt_realgen throws it: a blinking rainbow target
+ // (spr_rainbowtarget) on each foe, and 20 frames later a rainbow bolt from the top of the
+ // screen through it, shaking, white-hot while it's fresh, then thinning out. Then the giant
+ // bolts (target 3x, bolt 4x wide). sfx_a_lithit / lithit2 at the game's pitches.
+ function partyFxShockBreak(p){
+  const al=alive(),fx={t:0,targets:[],bolts:[],hit:0,step(e){
+   e.t++;
+   const aim=(giga,delay)=>{for(const m of al)if(m.alive)e.targets.push({m,x:m.x+m.w/2,y:m.y+m.h/2,giga,t:-delay,frame:0})};
+   if(e.t===1)aim(false,0);
+   if(e.t===30)aim(true,0);
+   for(const tg of e.targets){
+    tg.t++;tg.frame+=.25;
+    if(tg.t===20){
+     tg.dead=true;
+     e.bolts.push({x:tg.x,y:-10,giga:tg.giga,ss:tg.giga?-2:0,alpha:1,xs:tg.giga?4:2,ac:rnd(255),add:0,frame:Math.random()<.5?0:1,sx:tg.x,sy:-10});
+     if(tg.giga){
+      // obj_rainbowbolt_realgen event_user(1): the giant hits, each its own pitch
+      const pit=[.75,.65,.9][Math.min(2,e.hit)];play(e.hit%2?'asLithit2':'asLithit',pit);e.hit++;
+      S.shake={h:8,v:8,speed:2,t:0};
+      if(tg.m.alive)partyHit(tg.m,asDmg(p,6,4));
+     }else{
+      play(e.hit%2?'asLithit2':'asLithit',.6);e.hit++;
+      S.shake={h:3,v:3,speed:2,t:0};
+      if(tg.m.alive)partyHit(tg.m,asDmg(p,4,3));
+     }
+    }
+   }
+   e.targets=e.targets.filter(tg=>!tg.dead);
+   for(const b of e.bolts){
+    const j=b.giga?12:6;b.x=b.sx+rnd(j)-rnd(j);b.y=b.sy+rnd(j)-rnd(j);
+    if(b.giga)b.ss-=.5;
+    b.ss++;
+    if(b.ss>2){b.alpha-=.1;if(b.alpha<.5)b.xs-=.2;if(b.alpha<.1||b.xs<=0)b.dead=true}
+    b.add+=10;
+   }
+   e.bolts=e.bolts.filter(b=>!b.dead);
+   if(e.t>40&&!e.targets.length&&!e.bolts.length)e.dead=true;
+  },draw(g,e){
+   for(const tg of e.targets){const im=fr2(images.nbAsTarget,tg.frame),s=tg.giga?3:2;dse(g,im,tg.x,tg.y,s,s,0,1,10,10)}
+   for(const b of e.bolts){
+    const im=fr2(images.nbAsBolt,b.frame);if(!im)continue;
+    dse(g,asBlend(im,b.ac+b.add,210,255),b.x,b.y,b.xs,2,0,b.alpha,16,0);
+    // draw_rectangle(bbox) in white while the bolt is fresh
+    if(b.alpha>.8){g.save();g.fillStyle='#ffffff';g.fillRect(b.x-8*b.xs,b.y,16*b.xs,400);g.restore()}
+   }
+  }};
+  S.fx.push(fx);return fx;
+ }
+ // STAR SHATTER: phase one's finale turned on one foe. The big star comes down over it, and
+ // twenty small stars appear in a ring and spiral in, one after another, 5 damage each.
+ function partyFxStarShatter(p,m){
+  const cx=m.x+m.w/2,cy=m.y+m.h/2,special=!!(m.def.hurt&&m.custom?.def==null)||!!m.def.onHitCalc;
+  const fx={t:0,acc:0,big:{x:cx,y:Math.max(70,cy-110),ang:0,alpha:0,siner:0},stars:[],bursts:[],expl:[],hits:0,step(e){
+   e.t++;
+   const B=e.big;B.siner++;B.ang+=2;if(e.t<15)B.alpha=Math.min(1,B.alpha+.08);
+   if(e.t===1)play('asStar',.4);
+   // the ring: one star every 2 frames, each 18 degrees round
+   if(e.t>=12&&e.t<12+40&&(e.t-12)%2===0){
+    const i=(e.t-12)/2,a=i*18;
+    e.stars.push({a,r:230,v:2,ang:rnd(360),alpha:0});
+    if(i%4===0)play('asStar',1+rnd(.2)-rnd(.3));
+   }
+   for(const s of e.stars){
+    s.alpha=Math.min(1,s.alpha+.15);s.ang+=4;s.a+=3;s.v+=.35;s.r-=s.v;
+    if(s.r<=6&&!s.hit){
+     s.hit=true;e.hits++;
+     e.bursts.push({x:cx+rnd(16)-8,y:cy+rnd(16)-8,size:3,ang:rnd(360),aspeed:60,alpha:1});
+     play('asStar',1.3+rnd(.3));
+     if(m.alive){
+      if(special)e.acc+=5;
+      else{m.hp=Math.max(0,m.hp-5);spawnDmgWriter(m,5);const w=S.dmgw[S.dmgw.length-1];if(w){w.x+=rnd(48)-24;w.y-=rnd(24)}}
+     }
+    }
+   }
+   e.stars=e.stars.filter(s=>!s.hit);
+   // obj_starburst_x at each hit
+   for(const b of e.bursts){b.size-=.1;if(b.size>1.5)b.alpha-=.05;b.ang+=b.aspeed;b.aspeed-=3}
+   e.bursts=e.bursts.filter(b=>b.alpha>0&&b.size>=.3);
+   // all twenty in: the big star drops onto it and bursts
+   if(e.hits>=20&&!e.fin){
+    e.fin=true;play('asExplosion',1.1);S.shake={h:7,v:7,speed:2,t:0};
+    e.expl.push({x:cx,y:cy,frame:1,h:B.siner*12,white:true,alpha:1,sc:2,ang:B.ang,big:true,t:0});B.alpha=0;
+    if(m.alive){
+     if(special){if(e.acc)partyHit(m,e.acc)}
+     // the flinch that ends the hit (the HP is already down): no number, then death if it's at 0
+     else if(m.hurtanim!==3){m.partyHit=true;m.takedamage=0;m.hitIce=false;m.hurt=true;m.shudder=m.def.shudder?.[0]??16;m.shakeT=0;snd('damage');m.hurtanim=3}
+    }
+   }
+   if(e.fin){const x=e.expl[0];if(x){x.t++;x.alpha-=.05;x.sc+=.2;if(x.t>=20)e.expl=[]}}
+   if(e.fin&&!e.expl.length&&!e.bursts.length)e.dead=true;
+  },draw(g,e){
+   const B=e.big,ims=images.nbAsStormStar2;
+   if(B.alpha>0)dse(g,asBlend(fr2(ims,0),B.siner*12,100,244),B.x,B.y,1.5,1.5,B.ang,B.alpha,63,60);
+   for(const s of e.stars){const a=s.a*Math.PI/180;dse(g,images.nbAsRegStar,cx+Math.cos(a)*s.r,cy-Math.sin(a)*s.r,1,1,s.ang,s.alpha,11,11)}
+   for(const b of e.bursts)dse(g,images.nbAsBurstX,b.x,b.y,b.size,b.size,b.ang,b.alpha,5,5);
+   for(const x of e.expl)asExplDraw(g,x);
   }};
   S.fx.push(fx);return fx;
  }
@@ -12700,26 +12880,6 @@ const NB=(()=>{
     const a=k<4?k/4:Math.max(0,1-(k-4)/10);
     g.save();g.globalAlpha=a;g.translate(x,y);g.scale(flip*.75,.75);g.rotate((flip>0?-20:20)*Math.PI/180);g.imageSmoothingEnabled=false;
     g.drawImage(asTint(im,asHue(e.t)),-79,-84);g.restore();
-   }
-  }};
-  S.fx.push(fx);return fx;
- }
- // SHOCKER BREAKER: a rainbow bolt from the top of the screen onto each foe, twice
- function partyFxShockBreak(p){
-  const al=alive(),fx={t:0,step(e){
-   e.t++;
-   if(e.t===4||e.t===20){snd('shock');S.shake={h:3,v:3,speed:2,t:0};for(const m of al)if(m.alive)partyHit(m,asDmg(p,7,4))}
-   if(e.t>=40)e.dead=true;
-  },draw(g,e){
-   const ims=images.nbAsBolt;if(!Array.isArray(ims)||!ims[0])return;
-   for(const t0 of [4,20]){
-    const k=e.t-t0;if(k<-3||k>10)continue;
-    const a=k<0?.5:Math.max(0,1-k/10);
-    for(const m of al){
-     const x=m.x+m.w/2,yb=m.y+m.h/2,im=ims[(e.t>>1)%2];
-     g.save();g.globalAlpha=a;g.imageSmoothingEnabled=false;g.drawImage(asTint(im,asHue(e.t+x)),x-16*1.5,0,32*1.5,yb);g.restore();
-    }
-    if(k>=0&&k<3){g.save();g.globalAlpha=.35*(1-k/3);g.fillStyle='#ffffff';g.fillRect(0,0,640,480);g.restore()}
    }
   }};
   S.fx.push(fx);return fx;
@@ -29488,7 +29648,8 @@ function memoryheadCard(){
 })();
 const NB_ASSETS={
  // Asriel's spells
- nbAsStormStar:RAW+'sprites/images/spr_stormstar_0.png',nbAsRegStar:RAW+'sprites/images/spr_regstar_0.png',
+ nbAsStormStar:RAW+'sprites/images/spr_stormstar_0.png',nbAsStormStar2:[0,1].map(i=>RAW+`sprites/images/spr_stormstar_${i}.png`),
+ nbAsTarget:[0,1].map(i=>RAW+`sprites/images/spr_rainbowtarget_${i}.png`),nbAsBurstX:RAW+'sprites/images/spr_starburst_x_0.png',nbAsRegStar:RAW+'sprites/images/spr_regstar_0.png',
  nbAsBolt:[0,1].map(i=>RAW+`sprites/images/spr_rainbowbolt_${i}.png`),nbAsSmear:RAW+'sprites/images/spr_asriel_swordsmear_0.png',
  nbAsGoner:RAW+'sprites/images/spr_hypergoner_0.png',
  // Memoryhead
