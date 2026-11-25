@@ -1107,7 +1107,7 @@ const TUTORIAL_STEPS=[
  {view:'title',highlight:'creator',text:"some real attacks use more than one graphic. PATTERN has three ATTACK SPRITE slots per layer, so a hand sweep can keep its hand and fire separate instead of repainting everything with one image."},
  {view:'title',highlight:'creator',text:"ACTS builds that monster's pacifist route. you can require several ACT conditions before MERCY turns yellow."},
  {view:'title',highlight:'creator',text:"DIALOGUE lets each monster react differently to each player role. put a | between lines when you want a new speech bubble."},
- {view:'enemies',highlight:'sandbox',text:"PARTY in the CUSTOM HUB: lead as chara or kris and bring susie and noelle along, deltarune style. TP, spells, the works."},
+ {view:'enemies',highlight:'sandbox',text:"PARTY in the CUSTOM HUB: lead as chara or kris and bring susie, noelle and ralsei along, deltarune style. TP, spells, the works."},
  {view:'title',highlight:'history',text:"RECORDS keeps your KILLS and SPARES. useful if you're the kind of person who likes receipts for violence."},
  {view:'settings',highlight:'tutorial',text:"CONFIG has the frame rate and this TUTORIAL button, in case you close this and immediately forget every word i said. statistically, good feature."},
  {view:'title',highlight:'online',text:"ONLINE lets up to five of you take on the same fight. host a room, share the code, take turns in the menus and dodge together. nobody gets left behind. well. unless they die."},
@@ -1364,7 +1364,9 @@ const SHOP_WEAPON_ENTRIES=[
  {id:'floweryscarf',price:1,partyOnly:true,desc:'+70 AT/DF/MAGIC // RALSEI // THE BEST'},
  {id:'brokenscarf',price:10,partyOnly:true,desc:'0 STATS // RALSEI // CH5'},
  {id:'gildedrose',price:1111,partyOnly:true,desc:'+16 AT // +2 MAGIC // NOELLE // UNUSED CH5'},
- {id:'mistlewp',price:1111,partyOnly:true,desc:'+6 AT // +2 MAGIC // RALSEI // CH5'}
+ {id:'mistlewp',price:1111,partyOnly:true,desc:'+6 AT // +2 MAGIC // RALSEI // CH5'},
+ {id:'ragger',price:180,partyOnly:true,desc:'+2 AT // +1 MAGIC // RALSEI // PARTY GEAR'},
+ {id:'daintyscarf',price:300,partyOnly:true,desc:'+3 MAGIC // RALSEI // PARTY GEAR'}
 ];
 // Complete UNDERTALE armor roster. Prices for normally-found pickup armor are
 // adapted to this game's all-in-one shop; actual armor stats/effects stay source-accurate.
@@ -1383,21 +1385,21 @@ const SHOP_ARMOR_ENTRIES=[
  // sandbox PARTY loadout editor rather than replacing Undertale's global armor.
  {id:'ambercard',label:'Amber Card',price:100,def:1,atk:0,magic:0,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,desc:'+1 DF // DELTARUNE'},
  {id:'dicebrace',label:'Dice Brace',price:125,def:2,atk:0,magic:0,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,desc:'+2 DF // DELTARUNE'},
- {id:'whiteribbon',label:'White Ribbon',price:100,def:2,atk:0,magic:0,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,roles:['classic','kris','noelle','toriel','papyrus'],desc:'+2 DF // Susie will not equip it'},
+ {id:'whiteribbon',label:'White Ribbon',price:100,def:2,atk:0,magic:0,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,roles:['classic','kris','noelle','toriel','papyrus','ralsei'],desc:'+2 DF // Susie will not equip it'},
  {id:'ironshackle',label:'Iron Shackle',price:150,def:2,atk:1,magic:0,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,desc:'+2 DF // +1 AT'},
  {id:'jevilstail',label:'Jevilstail',price:1000,def:2,atk:2,magic:2,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,desc:'+2 AT // +2 DF // +2 MAGIC'},
  {id:'shadowmantle',label:'Shadow Mantle',price:1500,def:5,atk:0,magic:0,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,roles:['kris','susie'],darkStarReduce:.66,desc:'+5 DF // Dark/Star protection'},
- {id:'princessrbn',label:'PrincessRBN',price:900,def:4,atk:2,magic:0,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,roles:['classic','kris','noelle','toriel','papyrus'],desc:'+4 DF // +2 AT'},
+ {id:'princessrbn',label:'PrincessRBN',price:900,def:4,atk:2,magic:0,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,roles:['classic','kris','noelle','toriel','papyrus','ralsei'],desc:'+4 DF // +2 AT'},
  // DELTARUNE Chapter 5 armor additions + their source abilities.
- {id:'monarchrbn',label:'MonarchRBN',price:600,def:6,atk:0,magic:2,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,roles:['kris','noelle'],healOutMul:1.125,desc:'+6 DF // +2 MAGIC // outgoing healing +12.5%'},
- {id:'truetie',label:'TrueTie',price:900,def:5,atk:1,magic:0,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,roles:['kris','susie','noelle'],catPuppetReduce:.20,desc:'+5 DF // +1 AT // Puppet/Cat damage -20%'},
- {id:'dogwidow',label:'DogWidow',price:1500,def:6,atk:0,magic:0,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,roles:['kris','susie','noelle'],moneyMul:.10,desc:'+6 DF // battle money -90%'},
- {id:'redribbon',label:'RedRibbon',price:550,def:4,atk:0,magic:1,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,roles:['kris','noelle'],desc:'+4 DF // +1 MAGIC'},
- {id:'netskiehat',label:'NetskieHat',price:700,def:6,atk:0,magic:0,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,roles:['kris','susie','noelle'],desc:'+6 DF'},
+ {id:'monarchrbn',label:'MonarchRBN',price:600,def:6,atk:0,magic:2,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,roles:['kris','noelle','ralsei'],healOutMul:1.125,desc:'+6 DF // +2 MAGIC // outgoing healing +12.5%'},
+ {id:'truetie',label:'TrueTie',price:900,def:5,atk:1,magic:0,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,roles:['kris','susie','noelle','ralsei'],catPuppetReduce:.20,desc:'+5 DF // +1 AT // Puppet/Cat damage -20%'},
+ {id:'dogwidow',label:'DogWidow',price:1500,def:6,atk:0,magic:0,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,roles:['kris','susie','noelle','ralsei'],moneyMul:.10,desc:'+6 DF // battle money -90%'},
+ {id:'redribbon',label:'RedRibbon',price:550,def:4,atk:0,magic:1,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,roles:['kris','noelle','ralsei'],desc:'+4 DF // +1 MAGIC'},
+ {id:'netskiehat',label:'NetskieHat',price:700,def:6,atk:0,magic:0,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,roles:['kris','susie','noelle','ralsei'],desc:'+6 DF'},
  {id:'sethspecs',label:'SethSpecs',price:900,def:4,atk:0,magic:6,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,roles:['kris','susie'],invTimeMul:1.20,desc:'+4 DF // +6 MAGIC // invincibility time +20%'},
- {id:'yellowhat',label:'YellowHat',price:1200,def:4,atk:4,magic:4,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,roles:['kris','susie','noelle'],spellPowerMul:1.20,desc:'+4 AT/DF/MAGIC // spells +20%'},
- {id:'ogloves',label:'O.Glove',price:1100,def:8,atk:4,magic:0,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,roles:['susie','noelle'],scytheCostMul:.50,desc:'+8 DF // +4 AT // Scythemare TP cost halved'},
- {id:'greenapron',label:'GreenApron',price:1000,def:7,atk:0,magic:0,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,roles:['kris','susie','noelle'],defendHealPct:.16,desc:'+7 DF // DEFEND heals 16% max HP'}
+ {id:'yellowhat',label:'YellowHat',price:1200,def:4,atk:4,magic:4,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,roles:['kris','susie','noelle','ralsei'],spellPowerMul:1.20,desc:'+4 AT/DF/MAGIC // spells +20%'},
+ {id:'ogloves',label:'O.Glove',price:1100,def:8,atk:4,magic:0,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,roles:['susie','noelle','ralsei'],scytheCostMul:.50,desc:'+8 DF // +4 AT // Scythemare TP cost halved'},
+ {id:'greenapron',label:'GreenApron',price:1000,def:7,atk:0,magic:0,invMs:0,regenEvery:0,lvCap:20,partyOnly:true,roles:['kris','susie','noelle','ralsei'],defendHealPct:.16,desc:'+7 DF // DEFEND heals 16% max HP'}
 ];
 function emptyProgression(){return {exp:0,gold:0,itemStock:{monster_candy:1,spider_donut:1},weapons:{stick:true},equippedWeapon:'stick',armors:{bandage:true},equippedArmor:'bandage'}}
 function loadProgression(){
@@ -3042,7 +3044,9 @@ const WEAPON_OPTIONS=[
  {id:'floweryscarf',label:'FloweryScarf',atk:70,def:70,magic:70,partyOnly:true,roles:['ralsei'],ability:'TheBest'},
  {id:'brokenscarf',label:'BrokenScarf',atk:0,def:0,magic:0,partyOnly:true,roles:['ralsei']},
  {id:'gildedrose',label:'GildedRose',atk:16,def:0,magic:2,partyOnly:true,roles:['noelle'],unused:true},
- {id:'mistlewp',label:'MistleWP',atk:6,def:0,magic:2,partyOnly:true,roles:['ralsei']}
+ {id:'mistlewp',label:'MistleWP',atk:6,def:0,magic:2,partyOnly:true,roles:['ralsei']},
+ {id:'ragger',label:'Ragger',atk:2,def:0,magic:1,partyOnly:true,roles:['ralsei']},
+ {id:'daintyscarf',label:'DaintyScarf',atk:0,def:0,magic:3,partyOnly:true,roles:['ralsei']}
 ];
 
 const ITEM_OPTIONS=[
@@ -3098,9 +3102,9 @@ const ITEM_OPTIONS=[
  {id:'last_dream',name:'Last Dream',heal:17,lastDream:true}
 ];
 
-const SANDBOX_ROLE_IDS=['classic','kris','susie','noelle','flowey'];
+const SANDBOX_ROLE_IDS=['classic','kris','susie','noelle','flowey','ralsei'];
 // Anyone can lead (or go solo); Susie and Noelle can also join the party. Flowey only leads.
-const LEADER_ROLE_IDS=['classic','kris','susie','noelle','flowey'],MEMBER_ROLE_IDS=['susie','noelle'];
+const LEADER_ROLE_IDS=['classic','kris','susie','noelle','flowey'],MEMBER_ROLE_IDS=['susie','noelle','ralsei'];
 const SANDBOX_PARTY_MAX=3;
 function normalizeSandboxPartySlots(raw,fallbackRole='classic'){
  const src=Array.isArray(raw)?raw.slice(0,SANDBOX_PARTY_MAX):[];
@@ -3125,7 +3129,7 @@ function roleCanEquipPartyWeapon(row,role){return !row?.roles||row.roles.include
 function partyWeaponOptions(role){
  const r=normalizePartyRoleForLoadout(role);
  const base=WEAPON_OPTIONS[0];
- if(!['kris','susie','noelle'].includes(r)){
+ if(!['kris','susie','noelle','ralsei'].includes(r)){
    return WEAPON_OPTIONS.filter(w=>!w.partyOnly&&(w.id==='stick'||ownsVanillaWeapon(w.id)));
  }
  return [base,...WEAPON_OPTIONS.filter(w=>w.partyOnly&&roleCanEquipPartyWeapon(w,r)&&ownsShopWeapon(w.id))];
@@ -3273,7 +3277,8 @@ const PLAYER_ROLES=[
  {id:'kris',label:'KRIS',move:'X-SLASH / ACT',soul:'RED HUMAN SOUL'},
  {id:'susie',label:'SUSIE',move:'FIGHT / SPELL / S-ACTION',soul:'PURPLE HUMAN SOUL'},
  {id:'noelle',label:'NOELLE',move:'FIGHT / SPELL / N-ACTION',soul:'MALICE MONSTER SOUL'},
- {id:'flowey',label:'FLOWEY',move:'VINES / SAVE / LOAD',soul:'NO SOUL // JUST DETERMINATION'}
+ {id:'flowey',label:'FLOWEY',move:'VINES / SAVE / LOAD',soul:'NO SOUL // JUST DETERMINATION'},
+ {id:'ralsei',label:'RALSEI',move:'FIGHT / SPELL / R-ACTION',soul:'NO SOUL // DARKNER PRINCE'}
 ];
 function normalizePlayerRole(v){return PLAYER_ROLES.some(r=>r.id===v)?v:'classic'}
 function sandboxPartySlots(){
@@ -7232,6 +7237,7 @@ function drawCustomHubSoulIcon(role,cx,cy,size=42){
  if(images.monsterSoul){
    ctx.save();ctx.imageSmoothingEnabled=false;
    if(role==='noelle')ctx.filter='sepia(1) saturate(.7) hue-rotate(330deg) brightness(.72)';
+   if(role==='ralsei')ctx.filter='sepia(1) saturate(4) hue-rotate(60deg) brightness(.9)';
    ctx.drawImage(images.monsterSoul,Math.round(cx-size/2),Math.round(cy-size/2),size,size);
    ctx.restore();return;
  }
@@ -10526,7 +10532,7 @@ const NB=(()=>{
  // room_battle button instances (obj_fightbt/talkbt/itembt/sparebt).
  const BUTTONS=[{x:32,img:'fight'},{x:185,img:'act'},{x:345,img:'item'},{x:500,img:'mercy'}];
  // g/c/m/n: DELTATRAVELER's grey (can't afford), TIRED blue, S-Action pink, N-Action yellow.
- const TEXT_COLORS={R:'#ff0000',G:'#00ff00',W:'#ffffff',Y:'#ffff00',X:'#000000',B:'#0000ff',O:'#ff9f40',L:'#14a9ff',P:'#ff00ff',p:'#ffbbd4',g:'#888888',c:'#00a2e8',m:'#ff69ff',n:'#ffff69'};
+ const TEXT_COLORS={R:'#ff0000',G:'#00ff00',W:'#ffffff',Y:'#ffff00',X:'#000000',B:'#0000ff',O:'#ff9f40',L:'#14a9ff',P:'#ff00ff',p:'#ffbbd4',g:'#888888',c:'#00a2e8',m:'#ff69ff',n:'#ffff69',r:'#69ff69'};
  const defs=new Map();
  let S=null;
 
@@ -11722,6 +11728,12 @@ const NB=(()=>{
    {id:'healprayer',name:'HealPrayer',target:'ally',cost:32,desc:'Uses LIGHT to heal'},
    {id:'iceshock',name:'Ice Shock',target:'enemy',cost:24,desc:'Deals ICE Damage'}
   ],
+  ralsei:[
+   {id:'raction',name:'R-Action',col:'r',target:'enemy',cost:0},
+   // BlueShoes (PACIFY 0 TP): free for whoever is wearing them
+   {id:'pacify',name:'Pacify',target:'enemy',get cost(){const q=S&&S.party?S.party[S.pturn]:null;return q&&q.pacifyFree?0:16},desc:'SPARE a TIRED enemy'},
+   {id:'healprayer',name:'HealPrayer',target:'ally',cost:32,desc:'Heal Ally'}
+  ],
   // Flowey: SAVE and LOAD (also O / P at any time in the fight), and a SOUL for 100%
   flowey:[
    {id:'fsave',name:'SAVE',col:'Y',target:'none',cost:0,desc:'Or press O anytime'},
@@ -11743,6 +11755,7 @@ const NB=(()=>{
   kris:{color:'#00ffff',light:'#80ffff',press:'#0000ff',head:'spr_headkris',pressIdx:0},
   susie:{color:'#ff00ff',light:'#ff80ff',press:'#800080',head:'spr_headsusie',pressIdx:1},
   noelle:{color:'#ffff00',light:'#ffff80',press:'#ffff00',head:'spr_headnoelle',pressIdx:3},
+  ralsei:{color:'#00ff00',light:'#80ff80',press:'#00c000',head:'spr_headralsei',pressIdx:2},
   flowey:{color:'#40d040',light:'#a0ffa0',press:'#00a000',head:null,icon:'floweyPlayer',pressIdx:-1}
  };
  function partySetup(opt){
@@ -11841,7 +11854,7 @@ const NB=(()=>{
  }
  function partyMagicText(p,c){
   const sp=PARTY_SPELLS[p.role]||[],rows=[];
-  const cell=s=>'\\'+(s.cost>S.tpCalc?'g':s.col||(s.id==='sleepmist'&&alive().some(partyTired)?'c':'W'))+'* '+s.name+'\\W';
+  const cell=s=>'\\'+(s.cost>S.tpCalc?'g':s.col||((s.id==='sleepmist'||s.id==='pacify')&&alive().some(partyTired)?'c':'W'))+'* '+s.name+'\\W';
   for(let r=0;r<2;r++){const L=sp[r*2],R=sp[r*2+1];if(!L)break;rows.push('   '+cell(L)+(R?' '.repeat(Math.max(2,14-L.name.length))+cell(R):''))}
   return rows.join('&'); // the description line is drawn by the renderer ("%" ends a writer message)
  }
@@ -12098,66 +12111,66 @@ const NB=(()=>{
  // Party S-Action (Susie) / N-Action (Noelle): what each one does to each enemy, and how much
  // MERCY it gives. Bosses that can't be talked down get none.
  const PARTY_ASSIST={
-  dummy:{g:20,s:'* Susie punched the Dummy.\n* It seemed to appreciate\n  the attention.',n:'* Noelle introduced herself\n  to the Dummy.\n* It listened politely.'},
-  froggit:{g:20,s:'* Susie croaked at Froggit.\n* Froggit croaked back,\n  impressed.',n:'* Noelle complimented\n  Froggit\'s posture.\n* Froggit sat up straighter.'},
-  whimsun:{g:25,s:'* Susie tried to look nice.\n* Whimsun still cried, but\n  less.',n:'* Noelle told Whimsun it\'s\n  okay to be nervous.\n* Whimsun related to that.'},
-  moldsmal:{g:20,s:'* Susie wiggled at Moldsmal.\n* It wiggled harder.',n:'* Noelle hummed a little\n  tune.\n* Moldsmal jiggled along.'},
-  migosp:{g:20,s:'* Susie told Migosp to\n  dance like no one\'s looking.\n* It did.',n:'* Noelle asked Migosp to\n  be her friend.\n* It got shy.'},
-  vegetoid:{g:20,s:'* Susie ate a carrot off\n  Vegetoid.\n* It took it as a compliment.',n:'* Noelle said she eats her\n  vegetables.\n* Vegetoid beamed.'},
-  loox:{g:20,s:'* Susie stared Loox down.\n* Loox blinked first.',n:'* Noelle didn\'t pick on\n  Loox.\n* Loox noticed.'},
-  napstablook:{g:15,s:'* Susie told Napstablook\n  its music slaps.\n* It blushed... sort of.',n:'* Noelle cheered Napstablook\n  up.\n* It said "oh... thanks..."'},
-  snowdrake:{g:20,s:'* Susie laughed at\n  Snowdrake\'s joke.\n* Snowdrake felt seen.',n:'* Noelle told an ice pun.\n* Snowdrake was\n  deeply impressed.'},
-  icecap:{g:20,s:'* Susie said the hat was\n  sick.\n* Ice Cap got cocky.',n:'* Noelle didn\'t look at\n  the hat.\n* Ice Cap respected that.'},
-  doggo:{g:20,s:'* Susie stood perfectly\n  still.\n* Doggo couldn\'t see her.',n:'* Noelle petted Doggo.\n* Doggo is confused, but\n  happy.'},
-  lesserdog:{g:20,s:'* Susie petted Lesser Dog.\n* Its neck got longer.',n:'* Noelle petted Lesser Dog.\n* Its neck got even longer.'},
-  dogamy:{g:15,s:'* Susie rolled in the snow.\n* Dogamy sniffed her.\n* She smells like a dog.',n:'* Noelle rolled in the snow.\n* Dogamy decided she\'s\n  probably a dog.'},
-  dogaressa:{g:15,s:'* Susie rolled in the snow.\n* Dogaressa sniffed her.\n* She passes.',n:'* Noelle petted Dogaressa.\n* "A pup who pets?!"'},
-  greaterdog:{g:15,s:'* Susie played fetch with\n  Greater Dog.\n* It brought back a log.',n:'* Noelle called Greater\n  Dog over.\n* It sat on her.'},
-  jerry:{g:25,s:'* Susie told Jerry to leave.\n* Jerry did not leave.',n:'* Noelle tried to include\n  Jerry.\n* Everyone looked at her.'},
-  toriel:{g:10,s:'* Susie said she doesn\'t\n  need protecting.\n* Toriel looks worried.',n:'* Noelle told Toriel she\n  reminds her of her mom.\n* Toriel softened.'},
-  papyrus:{g:10,s:'* Susie flexed at Papyrus.\n* "NYEH! A WORTHY RIVAL!"',n:'* Noelle asked Papyrus for\n  a puzzle.\n* He is overjoyed.'},
-  aaron:{g:20,s:'* Susie out-flexed Aaron.\n* He winked. Respect.',n:'* Noelle complimented\n  Aaron\'s muscles.\n* He flexed out of view.'},
-  woshua:{g:20,s:'* Susie let Woshua clean\n  her.\n* It was overwhelmed.',n:'* Noelle was already clean.\n* Woshua was thrilled.'},
-  shyren:{g:20,s:'* Susie hummed along, badly.\n* Shyren sang louder to\n  help her out.',n:'* Noelle sang a carol with\n  Shyren.\n* Shyren found her voice.'},
-  moldbygg:{g:20,s:'* Susie hugged Moldbygg.\n* It squished.',n:'* Noelle snuggled\n  Moldbygg.\n* It jiggled happily.'},
-  temmie:{g:25,s:'* Susie paid for Temmie\'s\n  college.\n* hOI!!!',n:'* Noelle petted Temmie.\n* tem... tem is blushing!!'},
-  undyne:{g:8,s:'* Susie challenged Undyne to\n  an arm-wrestle.\n* Undyne wants that later.',n:'* Noelle said she won\'t\n  give up either.\n* Undyne grinned.'},
-  vulkin:{g:20,s:'* Susie said Vulkin\'s\n  lava is cool.\n* Vulkin got... hotter.',n:'* Noelle hugged Vulkin.\n* It was very warm.'},
-  tsunderplane:{g:20,s:'* Susie ignored\n  Tsunderplane.\n* "I-it\'s not like I care!"',n:'* Noelle got close to\n  Tsunderplane.\n* "B-baka!"'},
-  pyrope:{g:20,s:'* Susie heckled Pyrope\'s\n  rap.\n* It got more fired up.',n:'* Noelle cheered for\n  Pyrope\'s verse.\n* It\'s on fire.'},
-  muffet:{g:10,s:'* Susie said the donuts\n  were mid.\n* Muffet\'s smile twitched.',n:'* Noelle bought a spider\n  donut.\n* "Ahuhuhu~ a customer!"'},
-  finalfroggit:{g:15,s:'* Susie croaked mysteriously.\n* Final Froggit nodded\n  sagely.',n:'* Noelle sat quietly with\n  Final Froggit.\n* It approved of the calm.'},
-  whimsalot:{g:15,s:'* Susie told Whimsalot to\n  chill.\n* It loosened its armor.',n:'* Noelle said she gets\n  scared too.\n* Whimsalot relaxed.'},
-  astigmatism:{g:15,s:'* Susie glared right back.\n* Astigmatism blinked.',n:'* Noelle closed her eyes.\n* Astigmatism appreciated\n  the respect.'},
-  madjick:{g:15,s:'* Susie cast "punch."\n* Madjick was impressed by\n  the magic.',n:'* Noelle showed Madjick a\n  real spell.\n* Madjick took notes.'},
-  knightknight:{g:15,s:'* Susie yawned loudly.\n* Knight Knight yawned too.',n:'* Noelle sang a lullaby.\n* Knight Knight\'s eyes\n  grew heavy.'},
+  dummy:{r:'* Ralsei taught the Dummy\n  a lesson about kindness.\n* It took notes. Somehow.',g:20,s:'* Susie punched the Dummy.\n* It seemed to appreciate\n  the attention.',n:'* Noelle introduced herself\n  to the Dummy.\n* It listened politely.'},
+  froggit:{r:'* Ralsei asked Froggit\n  about its day.\n* Froggit ribbited happily.',g:20,s:'* Susie croaked at Froggit.\n* Froggit croaked back,\n  impressed.',n:'* Noelle complimented\n  Froggit\'s posture.\n* Froggit sat up straighter.'},
+  whimsun:{r:'* Ralsei told Whimsun it\'s\n  doing its best.\n* Whimsun sniffled, grateful.',g:25,s:'* Susie tried to look nice.\n* Whimsun still cried, but\n  less.',n:'* Noelle told Whimsun it\'s\n  okay to be nervous.\n* Whimsun related to that.'},
+  moldsmal:{r:'* Ralsei gently patted\n  Moldsmal.\n* His glove is sticky now.',g:20,s:'* Susie wiggled at Moldsmal.\n* It wiggled harder.',n:'* Noelle hummed a little\n  tune.\n* Moldsmal jiggled along.'},
+  migosp:{r:'* Ralsei invited Migosp to\n  a tea party.\n* It\'s thinking about it.',g:20,s:'* Susie told Migosp to\n  dance like no one\'s looking.\n* It did.',n:'* Noelle asked Migosp to\n  be her friend.\n* It got shy.'},
+  vegetoid:{r:'* Ralsei complimented\n  Vegetoid\'s leaves.\n* It photosynthesized proudly.',g:20,s:'* Susie ate a carrot off\n  Vegetoid.\n* It took it as a compliment.',n:'* Noelle said she eats her\n  vegetables.\n* Vegetoid beamed.'},
+  loox:{r:'* Ralsei made eye contact\n  with Loox. Politely.\n* Loox felt respected.',g:20,s:'* Susie stared Loox down.\n* Loox blinked first.',n:'* Noelle didn\'t pick on\n  Loox.\n* Loox noticed.'},
+  napstablook:{r:'* Ralsei offered\n  Napstablook a blanket.\n* "oh... it\'s soft..."',g:15,s:'* Susie told Napstablook\n  its music slaps.\n* It blushed... sort of.',n:'* Noelle cheered Napstablook\n  up.\n* It said "oh... thanks..."'},
+  snowdrake:{r:'* Ralsei laughed at\n  Snowdrake\'s joke.\n* He meant it, too.',g:20,s:'* Susie laughed at\n  Snowdrake\'s joke.\n* Snowdrake felt seen.',n:'* Noelle told an ice pun.\n* Snowdrake was\n  deeply impressed.'},
+  icecap:{r:'* Ralsei said Ice Cap\'s hat\n  is very fashionable.\n* Ice Cap is unbearable now.',g:20,s:'* Susie said the hat was\n  sick.\n* Ice Cap got cocky.',n:'* Noelle didn\'t look at\n  the hat.\n* Ice Cap respected that.'},
+  doggo:{r:'* Ralsei stayed very still\n  and smiled.\n* Doggo sensed only kindness.',g:20,s:'* Susie stood perfectly\n  still.\n* Doggo couldn\'t see her.',n:'* Noelle petted Doggo.\n* Doggo is confused, but\n  happy.'},
+  lesserdog:{r:'* Ralsei petted Lesser Dog.\n* Its neck reached the\n  ceiling.',g:20,s:'* Susie petted Lesser Dog.\n* Its neck got longer.',n:'* Noelle petted Lesser Dog.\n* Its neck got even longer.'},
+  dogamy:{r:'* Ralsei smells like cake.\n* Dogamy is very interested.',g:15,s:'* Susie rolled in the snow.\n* Dogamy sniffed her.\n* She smells like a dog.',n:'* Noelle rolled in the snow.\n* Dogamy decided she\'s\n  probably a dog.'},
+  dogaressa:{r:'* Ralsei smells like cake.\n* Dogaressa approves.',g:15,s:'* Susie rolled in the snow.\n* Dogaressa sniffed her.\n* She passes.',n:'* Noelle petted Dogaressa.\n* "A pup who pets?!"'},
+  greaterdog:{r:'* Ralsei threw a stick.\n* Greater Dog fetched\n  Ralsei instead.',g:15,s:'* Susie played fetch with\n  Greater Dog.\n* It brought back a log.',n:'* Noelle called Greater\n  Dog over.\n* It sat on her.'},
+  jerry:{r:'* Ralsei tried to be nice\n  to Jerry.\n* Even Ralsei is struggling.',g:25,s:'* Susie told Jerry to leave.\n* Jerry did not leave.',n:'* Noelle tried to include\n  Jerry.\n* Everyone looked at her.'},
+  toriel:{r:'* Ralsei asked Toriel for\n  a pie recipe.\n* She seems delighted.',g:10,s:'* Susie said she doesn\'t\n  need protecting.\n* Toriel looks worried.',n:'* Noelle told Toriel she\n  reminds her of her mom.\n* Toriel softened.'},
+  papyrus:{r:'* Ralsei told Papyrus his\n  puzzles are very clever.\n* "NYEH HEH! FINALLY!"',g:10,s:'* Susie flexed at Papyrus.\n* "NYEH! A WORTHY RIVAL!"',n:'* Noelle asked Papyrus for\n  a puzzle.\n* He is overjoyed.'},
+  aaron:{r:'* Ralsei tried to flex.\n* Aaron gave him an\n  encouraging wink.',g:20,s:'* Susie out-flexed Aaron.\n* He winked. Respect.',n:'* Noelle complimented\n  Aaron\'s muscles.\n* He flexed out of view.'},
+  woshua:{r:'* Ralsei offered to help\n  with the cleaning.\n* Woshua is moved.',g:20,s:'* Susie let Woshua clean\n  her.\n* It was overwhelmed.',n:'* Noelle was already clean.\n* Woshua was thrilled.'},
+  shyren:{r:'* Ralsei hummed a gentle\n  tune.\n* Shyren hummed along.',g:20,s:'* Susie hummed along, badly.\n* Shyren sang louder to\n  help her out.',n:'* Noelle sang a carol with\n  Shyren.\n* Shyren found her voice.'},
+  moldbygg:{r:'* Ralsei hugged Moldbygg.\n* It was squishier than\n  expected.',g:20,s:'* Susie hugged Moldbygg.\n* It squished.',n:'* Noelle snuggled\n  Moldbygg.\n* It jiggled happily.'},
+  temmie:{r:'* Ralsei gave Temmie a\n  tiny hat.\n* hOI!! tem LOVE hat!!',g:25,s:'* Susie paid for Temmie\'s\n  college.\n* hOI!!!',n:'* Noelle petted Temmie.\n* tem... tem is blushing!!'},
+  undyne:{r:'* Ralsei asked Undyne to\n  please calm down.\n* She laughed. Loudly.',g:8,s:'* Susie challenged Undyne to\n  an arm-wrestle.\n* Undyne wants that later.',n:'* Noelle said she won\'t\n  give up either.\n* Undyne grinned.'},
+  vulkin:{r:'* Ralsei told Vulkin it\'s\n  doing great.\n* Vulkin erupted with joy.',g:20,s:'* Susie said Vulkin\'s\n  lava is cool.\n* Vulkin got... hotter.',n:'* Noelle hugged Vulkin.\n* It was very warm.'},
+  tsunderplane:{r:'* Ralsei waved at\n  Tsunderplane.\n* "D-don\'t wave at me!"',g:20,s:'* Susie ignored\n  Tsunderplane.\n* "I-it\'s not like I care!"',n:'* Noelle got close to\n  Tsunderplane.\n* "B-baka!"'},
+  pyrope:{r:'* Ralsei clapped politely\n  for Pyrope\'s verse.\n* Pyrope burned brighter.',g:20,s:'* Susie heckled Pyrope\'s\n  rap.\n* It got more fired up.',n:'* Noelle cheered for\n  Pyrope\'s verse.\n* It\'s on fire.'},
+  muffet:{r:'* Ralsei bought a spider\n  donut. With manners.\n* "Ahuhuhu~ how polite~"',g:10,s:'* Susie said the donuts\n  were mid.\n* Muffet\'s smile twitched.',n:'* Noelle bought a spider\n  donut.\n* "Ahuhuhu~ a customer!"'},
+  finalfroggit:{r:'* Ralsei bowed to Final\n  Froggit.\n* It bowed back, wisely.',g:15,s:'* Susie croaked mysteriously.\n* Final Froggit nodded\n  sagely.',n:'* Noelle sat quietly with\n  Final Froggit.\n* It approved of the calm.'},
+  whimsalot:{r:'* Ralsei said it\'s okay\n  to rest sometimes.\n* Whimsalot lowered its spear.',g:15,s:'* Susie told Whimsalot to\n  chill.\n* It loosened its armor.',n:'* Noelle said she gets\n  scared too.\n* Whimsalot relaxed.'},
+  astigmatism:{r:'* Ralsei asked Astigmatism\n  not to pick on anyone.\n* It blinked, considering.',g:15,s:'* Susie glared right back.\n* Astigmatism blinked.',n:'* Noelle closed her eyes.\n* Astigmatism appreciated\n  the respect.'},
+  madjick:{r:'* Ralsei and Madjick\n  compared spellbooks.\n* Madjick is impressed.',g:15,s:'* Susie cast "punch."\n* Madjick was impressed by\n  the magic.',n:'* Noelle showed Madjick a\n  real spell.\n* Madjick took notes.'},
+  knightknight:{r:'* Ralsei sang a soft\n  lullaby.\n* Knight Knight swayed.',g:15,s:'* Susie yawned loudly.\n* Knight Knight yawned too.',n:'* Noelle sang a lullaby.\n* Knight Knight\'s eyes\n  grew heavy.'},
   custom:{g:20},
   // the ones that won't be talked down
-  maddummy:{g:0,s:'* Susie punched the dummy.\n* It\'s a ghost. It doesn\'t\n  care.',n:'* Noelle apologized to\n  Mad Dummy.\n* It got MADDER.'},
-  papyrus_nhb:{g:0,s:'* Susie tried to hold\n  Papyrus back.\n* He is NOT holding back.',n:'* Noelle asked Papyrus to\n  stop.\n* He can\'t hear her.'},
-  undyneex:{g:0,s:'* Susie dared Undyne to\n  hit harder.\n* She will.',n:'* Noelle begged Undyne to\n  stop.\n* She won\'t.'},
+  maddummy:{r:'* Ralsei tried to make\n  friends with the dummy.\n* It got MADDER.',g:0,s:'* Susie punched the dummy.\n* It\'s a ghost. It doesn\'t\n  care.',n:'* Noelle apologized to\n  Mad Dummy.\n* It got MADDER.'},
+  papyrus_nhb:{r:'* Ralsei asked Papyrus to\n  slow down.\n* He can\'t hear him.',g:0,s:'* Susie tried to hold\n  Papyrus back.\n* He is NOT holding back.',n:'* Noelle asked Papyrus to\n  stop.\n* He can\'t hear her.'},
+  undyneex:{r:'* Ralsei begged Undyne to\n  stop.\n* She keeps coming.',g:0,s:'* Susie dared Undyne to\n  hit harder.\n* She will.',n:'* Noelle begged Undyne to\n  stop.\n* She won\'t.'},
   mettatonneo:{g:0,s:'* Susie told NEO his wings\n  look dumb.\n* He\'s deeply offended.',n:'* Noelle stared at the\n  wings.\n* NEO struck a pose.'},
-  asgore:{g:0,s:'* Susie told Asgore to\n  quit it.\n* He doesn\'t answer.',n:'* Noelle tried to talk to\n  Asgore.\n* He can\'t look at her.'},
-  sans:{g:0,s:'* Susie swung at Sans.\n* He was already somewhere\n  else.',n:'* Noelle asked Sans to\n  stop.\n* "heh. nice try, kid."'},
-  sans5000:{g:0,s:'* Susie flexed at SANS\n  SUPER 5000.\n* It does not compute.',n:'* Noelle waved at SANS\n  SUPER 5000.\n* It waved back. Slowly.'},
-  madmewmew:{g:0,s:'* Susie flexed at Mad Mew\n  Mew.\n* "STOP BEING SO COOL!!!"',n:'* Noelle said the doll is\n  really cute.\n* "I KNOW, RIGHT!?"'},
-  roaringknight:{g:0,s:'* Susie told the Knight to\n  get lost.\n* It didn\'t move.',n:'* Noelle tried to talk to\n  the Knight.\n* It only stared.'},
-  glyde:{g:15,s:'* Susie told Glyde it\'s\n  not that cool.\n* Glyde tried harder.',n:'* Noelle said Glyde\'s\n  wings were pretty.\n* "OBVIOUSLY."'},
-  gyftrot:{g:20,s:'* Susie ripped the junk\n  off Gyftrot\'s antlers.\n* It looked relieved.',n:'* Noelle gave Gyftrot a\n  present.\n* It really needed one.'},
-  moldessa:{g:20,s:'* Susie flexed at Moldessa.\n* It wobbled, impressed.',n:'* Noelle did a little\n  wiggle.\n* Moldessa wiggled back.'},
-  parsnik:{g:20,s:'* Susie bit Parsnik\'s\n  vines.\n* It took that as a\n  compliment.',n:'* Noelle asked Parsnik how\n  it grows so tall.\n* It blushed green.'},
+  asgore:{r:'* Ralsei bowed to the king.\n* ASGORE can\'t bring\n  himself to look.',g:0,s:'* Susie told Asgore to\n  quit it.\n* He doesn\'t answer.',n:'* Noelle tried to talk to\n  Asgore.\n* He can\'t look at her.'},
+  sans:{r:'* Ralsei offered Sans some\n  cake.\n* "heh. maybe later, pal."',g:0,s:'* Susie swung at Sans.\n* He was already somewhere\n  else.',n:'* Noelle asked Sans to\n  stop.\n* "heh. nice try, kid."'},
+  sans5000:{r:'* Ralsei waved at SANS\n  SUPER 5000.\n* It printed a receipt.',g:0,s:'* Susie flexed at SANS\n  SUPER 5000.\n* It does not compute.',n:'* Noelle waved at SANS\n  SUPER 5000.\n* It waved back. Slowly.'},
+  madmewmew:{r:'* Ralsei said the doll\n  looks very nice.\n* "FINALLY, SOMEONE GETS IT!"',g:0,s:'* Susie flexed at Mad Mew\n  Mew.\n* "STOP BEING SO COOL!!!"',n:'* Noelle said the doll is\n  really cute.\n* "I KNOW, RIGHT!?"'},
+  roaringknight:{r:'* Ralsei tried to reason\n  with the Knight.\n* It only stared.',g:0,s:'* Susie told the Knight to\n  get lost.\n* It didn\'t move.',n:'* Noelle tried to talk to\n  the Knight.\n* It only stared.'},
+  glyde:{r:'* Ralsei said Glyde is\n  very... unique.\n* Glyde took it as praise.',g:15,s:'* Susie told Glyde it\'s\n  not that cool.\n* Glyde tried harder.',n:'* Noelle said Glyde\'s\n  wings were pretty.\n* "OBVIOUSLY."'},
+  gyftrot:{r:'* Ralsei gently took the\n  junk off Gyftrot\'s antlers.\n* It sighed with relief.',g:20,s:'* Susie ripped the junk\n  off Gyftrot\'s antlers.\n* It looked relieved.',n:'* Noelle gave Gyftrot a\n  present.\n* It really needed one.'},
+  moldessa:{r:'* Ralsei wiggled politely.\n* The Moldessas wiggled\n  back.',g:20,s:'* Susie flexed at Moldessa.\n* It wobbled, impressed.',n:'* Noelle did a little\n  wiggle.\n* Moldessa wiggled back.'},
+  parsnik:{r:'* Ralsei watered Parsnik.\n* It grew a little taller.',g:20,s:'* Susie bit Parsnik\'s\n  vines.\n* It took that as a\n  compliment.',n:'* Noelle asked Parsnik how\n  it grows so tall.\n* It blushed green.'},
   // the Royal Guards are beaten their own way (the armor, the confession), so no MERCY here
-  rg01:{g:0,s:'* Susie challenged 01 to a\n  push-up contest.\n* 01 is too focused to care.',n:'* Noelle asked 01 how long\n  they\'ve known 02.\n* 01 got flustered, but\n  stayed on guard.'},
-  rg02:{g:0,s:'* Susie told 02 the armor\n  looks hot.\n* 02 is sweating more.',n:'* Noelle said 02 seems\n  really nice.\n* 02 looked at 01. Still\n  on duty.'},
-  lemonbread:{g:10,s:'* Susie told Lemon Bread\n  it\'s pretty.\n* All its mouths smiled.',n:'* Noelle held Lemon\n  Bread\'s hand.\n* It squeezed back. Gently.'},
-  reaperbird:{g:10,s:'* Susie told , it looks\n  cool.\n* , flapped, confused.',n:'* Noelle asked , if it was\n  lonely.\n* It ribbited softly.'},
-  snowdrakemom:{g:10,s:'* Susie told a joke about\n  ice.\n* Something almost laughed.',n:'* Noelle told her an ice\n  pun.\n* "ha...ha..."'},
-  endogeny:{g:10,s:'* Susie threw a stick.\n* Too many legs went\n  after it.',n:'* Noelle petted the\n  Amalgamate.\n* It drips happily.'},
-  jayzee:{g:10,s:'* Susie threw the ball\n  back.\n* Jayzee liked that.',n:'* Noelle asked Jayzee\n  for coaching.\n* Jayzee is thrilled.'}
+  rg01:{r:'* Ralsei asked 01 if they\n  wanted some tea.\n* 01 stays on guard.',g:0,s:'* Susie challenged 01 to a\n  push-up contest.\n* 01 is too focused to care.',n:'* Noelle asked 01 how long\n  they\'ve known 02.\n* 01 got flustered, but\n  stayed on guard.'},
+  rg02:{r:'* Ralsei told 02 the armor\n  looks very heavy.\n* 02 is still on duty.',g:0,s:'* Susie told 02 the armor\n  looks hot.\n* 02 is sweating more.',n:'* Noelle said 02 seems\n  really nice.\n* 02 looked at 01. Still\n  on duty.'},
+  lemonbread:{r:'* Ralsei held out a hand.\n* Lemon Bread\'s mouths all\n  smiled at once.',g:10,s:'* Susie told Lemon Bread\n  it\'s pretty.\n* All its mouths smiled.',n:'* Noelle held Lemon\n  Bread\'s hand.\n* It squeezed back. Gently.'},
+  reaperbird:{r:'* Ralsei sang a song about\n  hope.\n* , tilted its head.',g:10,s:'* Susie told , it looks\n  cool.\n* , flapped, confused.',n:'* Noelle asked , if it was\n  lonely.\n* It ribbited softly.'},
+  snowdrakemom:{r:'* Ralsei told a gentle\n  snow pun.\n* "ha... ha..."',g:10,s:'* Susie told a joke about\n  ice.\n* Something almost laughed.',n:'* Noelle told her an ice\n  pun.\n* "ha...ha..."'},
+  endogeny:{r:'* Ralsei petted the\n  Amalgamate.\n* It\'s unclear which part.',g:10,s:'* Susie threw a stick.\n* Too many legs went\n  after it.',n:'* Noelle petted the\n  Amalgamate.\n* It drips happily.'},
+  jayzee:{r:'* Ralsei cheered Jayzee on.\n* Jayzee plays even\n  harder now.',g:10,s:'* Susie threw the ball\n  back.\n* Jayzee liked that.',n:'* Noelle asked Jayzee\n  for coaching.\n* Jayzee is thrilled.'}
  };
  function partyCast(a){
   const p=a.p,s=a.spell,id=s.id;
-  if(id==='saction'||id==='naction'){
+  if(id==='saction'||id==='naction'||id==='raction'){
    const m=a.m;
    // EnemyBase.PerformAssistAct: each enemy has its own S/N-Action (PARTY_ASSIST).
    if(!m.alive){partyWait(`* ${p.say} tried to ACT,\n  but ${m.name} was\n  already spared!`);return}
@@ -12165,7 +12178,7 @@ const NB=(()=>{
    const own=m.def.assist&&m.def.assist(m,id,p,api);
    if(own){if(own.gain)partyMercy(m,own.gain);partyWait(own.text);return}
    const A=PARTY_ASSIST[m.id]||{g:15},gain=A.g??15;
-   const text=(id==='saction'?A.s:A.n)||`* ${p.say} used ${id==='saction'?'S':'N'}-ACTION!\n* ${m.name} liked that!`;
+   const text=A[id[0]]||`* ${p.say} used ${id[0].toUpperCase()}-ACTION!\n* ${m.name} liked that!`;
    if(gain>0)partyMercy(m,gain);partyWait(text);
    return;
   }
@@ -12173,7 +12186,7 @@ const NB=(()=>{
    const t=a.target||p;
    // ULTIMATE HEAL: floor(Susie's MAGIC). HEAL PRAYER: maxHP/4 + floor(MAGIC/2) + ring MAGIC.
    const n=id==='ultimateheal'?Math.floor(p.magRaw):Math.floor(p.maxhp/4)+Math.floor(p.magRaw/2)+(p.iceMag||0);
-   const onto=t===p?'herself.':t.leader?'you.':t.say+'.';
+   const onto=t===p?(p.he?'himself.':'herself.'):t.leader?'you.':t.say+'.';
    const text=`* ${p.say} cast ${id==='ultimateheal'?'ULTIMATE HEAL':'HEAL PRAYER'}\n  onto ${onto}\n${partyRecovery(t,n)}`;
    partyHeal(t,n);dsnd('power','heal');partyFxHeal(t);
    partyWait(text);return;
@@ -12201,6 +12214,14 @@ const NB=(()=>{
    if(!m){partyWait(`* ${p.say} reached for a SOUL...\n* But nobody was there.`);return}
    const fx=partyFxSoulSnatch(p,m);
    partyWait(`* ${p.say} reached for\n  ${m.name}'s SOUL!`,()=>fx.dead);return;
+  }
+  // PACIFY: one TIRED enemy is spared (DELTARUNE's spell 2)
+  if(id==='pacify'){
+   if(!m){partyWait(`* ${p.say} cast PACIFY!`);return}
+   const t=partyTired(m);
+   dsnd('ghostappear');if(t)dsnd('spellpacify');partyFxMist(m,t);
+   if(t)spareMonster(m);
+   partyWait(`* ${p.say} cast PACIFY!`+(t?'':`\n* But ${m.name} wasn't\n  TIRED...`));return;
   }
   if(id==='rudebuster'){
    if(!m){partyWait(`* ${p.say} cast RUDE BUSTER!`);return}
@@ -24764,7 +24785,7 @@ if(c.lesson > 20) {
   pos:()=>({x:216,y:90}),
   bgFrame:-1, // the quiz set replaces obj_battlebg
   // party S/N-Action: good television, no MERCY
-  assist:(m,id)=>({text:id==='saction'?'* Susie tells Mettaton to get\n  her good side.\n* He approves of the attitude.':'* Noelle waves nervously at\n  the camera.\n* "Adorable television!"'}),
+  assist:(m,id)=>({text:id==='raction'?'* Ralsei bows politely to\n  the camera.\n* "Such manners!"':id==='saction'?'* Susie tells Mettaton to get\n  her good side.\n* He approves of the attitude.':'* Noelle waves nervously at\n  the camera.\n* "Adorable television!"'}),
   setup(m){Object.assign(m.v,{q:0,phase:-1,quiztimer:0,correct:-1,answer:-1,con:0,mettamt:0,shake:0,a4:-1,a5:-1,a6:-1,a7:-1,a9:-1,am7:-1,
    ah:'helper',ahFrame:0,ahSpeed:.08,nodes:[],confetti:[],jar:null,zoom:null,shock:null,bub:null,nnn:false,unfade:null,qtext:'',ans:[],
    body:{x:316,y:190,remx:316,vx:0,vy:0,grav:0,lefter:-1,a0:-1,a1:-1,pspeed:[0,0,0,0,0],ang:0,siner:0,sineron:1,shaker:0,arms:'arms2',spr:'body',frame:0,isp:0}})},
@@ -28369,6 +28390,7 @@ function reaperBirdCard(){
   assist(m,id,p,api){
    mk(api);
    if(id==='saction'){X.rate(3);return {text:'* Susie flexes for the crowd.\n* Mettaton calls it a stunning\n  cameo.'}}
+   if(id==='raction'){X.rate(2);return {text:'* Ralsei twirls his scarf\n  for the audience.\n* Mettaton calls it charming.'}}
    X.rate(1);return {text:'* Noelle waves at the camera.\n* The ratings tick up a little.'};
   },
   check:()=>'* METTATON EX - ATK 47 DEF 47&* His weak point is his&  heart-shaped core./',
@@ -29063,7 +29085,7 @@ function reaperBirdCard(){
    drawHud(g,m);
   },
   acts:['Check'],
-  assist:(m,id)=>({text:id==='saction'?'* Susie tells NEO his wings\n  look dumb.\n* NEO is deeply offended.':'* Noelle stares at the wings.\n* Mettaton NEO strikes a pose\n  just for her.'}),
+  assist:(m,id)=>({text:id==='raction'?'* Ralsei asks NEO to stop.\n* NEO strikes a pose\n  instead.':id==='saction'?'* Susie tells NEO his wings\n  look dumb.\n* NEO is deeply offended.':'* Noelle stares at the wings.\n* Mettaton NEO strikes a pose\n  just for her.'}),
   check(m,api){
    mk(api);
    const s=N.twistDone?(N.shield>0?`&* NEO SHIELD: ${Math.round(N.shield)}%`:'&* His SHIELD is down!'):'';
@@ -29483,6 +29505,12 @@ function nbBuildParty(){
    return;
   }
   // GameManager.GetMaxHP / GetATKRaw / GetDEFRaw / GetMagicRaw
+  if(role==='ralsei'){
+   const base=(LV-1)*2,maxhp=LV===20?120:Math.round(25+4.5*(LV-1)),magRaw=LV+2;
+   out.push({role,slot,hud:'RALSEI',list:'Ralsei',say:'Ralsei',he:true,maxhp,at:Math.round(base*2/3)+1+eqAtk,df:Math.floor(LV/5)+1+eqDef,
+    mag:magRaw+eqMag,magRaw,noWeapon:!w.partyOnly,iceMag:0,pacifyFree:w.ability==='Pacify0TP'});
+   return;
+  }
   const susie=role==='susie',base=(LV-1)*2;
   const maxhp=LV===20?(susie?150:100):Math.round(susie?30+5*(LV-1):20+4*(LV-1));
   const atRaw=susie?base+2+Math.floor(LV/4):Math.round(base*2/3);
