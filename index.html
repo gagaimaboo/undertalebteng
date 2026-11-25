@@ -12219,7 +12219,7 @@ const NB=(()=>{
   if(id==='pacify'){
    if(!m){partyWait(`* ${p.say} cast PACIFY!`);return}
    const t=partyTired(m);
-   dsnd('ghostappear');if(t)dsnd('spellpacify');partyFxMist(m,t);
+   partyFxPacify(m,t);
    if(t)spareMonster(m);
    partyWait(`* ${p.say} cast PACIFY!`+(t?'':`\n* But ${m.name} wasn't\n  TIRED...`));return;
   }
@@ -12596,6 +12596,31 @@ const NB=(()=>{
     if(G)G.draw(g,'spr_icespell_mist',0,px,py,3,2,0,al*.8);
     else{g.save();g.globalAlpha=Math.min(1,al*.5);g.fillStyle='#ffffff';g.beginPath();g.ellipse(px,py,60,30,0,0,7);g.fill();g.restore()}
    }
+  }});
+ }
+ function partyFxPacify(m,ok){
+  const x=m.x+m.w/2,y=m.y+m.h/2;
+  if(ok){
+   dsnd('pacify','select');
+   S.fx.push({timer:0,z:0,zs:[],step(e){
+    if(e.z<9&&--e.timer<=0){e.zs.push({x,y,dir:e.z*40,sp:12,a:1,s:1});e.timer=2;e.z++}
+    for(const z of e.zs){z.x+=Math.cos(z.dir*Math.PI/180)*z.sp;z.y-=Math.sin(z.dir*Math.PI/180)*z.sp;z.sp=Math.max(0,z.sp-1);z.a-=.05;z.s+=.05}
+    if(e.z>=9&&e.zs.every(z=>z.a<=0))e.dead=true;
+   },draw(g,e){
+    const G=drg();
+    for(const z of e.zs){if(z.a<=0)continue;
+     if(G)G.draw(g,'spr_spare_z',0,z.x,z.y,z.s,z.s,0,z.a);
+     else{g.save();g.globalAlpha=z.a;NB.drawText(g,'Z',z.x-8,z.y-8,'#ffffff');g.restore()}}
+   }});
+   return;
+  }
+  // the enemy as it stands now, washed blue, fading in and out over 24 frames
+  let c=null;
+  try{c=document.createElement('canvas');c.width=640;c.height=480;const q=c.getContext('2d');q.imageSmoothingEnabled=false;
+   m.def.draw(q,m,NB.api);q.globalCompositeOperation='source-atop';q.fillStyle='#0000ff';q.fillRect(0,0,640,480)}catch(_){c=null}
+  S.fx.push({t:0,step(e){if(++e.t>40)e.dead=true},draw(g,e){
+   const k=e.t<8?e.t/8:(e.t<16?1:Math.max(0,1-(e.t-16)/8));if(!c||k<=0)return;
+   g.save();g.globalAlpha=k*.6;g.drawImage(c,0,0);g.restore();
   }});
  }
  NB.partyFlake=(...a)=>partyFlake(...a);
