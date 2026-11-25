@@ -532,6 +532,7 @@ const IMG={
  // Official UNDERTALE Flowey assets. spr_flowey is his real overworld flower;
  // spr_gigavine is the thorny vine used by Flowey's powered-up form.
  floweyPlayer:RAW+'sprites/images/spr_flowey_0.png',
+ asrielPlayer:RAW+'sprites/images/spr_kidasriel_front_0.png',asrielFace:RAW+'sprites/images/spr_face_asriel0_0.png',
  friskIdle:[0,1,2,3].map(i=>RAW+`sprites/images/spr_maincharad_${i}.png`),
  floweyVine:RAW+'sprites/images/spr_gigavine_0.png',
  toriel:RAW+'sprites/images/spr_torielboss_0.png',
@@ -1109,7 +1110,7 @@ const TUTORIAL_STEPS=[
  {view:'title',highlight:'creator',text:"some real attacks use more than one graphic. PATTERN has three ATTACK SPRITE slots per layer, so a hand sweep can keep its hand and fire separate instead of repainting everything with one image."},
  {view:'title',highlight:'creator',text:"ACTS builds that monster's pacifist route. you can require several ACT conditions before MERCY turns yellow."},
  {view:'title',highlight:'creator',text:"DIALOGUE lets each monster react differently to each player role. put a | between lines when you want a new speech bubble."},
- {view:'enemies',highlight:'sandbox',text:"PARTY in the CUSTOM HUB: lead as chara or kris and bring susie, noelle and ralsei along, deltarune style. TP, spells, the works."},
+ {view:'enemies',highlight:'sandbox',text:"PARTY in the CUSTOM HUB: lead as chara or kris and bring susie, noelle, ralsei or asriel along, deltarune style. TP, spells, the works."},
  {view:'title',highlight:'history',text:"RECORDS keeps your KILLS and SPARES. useful if you're the kind of person who likes receipts for violence."},
  {view:'settings',highlight:'tutorial',text:"CONFIG has the frame rate and this TUTORIAL button, in case you close this and immediately forget every word i said. statistically, good feature."},
  {view:'title',highlight:'online',text:"ONLINE lets up to five of you take on the same fight. host a room, share the code, take turns in the menus and dodge together. nobody gets left behind. well. unless they die."},
@@ -3105,9 +3106,9 @@ const ITEM_OPTIONS=[
  {id:'last_dream',name:'Last Dream',heal:17,lastDream:true}
 ];
 
-const SANDBOX_ROLE_IDS=['classic','kris','susie','noelle','flowey','ralsei'];
+const SANDBOX_ROLE_IDS=['classic','kris','susie','noelle','flowey','ralsei','asriel'];
 // Anyone can lead (or go solo); Susie and Noelle can also join the party. Flowey only leads.
-const LEADER_ROLE_IDS=['classic','kris','susie','noelle','flowey'],MEMBER_ROLE_IDS=['susie','noelle','ralsei'];
+const LEADER_ROLE_IDS=['classic','kris','susie','noelle','flowey'],MEMBER_ROLE_IDS=['susie','noelle','ralsei','asriel'];
 const SANDBOX_PARTY_MAX=3;
 function normalizeSandboxPartySlots(raw,fallbackRole='classic'){
  const src=Array.isArray(raw)?raw.slice(0,SANDBOX_PARTY_MAX):[];
@@ -3281,7 +3282,8 @@ const PLAYER_ROLES=[
  {id:'susie',label:'SUSIE',move:'FIGHT / SPELL / S-ACTION',soul:'PURPLE HUMAN SOUL'},
  {id:'noelle',label:'NOELLE',move:'FIGHT / SPELL / N-ACTION',soul:'MALICE MONSTER SOUL'},
  {id:'flowey',label:'FLOWEY',move:'VINES / SAVE / LOAD',soul:'NO SOUL // JUST DETERMINATION'},
- {id:'ralsei',label:'RALSEI',move:'FIGHT / SPELL / R-ACTION',soul:'NO SOUL // DARKNER PRINCE'}
+ {id:'ralsei',label:'RALSEI',move:'FIGHT / SPELL / R-ACTION',soul:'NO SOUL // DARKNER PRINCE'},
+ {id:'asriel',label:'ASRIEL',move:'FIGHT / SPELL / HYPER GONER',soul:'BOSS MONSTER SOUL'}
 ];
 function normalizePlayerRole(v){return PLAYER_ROLES.some(r=>r.id===v)?v:'classic'}
 function sandboxPartySlots(){
@@ -7230,6 +7232,9 @@ function confirmCustomHubRow(){
  screen='enemies';enemySelectFocus=2;
 }
 function drawCustomHubSoulIcon(role,cx,cy,size=42){
+ if(role==='asriel'&&images.asrielPlayer){
+   const im=images.asrielPlayer,h=size*1.3,w=h*34/78;ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(im,Math.round(cx-w/2),Math.round(cy-h/2),Math.round(w),Math.round(h));ctx.restore();return;
+ }
  if(role==='flowey'&&images.floweyPlayer){
    ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(images.floweyPlayer,Math.round(cx-size/2),Math.round(cy-size/2),size,size);ctx.restore();return;
  }
@@ -10257,6 +10262,8 @@ async function boot(){
  IMG.aaronArmL.forEach((u,i)=>add(`Aaron left muscle frame ${i+1}`,async()=>{images.aaronArmL=images.aaronArmL||[];images.aaronArmL[i]=await needImage(u)}));
  IMG.aaronArmR.forEach((u,i)=>add(`Aaron right muscle frame ${i+1}`,async()=>{images.aaronArmR=images.aaronArmR||[];images.aaronArmR[i]=await needImage(u)}));
  add('Flowey official player sprite',async()=>images.floweyPlayer=await needImage(IMG.floweyPlayer));
+add('Asriel party sprite',async()=>images.asrielPlayer=await needImage(IMG.asrielPlayer));
+add('Asriel party face',async()=>images.asrielFace=await needImage(IMG.asrielFace));
  IMG.friskIdle.forEach((u,i)=>add(`Frisk frame ${i+1}`,async()=>{images.friskIdle=images.friskIdle||[];images.friskIdle[i]=await needImage(u)}));
  add('Flowey official thorn vine',async()=>images.floweyVine=await needImage(IMG.floweyVine));
  add('Toriel battle sprite',async()=>images.toriel=await needImage(IMG.toriel));
@@ -11733,6 +11740,13 @@ const NB=(()=>{
    {id:'healprayer',name:'HealPrayer',target:'ally',cost:32,desc:'Uses LIGHT to heal'},
    {id:'iceshock',name:'Ice Shock',target:'enemy',cost:24,desc:'Deals ICE Damage'}
   ],
+  // ASRIEL DREEMURR's own attacks, as spells
+  asriel:[
+   {id:'starblazing',name:'StarBlazing',target:'none',cost:40,desc:'Stars hit ALL foes'},
+   {id:'chaossaber',name:'ChaosSaber',target:'enemy',cost:50,desc:'Two slashes'},
+   {id:'shockbreak',name:'ShockBreak',target:'none',cost:64,desc:'Lightning, ALL foes'},
+   {id:'hypergoner',name:'HyperGoner',target:'none',cost:100,desc:'Swallow ALL foes'}
+  ],
   ralsei:[
    {id:'raction',name:'R-Action',col:'r',target:'enemy',cost:0},
    // BlueShoes (PACIFY 0 TP): free for whoever is wearing them
@@ -11761,6 +11775,7 @@ const NB=(()=>{
   susie:{color:'#ff00ff',light:'#ff80ff',press:'#800080',head:'spr_headsusie',pressIdx:1},
   noelle:{color:'#ffff00',light:'#ffff80',press:'#ffff00',head:'spr_headnoelle',pressIdx:3},
   ralsei:{color:'#00ff00',light:'#80ff80',press:'#00c000',head:'spr_headralsei',pressIdx:2},
+  asriel:{color:'#ffffff',light:'#c8c8ff',press:'#ffffff',head:null,icon:'asrielFace',pressIdx:-1},
   flowey:{color:'#40d040',light:'#a0ffa0',press:'#00a000',head:null,icon:'floweyPlayer',pressIdx:-1}
  };
  function partySetup(opt){
@@ -12221,6 +12236,12 @@ const NB=(()=>{
    const fx=partyFxSoulSnatch(p,m);
    partyWait(`* ${p.say} reached for\n  ${m.name}'s SOUL!`,()=>fx.dead);return;
   }
+  if(id==='starblazing'||id==='shockbreak'||id==='hypergoner'){
+   const name={starblazing:'STAR BLAZING',shockbreak:'SHOCKER BREAKER',hypergoner:'HYPER GONER'}[id];
+   if(!alive().length){partyWait(`* ${p.say} cast ${name}!`);return}
+   const fx=id==='starblazing'?partyFxStarBlazing(p):id==='shockbreak'?partyFxShockBreak(p):partyFxHyperGoner(p);
+   partyWait(`* ${p.say} cast ${name}!`,()=>fx.dead);return;
+  }
   // PACIFY: one TIRED enemy is spared (DELTARUNE's spell 2)
   if(id==='pacify'){
    if(!m){partyWait(`* ${p.say} cast PACIFY!`);return}
@@ -12228,6 +12249,11 @@ const NB=(()=>{
    partyFxPacify(m,t);
    if(t)spareMonster(m);
    partyWait(`* ${p.say} cast PACIFY!`+(t?'':`\n* But ${m.name} wasn't\n  TIRED...`));return;
+  }
+  if(id==='chaossaber'){
+   if(!m){partyWait(`* ${p.say} cast CHAOS SABER!`);return}
+   const fx=partyFxChaosSaber(p,m);
+   partyWait(`* ${p.say} cast CHAOS SABER!`,()=>fx.dead);return;
   }
   if(id==='rudebuster'){
    if(!m){partyWait(`* ${p.say} cast RUDE BUSTER!`);return}
@@ -12603,6 +12629,121 @@ const NB=(()=>{
     else{g.save();g.globalAlpha=Math.min(1,al*.5);g.fillStyle='#ffffff';g.beginPath();g.ellipse(px,py,60,30,0,0,7);g.fill();g.restore()}
    }
   }});
+ }
+ // ---- ASRIEL ----
+ // the rainbow his attacks cycle through
+ const asHue=t=>`hsl(${(t*24)%360},100%,60%)`;
+ // a coloured copy of a sprite: white takes the colour, black stays black, clear stays clear.
+ // Cached by sprite and by hue in 15-degree steps.
+ const asTints=new Map();
+ function asTint(im,col){
+  const h=Math.round((parseFloat(String(col).slice(4))||0)/15)%24,key=(im.src||im.id||'c')+'|'+h;
+  let c=asTints.get(key);if(c)return c;
+  c=document.createElement('canvas');c.width=im.width;c.height=im.height;const q=c.getContext('2d');
+  q.drawImage(im,0,0);q.globalCompositeOperation='multiply';q.fillStyle=`hsl(${h*15},100%,60%)`;q.fillRect(0,0,c.width,c.height);
+  q.globalCompositeOperation='destination-in';q.drawImage(im,0,0);
+  asTints.set(key,c);return c;
+ }
+ // spr_hypergoner sits on an opaque black square: clear the black that touches its edge (a flood
+ // fill), keeping the black inside the skull
+ let asGonerCv=null;
+ function asGoner(){
+  const im=images.nbAsGoner;if(!im)return null;if(asGonerCv)return asGonerCv;
+  const c=document.createElement('canvas');c.width=im.width;c.height=im.height;const q=c.getContext('2d');q.drawImage(im,0,0);
+  try{
+   const d=q.getImageData(0,0,c.width,c.height),w=c.width,hh=c.height,px=d.data,seen=new Uint8Array(w*hh),st=[];
+   const dark=i=>px[i*4]<40&&px[i*4+1]<40&&px[i*4+2]<40;
+   for(let x=0;x<w;x++){st.push(x,(hh-1)*w+x)}for(let y=0;y<hh;y++){st.push(y*w,y*w+w-1)}
+   while(st.length){const i=st.pop();if(seen[i]||!dark(i))continue;seen[i]=1;px[i*4+3]=0;const x=i%w,y=(i/w)|0;
+    if(x>0)st.push(i-1);if(x<w-1)st.push(i+1);if(y>0)st.push(i-w);if(y<hh-1)st.push(i+w)}
+   q.putImageData(d,0,0);
+  }catch(_){}
+  return asGonerCv=c;
+ }
+ // DrawSpriteExt for the spells (the battle helpers' dse lives in another block)
+ function dse(g,im,x,y,xs=1,ys=1,rot=0,alpha=1,ox=0,oy=0){if(!im)return;g.save();g.globalAlpha*=alpha;g.imageSmoothingEnabled=false;g.translate(x,y);if(rot)g.rotate(-rot*Math.PI/180);g.scale(xs,ys);g.drawImage(im,-ox,-oy);g.restore()}
+ const asDmg=(p,base,k)=>Math.max(1,Math.round(base+p.mag*k+Math.floor(rnd(10))-5));
+ // STAR BLAZING: a great star drops onto each foe and bursts into six small ones
+ function partyFxStarBlazing(p){
+  const al=alive(),fx={t:0,stars:al.map((m,i)=>({m,x:m.x+m.w/2,y:m.y+m.h/2,delay:i*6,hit:false,bits:[]})),step(e){
+   e.t++;
+   for(const s of e.stars){
+    const k=e.t-s.delay;
+    if(k===12&&!s.hit){s.hit=true;snd('mexBurst');partyHit(s.m,asDmg(p,8,6));for(let j=0;j<6;j++)s.bits.push({x:s.x,y:s.y,a:j*60,sp:9,al:1})}
+    for(const b of s.bits){b.x+=Math.cos(b.a*Math.PI/180)*b.sp;b.y-=Math.sin(b.a*Math.PI/180)*b.sp;b.sp*=.9;b.al-=.04}
+   }
+   if(e.t===1)snd('power');
+   if(e.t>12+6*e.stars.length+26)e.dead=true;
+  },draw(g,e){
+   g.save();
+   for(const s of e.stars){
+    const k=e.t-s.delay;
+    if(k>=0&&k<12&&images.nbAsStormStar){const q=k/12,y=s.y-220*(1-q);dse(g,images.nbAsStormStar,s.x,y,.45,.45,e.t*10,1,63,60)}
+    for(const b of s.bits)if(b.al>0&&images.nbAsRegStar){g.globalAlpha=b.al;dse(g,images.nbAsRegStar,b.x,b.y,1,1,e.t*15,b.al,11,11)}
+    g.globalAlpha=1;
+   }
+   g.restore();
+  }};
+  S.fx.push(fx);return fx;
+ }
+ // CHAOS SABER: two crescent slashes across one foe, the second the other way
+ function partyFxChaosSaber(p,m){
+  const x=m.x+m.w/2,y=m.y+m.h/2,fx={t:0,step(e){
+   e.t++;
+   if(e.t===1||e.t===14){snd('asgSwipe');}
+   if(e.t===5||e.t===18)partyHit(m,Math.max(1,Math.round(partyRudeDamage(p,m,false)*.55)));
+   if(e.t>=34)e.dead=true;
+  },draw(g,e){
+   const im=images.nbAsSmear;if(!im)return;
+   for(const [t0,flip] of [[1,1],[14,-1]]){
+    const k=e.t-t0;if(k<0||k>14)continue;
+    const a=k<4?k/4:Math.max(0,1-(k-4)/10);
+    g.save();g.globalAlpha=a;g.translate(x,y);g.scale(flip*.75,.75);g.rotate((flip>0?-20:20)*Math.PI/180);g.imageSmoothingEnabled=false;
+    g.drawImage(asTint(im,asHue(e.t)),-79,-84);g.restore();
+   }
+  }};
+  S.fx.push(fx);return fx;
+ }
+ // SHOCKER BREAKER: a rainbow bolt from the top of the screen onto each foe, twice
+ function partyFxShockBreak(p){
+  const al=alive(),fx={t:0,step(e){
+   e.t++;
+   if(e.t===4||e.t===20){snd('shock');S.shake={h:3,v:3,speed:2,t:0};for(const m of al)if(m.alive)partyHit(m,asDmg(p,7,4))}
+   if(e.t>=40)e.dead=true;
+  },draw(g,e){
+   const ims=images.nbAsBolt;if(!Array.isArray(ims)||!ims[0])return;
+   for(const t0 of [4,20]){
+    const k=e.t-t0;if(k<-3||k>10)continue;
+    const a=k<0?.5:Math.max(0,1-k/10);
+    for(const m of al){
+     const x=m.x+m.w/2,yb=m.y+m.h/2,im=ims[(e.t>>1)%2];
+     g.save();g.globalAlpha=a;g.imageSmoothingEnabled=false;g.drawImage(asTint(im,asHue(e.t+x)),x-16*1.5,0,32*1.5,yb);g.restore();
+    }
+    if(k>=0&&k<3){g.save();g.globalAlpha=.35*(1-k/3);g.fillStyle='#ffffff';g.fillRect(0,0,640,480);g.restore()}
+   }
+  }};
+  S.fx.push(fx);return fx;
+ }
+ // HYPER GONER: the goat skull opens over the field and swallows everything, in a rainbow
+ function partyFxHyperGoner(p){
+  const al=alive(),fx={t:0,step(e){
+   e.t++;
+   if(e.t===1)snd('gbCharge');
+   if(e.t===40){snd('gbFire');S.shake={h:5,v:5,speed:2,t:0}}
+   if(e.t===46)for(const m of al)if(m.alive)partyHit(m,asDmg(p,30,16));
+   if(e.t>=90)e.dead=true;
+  },draw(g,e){
+   const im=asGoner();
+   const sc=e.t<40?.4+.8*(e.t/40):1.2+.2*Math.sin(e.t/3),a=e.t<70?1:Math.max(0,1-(e.t-70)/20);
+   g.save();
+   if(e.t>=40&&e.t<56){g.globalAlpha=.6*(1-(e.t-40)/16);g.fillStyle=asHue(e.t*3);g.fillRect(0,0,640,480)}
+   g.globalAlpha=a;g.imageSmoothingEnabled=false;
+   if(im)g.drawImage(e.t>=40?asTint(im,asHue(e.t*4)):im,320-76*sc,40-10*sc,152*sc,159*sc);
+   // the field is pulled into the mouth
+   if(e.t>=40&&e.t<70)for(let j=0;j<10;j++){const an=(e.t*20+j*36)*Math.PI/180,r=200*(1-(e.t-40)/30);g.fillStyle=asHue(e.t+j*30);g.fillRect(320+Math.cos(an)*r-3,150+Math.sin(an)*r*.6-3,6,6)}
+   g.restore();
+  }};
+  S.fx.push(fx);return fx;
  }
  function partyFxPacify(m,ok){
   const x=m.x+m.w/2,y=m.y+m.h/2;
@@ -29346,6 +29487,10 @@ function memoryheadCard(){
  });
 })();
 const NB_ASSETS={
+ // Asriel's spells
+ nbAsStormStar:RAW+'sprites/images/spr_stormstar_0.png',nbAsRegStar:RAW+'sprites/images/spr_regstar_0.png',
+ nbAsBolt:[0,1].map(i=>RAW+`sprites/images/spr_rainbowbolt_${i}.png`),nbAsSmear:RAW+'sprites/images/spr_asriel_swordsmear_0.png',
+ nbAsGoner:RAW+'sprites/images/spr_hypergoner_0.png',
  // Memoryhead
  nbMemoryhead:[0,1,2,3].map(i=>RAW+`sprites/images/spr_memoryhead_${i}.png`),
  nbFreakBullet:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14].map(i=>RAW+`sprites/images/spr_freakbullet_${i}.png`),
@@ -29734,6 +29879,12 @@ function nbBuildParty(){
    return;
   }
   // GameManager.GetMaxHP / GetATKRaw / GetDEFRaw / GetMagicRaw
+  if(role==='asriel'){
+   const base=(LV-1)*2,maxhp=LV===20?140:Math.round(28+5*(LV-1)),magRaw=LV+3;
+   out.push({role,slot,hud:'ASRIEL',list:'Asriel',say:'Asriel',he:true,maxhp,at:base+1+Math.floor(LV/4)+eqAtk,df:Math.floor(LV/5)+1+eqDef,
+    mag:magRaw+eqMag,magRaw,noWeapon:false,iceMag:0});
+   return;
+  }
   if(role==='ralsei'){
    const base=(LV-1)*2,maxhp=LV===20?120:Math.round(25+4.5*(LV-1)),magRaw=LV+2;
    out.push({role,slot,hud:'RALSEI',list:'Ralsei',say:'Ralsei',he:true,maxhp,at:Math.round(base*2/3)+1+eqAtk,df:Math.floor(LV/5)+1+eqDef,
