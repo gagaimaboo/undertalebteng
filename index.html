@@ -840,7 +840,9 @@ const MUSIC={
  battle:RAW+'sound/audio/mus_battle1.ogg',
  // the True Lab amalgamates' fights
  amalgam:RAW+'sound/audio/mus_amalgam.ogg',
- woofenstein:RAW+'sound/audio/mus_woofenstein_loop.ogg',snowy:RAW+'sound/audio/mus_snowy.ogg',dogsong:RAW+'sound/audio/mus_dogsong.ogg',
+ woofenstein:RAW+'sound/audio/mus_woofenstein_loop.ogg',
+ // Memoryhead's dial-up noise (music/dialup/dialup_0-5.ogg)
+ dialup0:RAW+'sound/audio/mus_dialup_0.ogg',dialup1:RAW+'sound/audio/mus_dialup_1.ogg',dialup2:RAW+'sound/audio/mus_dialup_2.ogg',dialup3:RAW+'sound/audio/mus_dialup_3.ogg',dialup4:RAW+'sound/audio/mus_dialup_4.ogg',dialup5:RAW+'sound/audio/mus_dialup_5.ogg',snowy:RAW+'sound/audio/mus_snowy.ogg',dogsong:RAW+'sound/audio/mus_dogsong.ogg',
  core:RAW+'sound/audio/mus_core.ogg',
  flowey:RAW+'sound/audio/mus_flowey.ogg',
  toriel:RAW+'sound/audio/mus_boss1.ogg',
@@ -1145,7 +1147,7 @@ const SUPPORT_OPTIONS=[
  {id:'moldsmal',label:'MOLDSMAL'},{id:'moldessa',label:'MOLDESSAS'},{id:'aaron',label:'AARON'},{id:'moldbygg',label:'MOLDBYGG'},
  {id:'temmie',label:'TEMMIE'},{id:'woshua',label:'WOSHUA'},{id:'undyne',label:'UNDYNE'},{id:'undyneex',label:'UNDYNE THE UNDYING'},
  {id:'tsunderplane',label:'TSUNDERPLANE'},{id:'knightknight',label:'KNIGHT KNIGHT'},{id:'snowdrakemom',label:'SNOWDRAKE\'S MOTHER'},
- {id:'endogeny',label:'ENDOGENY'},{id:'lemonbread',label:'LEMON BREAD'},{id:'reaperbird',label:'REAPER BIRD'},{id:'astigmatism',label:'ASTIGMATISM'},{id:'muffet',label:'MUFFET'},
+ {id:'endogeny',label:'ENDOGENY'},{id:'lemonbread',label:'LEMON BREAD'},{id:'reaperbird',label:'REAPER BIRD'},{id:'memoryhead',label:'MEMORYHEADS'},{id:'astigmatism',label:'ASTIGMATISM'},{id:'muffet',label:'MUFFET'},
  {id:'pyrope',label:'PYROPE'},{id:'vulkin',label:'VULKIN'},{id:'mettaton',label:'METTATON'},{id:'mettatonex',label:'METTATON EX'},
  {id:'mettatonneo',label:'METTATON NEO'},{id:'asgore',label:'ASGORE'},{id:'madmewmew',label:'MAD MEW MEW'},
  {id:'roaringknight',label:'THE ROARING KNIGHT'},{id:'jayzee',label:'JAYZEE'},{id:'custom',label:'CUSTOM (CREATOR)'}
@@ -1271,6 +1273,7 @@ const VANILLA_REWARDS={
  endogeny:{exp:0,killGold:0,spareGold:0},
  snowdrakemom:{exp:0,killGold:0,spareGold:0},
  reaperbird:{exp:0,killGold:0,spareGold:0},
+ memoryhead:{exp:0,killGold:0,spareGold:0},
  glyde:{exp:100,killGold:140,spareGold:120},
  royalguards:{exp:220,killGold:120,spareGold:100},
  moldessa:{exp:10,killGold:6,spareGold:6},
@@ -1464,7 +1467,7 @@ function confirmLevelSelect(){
 function progressionInventoryCount(){return Object.values(progression.itemStock||{}).reduce((a,v)=>a+Math.max(0,Number(v)||0),0)}
 function progressionRewardEligible(){return screen==='nb'&&vanillaMode&&practiceMode==='classic'&&currentBoss!==SECRET_SANS_BOSS.id}
 // canon pays 0 G for a lot of fights (most bosses, some spares): here everything pays something
-const GOLD_FLOOR={dummy:5,toriel:150,papyrus:200,napstablook:50,maddummy:50,undyne:500,undyneex:1500,mettaton:300,mettatonex:800,mettatonneo:2000,asgore:1000,sans:1000,madmewmew:500,lemonbread:50,endogeny:50,snowdrakemom:50,reaperbird:50,roaringknight:2000,custom:10};
+const GOLD_FLOOR={dummy:5,toriel:150,papyrus:200,napstablook:50,maddummy:50,undyne:500,undyneex:1500,mettaton:300,mettatonex:800,mettatonneo:2000,asgore:1000,sans:1000,madmewmew:500,lemonbread:50,endogeny:50,snowdrakemom:50,reaperbird:50,memoryhead:50,roaringknight:2000,custom:10};
 function rewardData(id){
  const r=VANILLA_REWARDS[id]||{exp:0,killGold:0,spareGold:0};
  let kg=r.killGold||0,sg=r.spareGold||0;
@@ -3840,7 +3843,7 @@ function battleMusicKey(){
  if(currentBoss==='asgore')return asgoreMusic;
  if(currentBoss==='sans')return sansMusic;
  if(currentBoss==='madmewmew')return mmmMusic;
- if(currentBoss==='lemonbread'||currentBoss==='reaperbird')return 'amalgam';
+ if(currentBoss==='lemonbread'||currentBoss==='reaperbird'||currentBoss==='memoryhead')return 'amalgam';
  if(currentBoss==='endogeny')return 'woofenstein';
  if(currentBoss==='snowdrakemom')return 'snowy';
  if(currentBoss==='roaringknight')return 'knight';
@@ -4388,6 +4391,7 @@ const BOSS_OPTIONS=[
  {id:'tsunderplane',label:'TSUNDERPLANE',area:'HOTLAND',hp:80,atk:25,def:26,encounter:'* Tsunderplane swoops into your way... accidentally, apparently.',noelleEncounter:'* Noelle encountered Tsunderplane.'},
  {id:'madjick',label:'MADJICK',area:'CORE',hp:190,atk:29,def:24,encounter:'* Madjick blocks the way!',noelleEncounter:'* Noelle encountered Madjick.'},
  {id:'knightknight',label:'KNIGHT KNIGHT',area:'CORE',hp:230,atk:36,def:36,encounter:'* Knight Knight blocks the way!',noelleEncounter:'* Noelle encountered Knight Knight.'},
+ {id:'memoryhead',label:'MEMORYHEAD',area:'TRUE LAB',hp:100,atk:9,def:999,encounter:'*        drew near!',noelleEncounter:'*        drew near!'},
  {id:'reaperbird',label:'REAPER BIRD',area:'TRUE LAB',hp:100,atk:9,def:9999,encounter:'* ,',noelleEncounter:'* ,'},
  {id:'snowdrakemom',label:'SNOWDRAKE\'S MOTHER',area:'TRUE LAB',hp:400,atk:0,def:0,encounter:'* It\'s so cold.',noelleEncounter:'* It\'s so cold.'},
  {id:'endogeny',label:'ENDOGENY',area:'TRUE LAB',hp:100,atk:9,def:999,encounter:'* It\'s the Amalgamate.',noelleEncounter:'* It\'s the Amalgamate.'},
@@ -6745,6 +6749,7 @@ function bossImage(b,now=performance.now()){
  if(b.id==='endogeny')return endogenyCard()||images.dummy;
  if(b.id==='snowdrakemom')return snowdrakeMomCard()||images.dummy;
  if(b.id==='reaperbird')return reaperBirdCard()||images.dummy;
+ if(b.id==='memoryhead')return memoryheadCard()||images.dummy;
  if(b.id==='whimsalot')return images.whimsalot||images.whimsalotHurt||images.dummy;
  if(b.id==='asgore')return images.asgPrebrandish||images.dummy;
  if(b.id==='sans')return images.sans||images.dummy;
@@ -8346,7 +8351,7 @@ function drawGamePickOld(now=performance.now()){
 // The roster in groups, each a carousel of cards. Anything not listed lands in EXTRAS.
 const ENEMY_CATEGORIES=[
  {id:'bosses',label:'BOSSES',color:'#ff3355',ids:['toriel','papyrus','undyne','undyneex','muffet','mettaton','mettatonex','mettatonneo','asgore','sans']},
- {id:'minibosses',label:'MINI BOSSES',color:'#c04dff',ids:['napstablook','maddummy','doggo','lesserdog','greaterdog','dogi','glyde','royalguards','lemonbread','endogeny','snowdrakemom','reaperbird']},
+ {id:'minibosses',label:'MINI BOSSES',color:'#c04dff',ids:['napstablook','maddummy','doggo','lesserdog','greaterdog','dogi','glyde','royalguards','lemonbread','endogeny','snowdrakemom','reaperbird','memoryhead']},
  {id:'enemies',label:'ENEMIES',color:'#2fd36b',ids:['dummy','froggit','whimsun','moldsmal','loox','vegetoid','migosp','parsnik','moldessa','snowdrake','icecap','gyftrot','aaron','woshua','moldbygg','shyren','temmie','vulkin','tsunderplane','pyrope','finalfroggit','whimsalot','astigmatism','madjick','knightknight']},
  {id:'extras',label:'EXTRAS',color:'#2aa8ff',ids:[]}
 ];
@@ -12163,6 +12168,7 @@ const NB=(()=>{
   rg01:{r:'* Ralsei asked 01 if they\n  wanted some tea.\n* 01 stays on guard.',g:0,s:'* Susie challenged 01 to a\n  push-up contest.\n* 01 is too focused to care.',n:'* Noelle asked 01 how long\n  they\'ve known 02.\n* 01 got flustered, but\n  stayed on guard.'},
   rg02:{r:'* Ralsei told 02 the armor\n  looks very heavy.\n* 02 is still on duty.',g:0,s:'* Susie told 02 the armor\n  looks hot.\n* 02 is sweating more.',n:'* Noelle said 02 seems\n  really nice.\n* 02 looked at 01. Still\n  on duty.'},
   lemonbread:{r:'* Ralsei held out a hand.\n* Lemon Bread\'s mouths all\n  smiled at once.',g:10,s:'* Susie told Lemon Bread\n  it\'s pretty.\n* All its mouths smiled.',n:'* Noelle held Lemon\n  Bread\'s hand.\n* It squeezed back. Gently.'},
+  memoryhead:{r:'* Ralsei tried to read the\n  Memoryhead.\n* No data available.',g:10,s:'* Susie yelled into the\n  static.\n* The static yelled back.',n:'* Noelle asked if it\n  remembers her.\n* It flickers.'},
   reaperbird:{r:'* Ralsei sang a song about\n  hope.\n* , tilted its head.',g:10,s:'* Susie told , it looks\n  cool.\n* , flapped, confused.',n:'* Noelle asked , if it was\n  lonely.\n* It ribbited softly.'},
   snowdrakemom:{r:'* Ralsei told a gentle\n  snow pun.\n* "ha... ha..."',g:10,s:'* Susie told a joke about\n  ice.\n* Something almost laughed.',n:'* Noelle told her an ice\n  pun.\n* "ha...ha..."'},
   endogeny:{r:'* Ralsei petted the\n  Amalgamate.\n* It\'s unclear which part.',g:10,s:'* Susie threw a stick.\n* Too many legs went\n  after it.',n:'* Noelle petted the\n  Amalgamate.\n* It drips happily.'},
@@ -26413,6 +26419,201 @@ function reaperBirdCard(){
  });
 })();
 
+// Memoryhead's roster card: three of spr_memoryhead's first frame, as they line up in the True Lab.
+var memheadCardCv=null,memheadCardIm=null;
+function memoryheadCard(){
+ if(memheadCardCv)return memheadCardCv;
+ if(!memheadCardIm){memheadCardIm=1;loadImage(RAW+'sprites/images/spr_memoryhead_0.png').then(im=>{if(im)memheadCardIm=im}).catch(()=>{})}
+ const im=memheadCardIm;if(!im||im===1)return null;
+ const c=document.createElement('canvas');c.width=47*3+16;c.height=49;const g=c.getContext('2d');g.imageSmoothingEnabled=false;
+ for(let k=0;k<3;k++)g.drawImage(im,k*55,0);
+ return memheadCardCv=c;
+}
+/* ---- NB content: True Lab, Memoryhead (obj_memoryhead + obj_memoryhead_body; obj_insanesq,
+        obj_freakbulletgen with obj_freakbullet). Three of them, as battlegroup 33. ---- */
+(()=>{
+ const {rnd,snd}=NB;
+ const {dse}=NB.hl;
+ const R=Math.round;
+ const tick=(o,k)=>{if(o[k]>0){o[k]-=1;if(o[k]<=0){o[k]=-1;return true}}return false};
+ const fr=(a,i)=>Array.isArray(a)?a[((Math.floor(i)%a.length)+a.length)%a.length]:a;
+ const choose=(...a)=>a[Math.floor(rnd(a.length))];
+ // what the three share: whether they've become coherent (CELL makes them all coherent at once)
+ const shared=()=>{const st=NB.S;if(!st.mh)st.mh={coherent:0,gen:null};return st.mh};
+
+ // the dial-up noise under the incoherent talk (caster_loop(ds[dd], 0.3, 0.9 + random(0.2)))
+ const dialups={};
+ function dialup(on){
+  if(!on){for(const k in dialups){const a=dialups[k];if(a)try{a.pause()}catch(_){}}return}
+  const n=Math.floor(rnd(6)),key='dialup'+n;
+  const go=a=>{if(!a)return;dialups[key]=a;try{a.loop=true;a.volume=.2;a.currentTime=0;a.playbackRate=.9+rnd(.2);a.preservesPitch=a.mozPreservesPitch=a.webkitPreservesPitch=false;playMusicElement(a)}catch(_){}};
+  if(music[key]){go(music[key]);return}
+  loadAudioAsset(MUSIC[key],.2,true).then(a=>{if(a&&!music[key])music[key]=a;if(NB.S&&NB.S.mnfight===1)go(music[key]||a)}).catch(()=>{});
+ }
+
+ // obj_insanesq: instead of words, the bubble fills with 12 white and 12 black rectangles a frame
+ function insaneWriter(x,y){
+  return {done:false,step(){},draw(g){
+   const tx=x+10,ty=y;
+   for(let k=0;k<12;k++){
+    const r=(c)=>{const x1=tx+rnd(70),y1=ty+rnd(80),x2=tx+rnd(70),y2=ty+rnd(80);g.fillStyle=c;g.fillRect(Math.min(x1,x2),Math.min(y1,y2),Math.abs(x2-x1)+1,Math.abs(y2-y1)+1)};
+    r('#ffffff');r('#000000');
+   }
+  }};
+ }
+
+ // ------------------------------------------------------- obj_freakbulletgen --
+ // Every 3-6 frames a freak bullet fades in somewhere in the box (pushed 24-36 px away if it
+ // would land on the SOUL), waits 20 frames, then bursts: it only hurts on frames 3-8.
+ function freakBullet(api,x,y){
+  api.spawn({x,y,frame:0,alpha:0,con:0,a4:-1,sz:2,sz2:2,box:[-18,-24,34,48],manual:true,wallKill:false,kill:false,dmg:9,
+   onHit:(b,a)=>a.damageStd(b.dmg),
+   mask(){return this.frame>=3&&this.frame<=8},
+   step(b){
+    if(tick(b,'a4'))b.con++;
+    if(b.con===0){b.alpha+=.05;if(b.alpha>=1){b.alpha=1;b.con=1;b.a4=20}}
+    if(b.con===2){
+     b.frame+=.5;b.sz=2+rnd(.1);b.sz2=2+rnd(.1);
+     if(b.frame>9)b.alpha-=.1;
+     if(b.alpha<.3)b.alive=false;
+    }
+    // the sprite's bbox (6-22 x 3-26 round the 15,15 origin) at its current scale
+    b.box=[-9*b.sz,-12*b.sz2,17*b.sz,24*b.sz2];
+   },
+   draw(g,b){const im=fr(images.nbFreakBullet,b.frame);if(im)dse(g,im,b.x,b.y,b.sz,b.sz2,0,b.alpha,15,15)}});
+ }
+ function freakGenStep(api,g){
+  if(--g.wait>0)return;
+  const [L,Rr,T,B]=api.S.ideal,h=api.heart,dir=rnd(360);
+  let x=L+rnd(Rr-L),y=T+rnd(B-T);
+  if(x+10>=h.x&&x-10<=h.x+16&&y+10>=h.y&&y-10<=h.y+16){const r=24+rnd(12);x=h.x+8+Math.cos(dir*Math.PI/180)*r;y=h.y+8-Math.sin(dir*Math.PI/180)*r}
+  freakBullet(api,x,y);
+  g.wait=3+rnd(3);
+ }
+
+ // --------------------------------------------------------------- Memoryhead --
+ // obj_memoryhead_body: a 4-frame head. Now and then it breaks into scr_fx_waver_scanline
+ // (each row of the sprite drawn at its own height and sideways offset). When the talk ends
+ // it smears out and fades away for the attack, and comes back after.
+ function waver(g,m,im){
+  const v=m.v,w=47,H=49,b=v.bb||1,c=v.cc||1,d=v.dd||1;
+  g.save();g.imageSmoothingEnabled=false;g.globalAlpha*=Math.max(0,Math.min(1,v.alpha));
+  for(let i=0;i<H;i++){
+   v.a++;
+   const h=Math.sin(v.a)*d,hh=Math.min(Math.abs(h),H-i);
+   if(hh<=0)continue;
+   const dx=m.x+Math.sin(v.a/b)*c,dy=m.y+i*2;
+   if(h>=0)g.drawImage(im,0,i,w,hh,dx,dy,w*2,hh*2);
+   else{g.save();g.translate(0,dy);g.scale(1,-1);g.drawImage(im,0,i,w,hh,dx,0,w*2,hh*2);g.restore()}
+  }
+  g.restore();
+ }
+ const MH_POS=[[15,146],[217,146],[421,146]];
+ NB.groups.memoryhead=['memoryhead','memoryhead','memoryhead'];
+ NB.defs.set('memoryhead',{
+  name:'     ',hp:100,atk:9,def:999,xp:0,gold:0,mercymod:-999,wd:100,
+  encounter:'*        drew near!',
+  size:()=>({w:94,h:98}),
+  // battlegroup 33: (15,146), (217,146), (421,146)
+  pos:(i,n,cx)=>n===3&&i<3?{x:MH_POS[i][0],y:MH_POS[i][1]}:{x:R(cx-47),y:146},
+  shudder:[8,1],shudderAbs:true,
+  dmgPos:m=>({x:m.x-23,y:m.y-24}),
+  setup(m){
+   shared();
+   Object.assign(m.v,{frame:0,a0:8,a1:150,a2:-1,on:0,mega:0,alpha:1,a:1,bb:1,cc:1,dd:1,cmd:0,turns:0,last:null});
+  },
+  step(m){
+   const v=m.v;
+   if(tick(v,'a0')){v.frame++;v.a0=8}
+   if(tick(v,'a1')){v.dd=Math.floor(rnd(12));v.bb=choose(1,2,4,8);v.cc=choose(1,2,3,4,6,8,10,16);v.on=1;v.a2=60}
+   if(tick(v,'a2')){v.a1=90+rnd(30);v.on=0}
+   if(!m.alive&&!m.spared&&v.mega===0){v.mega=1;v.on=1;v.a1=v.a2=-1}
+   if(v.mega===1){v.cc++;v.alpha-=.03;if(v.alpha<=0){v.alpha=0;v.mega=4}}
+   if(v.mega===2){if(v.cc>1)v.cc--;if(v.alpha<1)v.alpha=Math.min(1,v.alpha+.03);if(v.cc<=1){v.mega=0;v.on=0;v.a2=-1;v.a1=90}}
+  },
+  draw(g,m){
+   const v=m.v,im=fr(images.nbMemoryhead,v.frame);if(!im)return;
+   if(v.bb===0)v.bb=1;if(v.cc===0)v.cc=1;if(v.dd===0)v.dd=1;
+   if(v.on)waver(g,m,im);
+   else dse(g,im,m.x,m.y,2,2,0,Math.max(0,Math.min(1,v.alpha)));
+  },
+  check:()=>shared().coherent?'* MEMORYHEAD':'* No data available.',
+  // SCR_TEXT 225: "Check / STAT" and "ITEM / CELL"; once coherent, "Check / Refuse" and "Join"
+  acts:()=>shared().coherent?['Check','Join','Refuse']:['Check','ITEM','STAT','CELL'],
+  act(m,i,name,api){
+   const v=m.v,sh=shared(),st=api.S;v.last=name;
+   if(!sh.coherent){
+    if(name==='STAT')return `* AT - ${st.at+st.wstrength} DF - ${st.df}`;
+    if(name==='ITEM'){
+     // scr_itemget(54): the Bad Memory
+     if((st.items||[]).length>=8)return '* But your inventory was full.';
+     let t='* You consume the Bad Memory.&* You lost 1 HP.';
+     st.items.push({id:'bad_memory',name:'Bad Memory',heal:0,
+      onUse(a){const s=a.S;if(s.hp<=3){s.hp=s.maxhp;t='* You consume the Bad Memory.&* Your HP was maxed out.'}else s.hp=s.hp-1},
+      get useText(){return t}});
+     return '* The enemy put a piece of&  itself in your inventory.';
+    }
+    if(name==='CELL'){
+     sh.coherent=1;
+     for(const o of st.mons)if(o.id==='memoryhead')o.name='Memoryhead';
+     return '* You take out your CELL PHONE^1.&* You can hear voices through&  the receiver...!';
+    }
+    return '* Nothing happened.';
+   }
+   // coherent: Join and Refuse end your turn without a word; Refuse makes them spareable
+   if(name==='Refuse'){for(const o of st.mons)if(o.id==='memoryhead')o.mercymod=999998;return null}
+   if(name==='Join')return null;
+   return '* Nothing happened.';
+  },
+  // alarm[6]: a small bubble at (x+95, y-10). Incoherent, it fills with flickering rectangles
+  // over dial-up noise; coherent, they talk. alarm[5] = 110.
+  speech(m,api){
+   const v=m.v,sh=shared(),st=api.S,x=m.x+95,y=m.y-10,c=Math.round(rnd(100));v.cmd=c;
+   let t='';
+   if(sh.coherent){
+    t='Come&join&the&fun.';
+    if(c<75)t='It\'s a&real&get&together';
+    if(c<50)t='Lorem&ipsum&docet';
+    if(c<25)t='Become&one of&us!';
+    if(v.turns===0)t='Come&join&the&fun.';
+    v.turns++;
+   }
+   if(v.last==='Refuse'){t='That\'s&a&shame.';if(c>33)t='Oh&well.';if(c>66)t='Be&seeing&you.'}
+   if(v.last==='Join'){t='Then,&hold&still.';if(c>33)t='Just&a&moment.';if(c>66)t='You\'ll&be with&us&shortly.'}
+   v.last=null;
+   const img=images.nbBlconSm||null;
+   if(sh.coherent)st.bubbles.push({m,x,y,wide:false,img,hold:false,w:new NB.Writer([t],{typer:2,x:x+15,y:y+10})});
+   else{st.bubbles.push({m,x,y,wide:false,img,hold:false,w:insaneWriter(x+15,y+10)});dialup(true)}
+   st.talkLenExact=110;
+   return null;
+  },
+  border:()=>5,
+  hurt(m,api){
+   m.hurt=true;m.shudder=8;m.shakeT=0;snd('damage');
+   const x=m.x-23,y=m.y-24;
+   api.S.dmgw.push({x,y,ystart:y,vy:0,dmg:0,special:1,m,maxhp:m.maxhp,apparent:m.hp,actual:m.hp,life:-1,tick:0});
+   m.hurtanim=3;
+  },
+  attack(m,api){
+   const v=m.v,sh=shared();
+   dialup(false);
+   // event_user 0 on the body: smear out and fade for the attack
+   if(v.mega===0){v.a2=-1;v.a1=-1;v.mega=1;v.on=1}
+   if(v.mega===4)v.mega=2;
+   api.turntimer(200);
+   // with(obj_freakbulletgen) instance_destroy(): one generator however many heads attack
+   sh.gen={wait:1,owner:m};
+   let f='* But nobody came.';
+   if(v.cmd>=95)f='* Smells like batteries.';
+   if(m.mercymod>100)f='* Seems like it doesn\'t&  care anymore.';
+   if(m.hp<=m.maxhp/4)f='* Monster has low HP.';
+   return f;
+  },
+  attackStep(m,api){const g=shared().gen;if(g&&g.owner===m)freakGenStep(api,g);else if(g&&!g.owner.alive){g.owner=m;freakGenStep(api,g)}},
+  endAttack(m){dialup(false);const v=m.v;if(v.mega===4)v.mega=2;const sh=shared();sh.gen=null}
+ });
+})();
+
 /* ---- NB content: Core I (obj_finalfroggit, obj_whimsalot, obj_astigmatism, obj_wizard = Madjick,
         obj_finalknight = Knight Knight, with their bodies; obj_megaflybulletgen, obj_frogbullet_gen,
         obj_butterflybullet_gen/_gen_2, obj_astigmatismgen, obj_stromboligen, obj_wizardorb_chaser,
@@ -29145,6 +29346,9 @@ function reaperBirdCard(){
  });
 })();
 const NB_ASSETS={
+ // Memoryhead
+ nbMemoryhead:[0,1,2,3].map(i=>RAW+`sprites/images/spr_memoryhead_${i}.png`),
+ nbFreakBullet:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14].map(i=>RAW+`sprites/images/spr_freakbullet_${i}.png`),
  // Reaper Bird
  nbRbHead:[0,1,2,3,4,5,6].map(i=>RAW+`sprites/images/spr_reaperbird_head_${i}.png`),
  nbRbBite:[0,1,2,3,4,5,6,7].map(i=>RAW+`sprites/images/spr_reaperbird_bite_${i}.png`),
