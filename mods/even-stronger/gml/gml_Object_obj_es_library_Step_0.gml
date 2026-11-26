@@ -1,5 +1,6 @@
-if (con == 2 && !instance_exists(obj_cutscene_master))
+if (stage == 3 && !instance_exists(obj_cutscene_master))
 {
+    stage = 4;
     with (obj_actor)
         visible = 0;
     scr_losechar();
@@ -16,5 +17,4 @@ if (con == 2 && !instance_exists(obj_cutscene_master))
         kris_only = 1;
         nextroom = room_dw_cyber_intro_1;
     }
-    con = 3;
 }

@@ -28,8 +28,18 @@ it couldn't place, so send that list over.
 
 ## What's in v0.1
 
-- **Opening:** no Susie. Noelle is in the library for the group project, then the computer lab door opens and
-  you both fall into the Cyber World.
+- **Opening:** no Susie. A cold open on black, then the library:
+  - Noelle doesn't notice you at first.
+  - Susie texted her "lol". Berdly has a "prior engagement".
+  - The project needs a local legend. She almost says the forest, then takes it back.
+  - Her dad is still in the hospital. She asks if that's weird, and you choose your answer.
+  - Then the computer lab door opens, and you both fall into the Cyber World.
+- **Queen's entrance** (the vanilla scene-9 room, rewritten for Noelle):
+  - Queen comes to look at the two unregistered Lightners. She finds "something very cold" in Noelle's code and wants her as a peon.
+  - Kris steps in, and she wires the two scared locals into Werewires.
+  - **After the fight:** if you killed them, Queen comes back to a field that's "Simply: Not There Anymore" and warns the whole city ("Do Not Engage... And Raise Your Guard"). Noelle talks about the ice, or about your sword.
+  - If nobody died, she leaves bored.
+- **Warned:** every enemy shows "(Warned)" next to its name, the label from Ralsei's Warn act in Chapter 1.
 - **FIGHT:** Kris always MISSes. Noelle's FIGHT barely scratches and can never land the kill.
 - **Abilities:**
   - **X-Slash** (Kris, 25% TP): Spamton NEO's X-Slash, on every enemy.

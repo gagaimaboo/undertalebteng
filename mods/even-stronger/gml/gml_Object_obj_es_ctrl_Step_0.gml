@@ -19,6 +19,12 @@ if (instance_exists(obj_battlecontroller) && global.fighting == 1)
     }
     if (global.mnfight != 2)
         scr_es_addkrisacts();
+    // Queen warned everyone about you: every enemy is on guard, like Ralsei's Warn in Chapter 1
+    for (var w = 0; w < 3; w++)
+    {
+        if (global.monster[w] == 1 && global.monstercomment[w] != "(Warned)")
+            global.monstercomment[w] = "(Warned)";
+    }
     // ...and attack 5% faster (3% for Queen)
     var want = (global.mnfight == 2) ? ((global.flag[2451] == 1) ? 30.9 : 31.5) : 30;
     if (room_speed != want && (want != 30 || fast == 1))

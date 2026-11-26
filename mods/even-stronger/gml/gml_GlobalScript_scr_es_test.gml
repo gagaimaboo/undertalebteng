@@ -53,7 +53,14 @@ function scr_es_test_tick()
     }
     if (variable_global_exists("es_t_until") && global.es_t_until != "")
     {
-        if (room_get_name(room) != global.es_t_until)
+        var notyet;
+        if (global.es_t_until == "!fight")
+            notyet = !(instance_exists(obj_battlecontroller) && global.fighting == 1 && global.bmenuno == 0 && global.mnfight == 0);
+        else if (string_char_at(global.es_t_until, 1) == "#")
+            notyet = global.plot < real(string_delete(global.es_t_until, 1, 1));
+        else
+            notyet = room_get_name(room) != global.es_t_until;
+        if (notyet)
         {
             if (global.es_t_mash && (global.es_t_frame mod 12) == 0)
             {
@@ -89,6 +96,16 @@ function scr_es_test_tick()
                 array_push(global.es_t_release, [vk, (n2 == "") ? 2 : real(n2)]);
                 global.es_t_wait = (n2 == "") ? 4 : real(n2) + 2;
                 break;
+            case "untilfight":
+                global.es_t_mash = 1;
+                global.es_t_until = "!fight";
+                global.es_t_wait = 1;
+                break;
+            case "untilplot":
+                global.es_t_mash = 1;
+                global.es_t_until = "#" + n1;
+                global.es_t_wait = 1;
+                break;
             case "until":
             case "mash":
                 global.es_t_mash = (c == "mash");
@@ -116,6 +133,25 @@ function scr_es_test_tick()
                 break;
             case "char":
                 global.char[real(n1)] = real(n2);
+                break;
+            case "killall":
+                // freeze every enemy through the game's own defeat path
+                if (instance_exists(obj_battlecontroller))
+                for (var ki = 0; ki < 3; ki++)
+                {
+                    if (global.monster[ki] == 1 && i_ex(global.monsterinstance[ki]))
+                    {
+                        global.monsterhp[ki] = 0;
+                        global.flag[51 + ki] = 6;
+                        with (global.monsterinstance[ki])
+                            scr_monsterdefeat();
+                    }
+                }
+                break;
+            case "monhp":
+                for (var mi = 0; mi < 3; mi++)
+                    if (global.monster[mi] == 1)
+                        global.monsterhp[mi] = real(n1);
                 break;
             case "tp":
                 global.tension = real(n1);

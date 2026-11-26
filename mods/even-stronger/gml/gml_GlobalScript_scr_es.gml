@@ -5,6 +5,7 @@
 //   2451  Queen rules active (FIGHT works, abilities hit harder)
 //   2452  kills this playthrough
 //   2453  opening done
+//   2454  freezes this playthrough
 //
 // spells added: 40 X-Slash (Kris), 41 Slashrush (Kris), 42 FrostNova (Noelle)
 
@@ -78,6 +79,8 @@ function scr_es_countkill(argument0)
 {
     if (global.flag[51 + argument0] == 1 || global.flag[51 + argument0] == 6)
         global.flag[2452] += 1;
+    if (global.flag[51 + argument0] == 6)
+        global.flag[2454] += 1;
 }
 
 function scr_es_spellinfo(argument0)
@@ -289,4 +292,37 @@ function scr_es_flavor()
         global.es_flv = lines[k];
     }
     return global.es_flv;
+}
+
+// dialogue entries the mod adds to scr_text (used where a choice needs a follow-up)
+function scr_es_text(argument0)
+{
+    switch (argument0)
+    {
+        case 24500:
+            global.choicemsg[0] = "It's not#weird";
+            global.choicemsg[1] = "(Say#nothing)";
+            global.choicemsg[2] = " ";
+            global.choicemsg[3] = " ";
+            scr_speaker("noelle");
+            msgsetloc(0, "\\E9* ...that's weird^1, right?/", "es_lib_26");
+            msgnextloc("\\C2 ", "es_lib_27");
+            return 1;
+        case 24501:
+            scr_speaker("noelle");
+            if (global.choice == 0)
+            {
+                msgsetloc(0, "\\E6* ..^1. oh./", "es_lib_28");
+                msgnextloc("\\E4* Thanks^1, Kris./", "es_lib_29");
+                msgnextloc("\\E4* You're..^1. nicer than people say you are./%", "es_lib_30");
+            }
+            else
+            {
+                msgsetloc(0, "\\E6* ..^1. yeah./", "es_lib_31");
+                msgnextloc("\\E1* You don't have to say anything^1. It's okay./", "es_lib_32");
+                msgnextloc("\\E4* It's kind of nice^1, actually./%", "es_lib_33");
+            }
+            return 1;
+    }
+    return 0;
 }

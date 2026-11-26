@@ -123,12 +123,11 @@ if (scr_es_on() && scr_es_actselect(arg0, arg1))
     exit;
 @end
 
-@@ gml_Object_obj_ch2_scene9_Create_0  # first fight
+@@ gml_Object_obj_ch2_scene9_Step_0  # Queen's entrance + first fight, with Noelle
 @prepend
-if (scr_es_on() && global.plot < 51)
+if (scr_es_on())
 {
-    instance_create(0, 0, obj_es_scene9);
-    instance_destroy();
+    scr_es_scene9_step();
     exit;
 }
 @end
@@ -155,4 +154,13 @@ if (!i_ex(battlewriter) || (global.chapter == 2 && !i_ex(battlewriter) && gigaqu
 global.msg[0] = global.battlemsg[0];
 if (scr_es_on())
     global.msg[0] = scr_es_flavor();
+@end
+
+@@ gml_GlobalScript_scr_text  # the mod's own dialogue entries (choice follow-ups)
+@find
+function scr_text(arg0)
+{
+@after
+if (scr_es_on() && scr_es_text(arg0))
+    exit;
 @end

@@ -26,7 +26,7 @@ namespace EvenStronger;
 
 static class Program
 {
-    const string Version = "0.1.2";
+    const string Version = "0.1.3";
     const string BackupName = "data.win.even_stronger_backup";
     const string MarkerCode = "gml_GlobalScript_scr_es_version";
 
