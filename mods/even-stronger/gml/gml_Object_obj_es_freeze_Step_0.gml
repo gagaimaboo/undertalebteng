@@ -1,4 +1,4 @@
-if (!is_array(pf) || global.flag[pf[0]] == 1)
+if (con == 0 && (!is_array(pf) || global.flag[pf[0]] == 1))
 {
     instance_destroy();
     exit;
@@ -82,7 +82,7 @@ if (con == 2)
         if (i_ex(parts[i]))
         {
             var p = parts[i];
-            if (p.object_index == obj_forcefield && !p.visible)
+            if (!p.visible || p.sprite_index < 0 || (p.x == 0 && p.y == 0))
                 continue;
             array_push(bursts, [p.x + (p.sprite_width / 2), p.y + (p.sprite_height / 2)]);
         }

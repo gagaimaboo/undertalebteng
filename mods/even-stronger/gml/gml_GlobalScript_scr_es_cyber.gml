@@ -82,6 +82,8 @@ function scr_es_puzzle_parts()
         array_push(parts, id);
     with (obj_npc_musical_door)
         array_push(parts, id);
+    with (obj_beatbullet_wall)
+        array_push(parts, id);
     with (obj_ow_viroring)
         array_push(parts, id);
     with (obj_forcefield)

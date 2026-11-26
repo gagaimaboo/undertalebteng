@@ -4,7 +4,7 @@ for (var i = 0; i < array_length(parts); i++)
     if (!i_ex(parts[i]))
         continue;
     var p = parts[i];
-    if (p.object_index == obj_forcefield)
+    if (p.object_index == obj_forcefield || !p.visible || p.sprite_index < 0 || (p.x == 0 && p.y == 0))
         continue;
     draw_set_alpha(0.28 + (sin((siner / 30) + i) * 0.05));
     draw_set_color(merge_color(c_aqua, c_white, 0.4));
