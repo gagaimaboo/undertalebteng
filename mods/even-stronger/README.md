@@ -42,6 +42,7 @@ it couldn't place, so send that list over.
   - If nobody died, she leaves bored.
 - **Warned:** every enemy shows "(Warned)" next to its name, the label from Ralsei's Warn act in Chapter 1.
 - **FIGHT:** Kris always MISSes. Noelle's FIGHT barely scratches and can never land the kill.
+- **No mercy:** every enemy's ACT list is just Check, X-Slash and Slashrush. The enemy's own mercy acts and everyone's S/N-Actions are gone. Spamton NEO keeps his own list.
 - **Abilities:**
   - **X-Slash** (Kris, 25% TP): Spamton NEO's X-Slash, on every enemy.
   - **Slashrush** (Kris, 80% TP): mash Z, every press is a slash.

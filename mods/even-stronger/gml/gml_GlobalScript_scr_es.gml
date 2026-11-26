@@ -201,56 +201,42 @@ function scr_es_cast_after_pain(argument0, argument1, argument2)
     global.es_pain_bypass = 0;
 }
 
-// Kris's skills live in his ACT list (like X-Slash on Spamton NEO), on every enemy
+// No mercy in this route: every enemy's ACT list is just Check plus Kris's skills
+// (X-Slash, Slashrush). The enemy's own acts and everyone's S/N/R-Actions are removed.
+// Spamton NEO keeps his own list (his X-Slash is already in it).
 function scr_es_addkrisacts()
 {
     if (!scr_havechar(1))
         exit;
     for (var i = 0; i < 3; i++)
     {
-        if (global.monster[i] != 1)
+        if (global.monster[i] != 1 || global.monstertype[i] == 50)
             continue;
-        var hasx = -1;
-        var hass = -1;
+        // already in shape?
+        if (global.canact[i][1] == 1 && global.actname[i][1] == "X-Slash" && global.canact[i][2] == 1 && global.actname[i][2] == "Slashrush" && global.canact[i][3] == 0)
+            continue;
+        var hascheck = (global.canact[i][0] == 1 && global.actname[i][0] == "Check");
         for (var k = 0; k < 6; k++)
         {
-            if (global.canact[i][k] == 1 && global.actname[i][k] == "X-Slash")
-                hasx = k;
-            if (global.canact[i][k] == 1 && global.actname[i][k] == "Slashrush")
-                hass = k;
+            if (!(k == 0 && hascheck))
+                global.canact[i][k] = 0;
+            global.canactsus[i][k] = 0;
+            global.canactral[i][k] = 0;
+            global.canactnoe[i][k] = 0;
         }
-        if (hasx < 0)
-        {
-            for (var k = 0; k < 6; k++)
-            {
-                if (global.canact[i][k] == 0)
-                {
-                    global.canact[i][k] = 1;
-                    global.actname[i][k] = "X-Slash";
-                    global.actdesc[i][k] = "Physical#damage";
-                    global.actcost[i][k] = 62;
-                    global.actactor[i][k] = 1;
-                    global.actsimul[i][k] = 0;
-                    break;
-                }
-            }
-        }
-        if (hass < 0)
-        {
-            for (var k = 0; k < 6; k++)
-            {
-                if (global.canact[i][k] == 0)
-                {
-                    global.canact[i][k] = 1;
-                    global.actname[i][k] = "Slashrush";
-                    global.actdesc[i][k] = "Mash Z!";
-                    global.actcost[i][k] = 200;
-                    global.actactor[i][k] = 1;
-                    global.actsimul[i][k] = 0;
-                    break;
-                }
-            }
-        }
+        var at = hascheck ? 1 : 0;
+        global.canact[i][at] = 1;
+        global.actname[i][at] = "X-Slash";
+        global.actdesc[i][at] = "Physical#damage";
+        global.actcost[i][at] = 62;
+        global.actactor[i][at] = 1;
+        global.actsimul[i][at] = 0;
+        global.canact[i][at + 1] = 1;
+        global.actname[i][at + 1] = "Slashrush";
+        global.actdesc[i][at + 1] = "Mash Z!";
+        global.actcost[i][at + 1] = 200;
+        global.actactor[i][at + 1] = 1;
+        global.actsimul[i][at + 1] = 0;
     }
 }
 
