@@ -30,6 +30,8 @@ if (instance_exists(obj_battlecontroller) && global.fighting == 1)
 else
 {
     buffed = 0;
+    if (variable_global_exists("es_flv"))
+        global.es_flv = "";
     if (fast == 1)
     {
         room_speed = 30;

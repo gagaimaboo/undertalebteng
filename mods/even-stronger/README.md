@@ -7,6 +7,15 @@ It ships as a **patcher**, not a modded `data.win`. It edits your own copy of Ch
 
 ## Install
 
+Two ways:
+
+**A. Standalone zip** (`DT_Even_Stronger_vX.zip`, built with `./make_zip.sh <DELTARUNE folder>`): unzip anywhere and run
+`DELTARUNE.exe`. It boots straight into the modded Chapter 2 (no launcher). It saves to
+`%LOCALAPPDATA%\DELTARUNE_EVEN_STRONGER`, so your real install and saves are untouched. The zip holds game files,
+so it's for your own use; it's never committed here.
+
+**B. Patcher**, which modifies your installed game:
+
 1. Put `EvenStrongerPatcher.exe` in your DELTARUNE folder (next to `DELTARUNE.exe`) and run it.
    (Or drag the DELTARUNE folder onto the exe.)
 2. Start Chapter 2 on a **new file**.
@@ -33,6 +42,7 @@ it couldn't place, so send that list over.
   - Every kill feeds the real "Noelle became stronger" level-up.
 - **Enemies:** +20% HP, and their attacks run 5% faster.
 - **Pain:** the first ability you ever use asks first.
+- **Battle text:** the box text in every battle is only "Hold.", "Its burning.." or "You are filled with power." (a new one each turn). Action results and victory text are unchanged.
 - **Battle theme:** regular encounters play **"SWORD (FM Cover)" by plrusek** instead of the normal battle music. Bosses keep theirs.
 
 ## Credits

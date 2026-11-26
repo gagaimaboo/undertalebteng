@@ -267,3 +267,26 @@ function scr_es_actselect(argument0, argument1)
     global.charspecial[global.charturn] = (an == "X-Slash") ? 40 : 41;
     return 1;
 }
+
+// every battle's box text is one of three lines, picked fresh each turn
+function scr_es_flavor()
+{
+    if (!variable_global_exists("es_flv_src"))
+    {
+        global.es_flv_src = "";
+        global.es_flv = "";
+        global.es_flv_last = -1;
+    }
+    // a new turn (the game set new flavor text) or a new battle: pick again
+    if (global.battlemsg[0] != global.es_flv_src || global.es_flv == "")
+    {
+        global.es_flv_src = global.battlemsg[0];
+        var lines = ["* Hold.", "* Its burning..", "* You are filled with power."];
+        var k = irandom(2);
+        if (k == global.es_flv_last)
+            k = (k + 1 + irandom(1)) mod 3;
+        global.es_flv_last = k;
+        global.es_flv = lines[k];
+    }
+    return global.es_flv;
+}

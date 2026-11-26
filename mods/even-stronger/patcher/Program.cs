@@ -26,12 +26,13 @@ namespace EvenStronger;
 
 static class Program
 {
-    const string Version = "0.1.1";
+    const string Version = "0.1.2";
     const string BackupName = "data.win.even_stronger_backup";
     const string MarkerCode = "gml_GlobalScript_scr_es_version";
 
     static string modDir;          // dev override: read gml/ and patches/ from here
     static bool testBuild;
+    static bool ownSaves;   // standalone zip: keep saves apart from the real DELTARUNE
     static readonly List<string> warnings = new();
 
     static int Main(string[] args)
@@ -47,6 +48,7 @@ static class Program
             {
                 case "--restore": restore = true; break;
                 case "--test": testBuild = true; break;
+                case "--own-saves": ownSaves = true; break;
                 case "--mod": modDir = args[++i]; break;
                 case "--out": outFile = args[++i]; break;
                 case "--no-pause": pause = false; break;
@@ -166,6 +168,12 @@ static class Program
         }
 
         ApplyMod(data);
+        if (ownSaves)
+        {
+            // GameMaker keeps saves in %LOCALAPPDATA%\<game name>
+            data.GeneralInfo.Name = data.Strings.MakeString("DELTARUNE_EVEN_STRONGER");
+            Console.WriteLine("Saves go to %LOCALAPPDATA%\\DELTARUNE_EVEN_STRONGER");
+        }
 
         string dest = outFile ?? dataPath;
         string tmp = dest + ".es_tmp";

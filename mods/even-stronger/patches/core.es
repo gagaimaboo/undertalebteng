@@ -143,3 +143,16 @@ if (scr_es_on() && arg0 == "battle.ogg" && file_exists(working_directory + "even
     arg0 = "es_battle.ogg";
 }
 @end
+
+@@ gml_Object_obj_battlecontroller_Step_0  # battle box text: Hold. / Its burning.. / You are filled with power.
+@find
+if (!i_ex(battlewriter) || (global.chapter == 2 && !i_ex(battlewriter) && gigaqueencon == 0))
+{
+global.msg[0] = global.battlemsg[0];
+@replace
+if (!i_ex(battlewriter) || (global.chapter == 2 && !i_ex(battlewriter) && gigaqueencon == 0))
+{
+global.msg[0] = global.battlemsg[0];
+if (scr_es_on())
+    global.msg[0] = scr_es_flavor();
+@end
