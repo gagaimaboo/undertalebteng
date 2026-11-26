@@ -1,5 +1,14 @@
 if (!scr_es_on())
     exit;
+if (room != lastroom)
+{
+    lastroom = room;
+    roomtimer = 0;
+}
+roomtimer++;
+if (roomtimer == 2)
+    scr_es_roomstart();
+scr_es_cyber_music_tick();
 // enemies come in with their guard up: +20% HP (Queen gets +10% in her own fight)
 if (instance_exists(obj_battlecontroller) && global.fighting == 1)
 {
