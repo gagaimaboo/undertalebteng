@@ -281,6 +281,13 @@ function scr_es_scene9_step()
         funcon = 2;
     }
     // wire animation, as in the original scene
+    // the fight deletes the wire/local markers when it starts; if the wire animation
+    // hasn't finished by then (text skipped fast), stop it instead of reading deleted markers
+    if (wirecon >= 1 && wirecon <= 5)
+    {
+        if (!variable_instance_exists(id, "wire1_actor") || !i_ex(wire1_actor) || !i_ex(wire2_actor) || !i_ex(npc1_actor) || !i_ex(npc2_actor))
+            wirecon = 6;
+    }
     if (wirecon == 1)
     {
         with (obj_marker)
