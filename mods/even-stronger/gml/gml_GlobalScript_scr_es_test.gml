@@ -137,6 +137,12 @@ function scr_es_test_tick()
             case "state":
                 scr_es_test_log("room=" + room_get_name(room) + " plot=" + string(global.plot) + " fighting=" + string(global.fighting) + " hp=" + string(global.hp[1]) + "," + string(global.hp[4]) + " tp=" + string(global.tension) + " char=" + string(global.char[0]) + "," + string(global.char[1]) + "," + string(global.char[2]) + " mon=" + string(global.monster[0]) + ":" + string(global.monsterhp[0]) + "/" + string(global.monstermaxhp[0]) + "," + string(global.monster[1]) + ":" + string(global.monsterhp[1]) + "/" + string(global.monstermaxhp[1]) + " kills=" + string(global.flag[2452]) + " lv=" + string(global.flag[65]) + " spd=" + string(room_speed) + " mn=" + string(global.mnfight));
                 break;
+            case "mus":
+                var ms = "streams:";
+                with (obj_astream)
+                    ms += " " + string(songname) + "(" + string(mystream) + ")";
+                scr_es_test_log(ms + " wd=" + working_directory);
+                break;
             case "quit":
                 scr_es_test_log("quit");
                 game_end();

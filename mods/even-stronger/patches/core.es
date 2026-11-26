@@ -132,3 +132,14 @@ if (scr_es_on() && global.plot < 51)
     exit;
 }
 @end
+
+@@ gml_GlobalScript_snd_init  # encounter battle theme: SWORD (FM Cover) by plrusek
+@find
+initsongvar = dir + arg0;
+@before
+if (scr_es_on() && arg0 == "battle.ogg" && file_exists(working_directory + "even_stronger/es_battle.ogg"))
+{
+    dir = working_directory + "even_stronger/";
+    arg0 = "es_battle.ogg";
+}
+@end

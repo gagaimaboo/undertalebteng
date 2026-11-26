@@ -26,7 +26,7 @@ namespace EvenStronger;
 
 static class Program
 {
-    const string Version = "0.1.0";
+    const string Version = "0.1.1";
     const string BackupName = "data.win.even_stronger_backup";
     const string MarkerCode = "gml_GlobalScript_scr_es_version";
 
@@ -174,6 +174,7 @@ static class Program
             UndertaleIO.Write(fs, data);
         File.Move(tmp, dest, true);
 
+        ExportMusic(Path.GetDirectoryName(Path.GetFullPath(dest)));
         ExportBorrowedAssets(Path.GetDirectoryName(Path.GetFullPath(dest)));
 
         Console.WriteLine();
@@ -306,6 +307,33 @@ static class Program
     {
         if (p.Optional) Console.WriteLine($"  (optional edit skipped: {p.Id})");
         else warnings.Add($"{p.Id} ({p.Code}): {why}");
+    }
+
+    // ---------- the mod's own music (ships inside the exe) ----------
+    // es_battle.ogg: encounter battle theme, "SWORD (FM Cover)" by plrusek
+    static void ExportMusic(string chDir)
+    {
+        string outDir = Path.Combine(chDir, "even_stronger");
+        Directory.CreateDirectory(outDir);
+        int n = 0;
+        if (modDir != null)
+        {
+            string d = Path.Combine(modDir, "music");
+            if (Directory.Exists(d))
+                foreach (var f in Directory.GetFiles(d, "*.ogg")) { File.Copy(f, Path.Combine(outDir, Path.GetFileName(f)), true); n++; }
+        }
+        else
+        {
+            var asm = Assembly.GetExecutingAssembly();
+            foreach (var r in asm.GetManifestResourceNames().Where(x => x.StartsWith("music/")))
+            {
+                using var s = asm.GetManifestResourceStream(r);
+                using var f = File.Create(Path.Combine(outDir, r.Substring(6)));
+                s.CopyTo(f);
+                n++;
+            }
+        }
+        if (n > 0) Console.WriteLine($"Music: {n} track(s) -> {outDir}  (battle theme: SWORD FM cover by plrusek)");
     }
 
     // ---------- borrowed assets from Chapters 3 and 4 ----------

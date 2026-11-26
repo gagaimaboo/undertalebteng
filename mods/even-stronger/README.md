@@ -33,6 +33,11 @@ it couldn't place, so send that list over.
   - Every kill feeds the real "Noelle became stronger" level-up.
 - **Enemies:** +20% HP, and their attacks run 5% faster.
 - **Pain:** the first ability you ever use asks first.
+- **Battle theme:** regular encounters play **"SWORD (FM Cover)" by plrusek** instead of the normal battle music. Bosses keep theirs.
+
+## Credits
+
+- Encounter battle theme: "SWORD (FM Cover)" by **plrusek**. It's a cover of SWORD from DELTARUNE Chapter 3.
 
 ## Building
 
@@ -49,6 +54,7 @@ Layout:
 |---|---|
 | `gml/` | New scripts and objects, named like UTMT code entries (`gml_Object_obj_x_Step_0.gml`) |
 | `patches/*.es` | Anchored edits to the game's own code (`@@ entry` / `@find` / `@after\|@before\|@replace\|@prepend\|@append` / `@end`). Indentation and blank lines are ignored when matching. |
+| `music/` | The mod's own music. It ships inside the exe and is written to `chapter2_windows/even_stronger/`. `snd_init` swaps it in whenever an encounter asks for `battle.ogg`. |
 | `objects.txt` | Object flags (persistent, depth) |
 | `assets.txt` | Sprites, sounds and music borrowed from Chapters 3 and 4, exported from the player's own install at patch time. Nothing is borrowed yet. |
 | `patches/test_harness.es` + `gml/*_es_test.gml` | Dev-only test harness, compiled only with `--test` |
