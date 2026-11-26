@@ -1,0 +1,57 @@
+# DT Chapter 2: Even Stronger
+
+A DELTARUNE Chapter 2 mod: the weird route, but the whole Cyber World, and Noelle is with you from the start.
+
+It ships as a **patcher**, not a modded `data.win`. It edits your own copy of Chapter 2 by matching code
+*content* (not byte offsets), so it works across game versions. Tested on DELTARUNE 1.49.
+
+## Install
+
+1. Put `EvenStrongerPatcher.exe` in your DELTARUNE folder (next to `DELTARUNE.exe`) and run it.
+   (Or drag the DELTARUNE folder onto the exe.)
+2. Start Chapter 2 on a **new file**.
+
+The patcher backs up the original as `chapter2_windows/data.win.even_stronger_backup`. Running it again re-patches from
+that clean backup. To uninstall run `EvenStrongerPatcher.exe --restore`.
+
+If a game update moves something the mod hooks into, the patcher still finishes. It prints a warning for each hook
+it couldn't place, so send that list over.
+
+## What's in v0.1
+
+- **Opening:** no Susie. Noelle is in the library for the group project, then the computer lab door opens and
+  you both fall into the Cyber World.
+- **FIGHT:** Kris always MISSes. Noelle's FIGHT barely scratches and can never land the kill.
+- **Abilities:**
+  - **X-Slash** (Kris, 25% TP): Spamton NEO's X-Slash, on every enemy.
+  - **Slashrush** (Kris, 80% TP): mash Z, every press is a slash.
+  - **IceShock** (Noelle): unchanged.
+  - **FrostNova** (Noelle, 60% TP): a giant snowflake forms, splits, gets thrown down and rains on every enemy.
+- **Kills are real:**
+  - Ice kills freeze, using the game's own frozen enemies.
+  - Slash kills use `obj_deathanim`, the same death animation Chapter 4 uses for Titan Spawns.
+  - Every kill feeds the real "Noelle became stronger" level-up.
+- **Enemies:** +20% HP, and their attacks run 5% faster.
+- **Pain:** the first ability you ever use asks first.
+
+## Building
+
+Needs the .NET 10 SDK and git. `./build.sh` clones UndertaleModTool 0.9.2.0 into `.utmt/`.
+
+```
+./build.sh            # dev build -> patcher/bin/Release/net10.0/
+./build.sh publish    # dist/EvenStrongerPatcher.exe (self-contained, Windows x64)
+```
+
+Layout:
+
+| Path | What it is |
+|---|---|
+| `gml/` | New scripts and objects, named like UTMT code entries (`gml_Object_obj_x_Step_0.gml`) |
+| `patches/*.es` | Anchored edits to the game's own code (`@@ entry` / `@find` / `@after\|@before\|@replace\|@prepend\|@append` / `@end`). Indentation and blank lines are ignored when matching. |
+| `objects.txt` | Object flags (persistent, depth) |
+| `assets.txt` | Sprites, sounds and music borrowed from Chapters 3 and 4, exported from the player's own install at patch time. Nothing is borrowed yet. |
+| `patches/test_harness.es` + `gml/*_es_test.gml` | Dev-only test harness, compiled only with `--test` |
+
+Dev loop: `EvenStrongerPatcher <clean data.win> --mod . --out <test data.win> --test`. The test build reads
+`es_test.txt` from the save folder and plays it back: key presses, waits, warps, battles and in-game screenshots.
