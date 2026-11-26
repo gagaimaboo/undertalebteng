@@ -4,6 +4,16 @@
 
 function scr_es_scene9_step()
 {
+    if (!variable_instance_exists(id, "es_qset"))
+    {
+        es_qset = -1;
+        es_qdone = -1;
+    }
+    if (es_qset != es_qdone)
+    {
+        es_qdone = es_qset;
+        scr_es_qscreens(es_qset);
+    }
     if (con == 1 && obj_mainchara.x >= 540)
     {
         con = 99;
@@ -124,7 +134,7 @@ function scr_es_scene9_step()
         c_wait(15);
         c_sprite(spr_queen_chair_pose);
         c_imagespeed(0.1);
-        c_var_instance(id, "screenmax", 2);
+        c_var_instance(id, "es_qset", 1);
         c_speaker("queen");
         c_msgsetloc(0, "\\E1* \"Queen\"/%", "es_q_10");
         c_talk_wait();
@@ -136,7 +146,7 @@ function scr_es_scene9_step()
         c_msgnextloc("\\E2* Um^1. Hi^1. We're just..^1. looking for the way out?/", "es_q_12");
         c_msgnextloc("\\E0* We have a group project^1, eheheh.../%", "es_q_13");
         c_talk_wait();
-        c_var_instance(id, "screenmax", 4);
+        c_var_instance(id, "es_qset", 2);
         c_speaker("queen");
         c_msgsetloc(0, "\\E0* A Group Project/", "es_q_14");
         c_msgnextloc("\\EQ* Children Doing Work Together/", "es_q_15");
@@ -150,7 +160,7 @@ function scr_es_scene9_step()
         c_speaker("queen");
         c_msgsetloc(0, "\\E2* Wait/", "es_q_17");
         c_msgnextloc("\\E2* Zoom In/%", "es_q_18");
-        c_var_instance(id, "screenmax", 7);
+        c_var_instance(id, "es_qset", 3);
         c_talk_wait();
         c_wait(20);
         c_msgsetloc(0, "\\E0* You. Girl With The Antlers/", "es_q_19");
@@ -164,7 +174,7 @@ function scr_es_scene9_step()
         c_talk_wait();
         c_sel(qu);
         c_sprite(spr_queen_chair_swish_wine);
-        c_var_instance(id, "screenmax", 11);
+        c_var_instance(id, "es_qset", 4);
         c_speaker("queen");
         c_msgsetloc(0, "\\E0* I Have A Proposition/", "es_q_23");
         c_msgnextloc("\\E6* Become My Willing Peon/", "es_q_24");
@@ -187,11 +197,12 @@ function scr_es_scene9_step()
         c_sel(qu);
         c_sprite(spr_queen_chair_ohoho_1);
         c_imagespeed(0.1);
-        c_var_instance(id, "screenmax", 16);
+        c_var_instance(id, "es_qset", 5);
         c_speaker("queen");
         c_msgsetloc(0, "\\EO* Rejected. By A Teenager. Again/", "es_q_28");
         c_msgnextloc("\\E1* Very Well/", "es_q_29");
         c_msgnextloc("\\E0* Perhaps My Citizens Can Change Your Mind/%", "es_q_30");
+        c_var_instance(id, "es_qset", 6);
         c_talk_wait();
         c_var_instance(id, "screencon", 1);
         c_sel(qu);
@@ -433,6 +444,26 @@ function scr_es_scene9_step()
         cutscene_master = scr_cutscene_make();
         scr_maincharacters_actors();
         kr_actor.sprite_index = spr_krisr_dark;
+        // Queen comes back in person, rising behind the platform like before
+        qu = actor_count + 2;
+        qu_actor = instance_create(camerax() + 255, 273, obj_actor_queenchair);
+        scr_actor_setup_nofacing(qu, qu_actor, "queen");
+        qu_actor.visible = 0;
+        qu_actor.shadow = 0;
+        qu_actor.auto_depth = 0;
+        qu_actor.depth = 1000300;
+        with (qu_actor)
+            fakeshadow.visible = 0;
+        qu_flame = actor_count + 8;
+        qu_flame_actor = scr_dark_marker(qu_actor.x, cameray() + view_hport[0] + 200, spr_queen_chair_flame);
+        qu_flame_actor.visible = 0;
+        qu_flame_actor.auto_depth = 0;
+        qu_flame_actor.depth = qu_actor.depth + 100;
+        scr_actor_setup_nofacing(qu_flame, qu_flame_actor, "qu_flame");
+        c_sel(qu_flame);
+        c_setxy(qu_actor.x, qu_actor.y - 80);
+        c_imagespeed(0.25);
+        c_stickto(qu_actor, 100);
         c_wait(40);
         c_sel(no);
         c_facing("r");
@@ -442,14 +473,33 @@ function scr_es_scene9_step()
             c_msgsetloc(0, "\\E2* Th..^1. they're gone./%", "es_q_40");
             c_talk_wait();
             c_wait(40);
-            c_var_instance(id, "screencount", 0);
-            c_var_instance(id, "screenmax", 5);
+            c_var_instance(id, "es_qset", 10);
             c_wait(20);
+            c_sel(kr);
+            c_facing("u");
+            c_sel(no);
+            c_facing("u");
+            c_sel(qu);
+            c_autowalk(0);
+            c_sprite(spr_queen_chair_ohoho_1);
+            c_imagespeed(0.1);
+            c_visible(1);
+            c_sel(qu_flame);
+            c_visible(1);
+            c_sel(qu);
+            c_walkdirect_wait(qu_actor.x, 90, 70);
+            c_autodepth(1);
+            c_sprite(spr_queen_chair_swish_wine);
+            c_imagespeed(0.1);
+            c_mus2("initloop", "queen.ogg", 0);
             c_speaker("queen");
             c_msgside("bottom");
             c_msgsetloc(0, "\\E0* Hello Again I Forgot To Mention That--/%", "es_q_41");
             c_talk_wait();
             c_wait(30);
+            c_var_instance(id, "es_qset", 11);
+            c_sel(qu);
+            c_sprite(spr_queen_chair_pose);
             c_msgsetloc(0, "\\E2* .../", "es_q_42");
             c_msgnextloc("\\E2* Where Are My Werewires/%", "es_q_43");
             c_talk_wait();
@@ -457,25 +507,37 @@ function scr_es_scene9_step()
             c_msgsetloc(0, "\\E7* I..^1. I don't.../%", "es_q_44");
             c_talk_wait();
             c_speaker("queen");
+            c_var_instance(id, "es_qset", 12);
             c_msgsetloc(0, "\\EE* My Readings Say They Were Not Defeated/", "es_q_45");
             c_msgnextloc("\\E2* They Are Not Asleep. They Are Not Hiding/", "es_q_46");
             c_msgnextloc("\\E1* They Are Simply: Not There Anymore/%", "es_q_47");
             c_talk_wait();
             c_wait(20);
-            c_var_instance(id, "screenmax", 11);
+            c_var_instance(id, "es_qset", 13);
+            c_sel(qu);
+            c_sprite(spr_queen_chair_ohoho_1);
             c_msgsetloc(0, "\\E0* Hm/", "es_q_48");
             c_msgnextloc("\\EQ* Hm Hm Hm/", "es_q_49");
             c_msgnextloc("\\E1* I Was Going To Make You My Peons/", "es_q_50");
             c_msgnextloc("\\E2* But I Do Not Think I Want You In My City At All/%", "es_q_51");
             c_talk_wait();
-            c_var_instance(id, "screenmax", 16);
+            c_var_instance(id, "es_qset", 14);
+            c_sel(qu);
+            c_sprite(spr_queen_chair_pose);
             c_msgsetloc(0, "\\E0* Attention All Citizens Of Cyber City/", "es_q_52");
             c_msgnextloc("\\E2* A Human And A Girl Have Entered The Cyber Field/", "es_q_53");
             c_msgnextloc("\\E1* Do Not Engage. Do Not Make Eye Contact. Do Not Be Interesting/", "es_q_54");
             c_msgnextloc("\\E0* And Raise Your Guard/%", "es_q_55");
             c_talk_wait();
             c_var_instance(id, "screencon", 1);
-            c_wait(60);
+            c_sel(qu);
+            c_sprite(spr_queen_chair_ohoho_1);
+            c_walkdirect(qu_actor.x + 400, 90, 40);
+            c_wait(30);
+            c_mus("free");
+            c_wait(30);
+            c_sel(kr);
+            c_facing("r");
             c_sel(no);
             c_facing("d");
             c_wait(30);
@@ -510,17 +572,41 @@ function scr_es_scene9_step()
             c_msgsetloc(0, "\\E2* Th..^1. they ran off./%", "es_q_70");
             c_talk_wait();
             c_wait(30);
-            c_var_instance(id, "screencount", 0);
-            c_var_instance(id, "screenmax", 4);
+            c_var_instance(id, "es_qset", 20);
             c_wait(20);
+            c_sel(kr);
+            c_facing("u");
+            c_sel(no);
+            c_facing("u");
+            c_sel(qu);
+            c_autowalk(0);
+            c_sprite(spr_queen_chair_ohoho_1);
+            c_imagespeed(0.1);
+            c_visible(1);
+            c_sel(qu_flame);
+            c_visible(1);
+            c_sel(qu);
+            c_walkdirect_wait(qu_actor.x, 90, 70);
+            c_autodepth(1);
+            c_sprite(spr_queen_chair_swish_wine);
+            c_imagespeed(0.1);
+            c_mus2("initloop", "queen.ogg", 0);
             c_speaker("queen");
             c_msgside("bottom");
             c_msgsetloc(0, "\\E1* Oh. You Did Not Even Hurt Them/", "es_q_71");
             c_msgnextloc("\\E0* How Boring/", "es_q_72");
             c_msgnextloc("\\EQ* My Offer Still Stands Antler Girl. Think About It/%", "es_q_73");
+            c_var_instance(id, "es_qset", 21);
             c_talk_wait();
             c_var_instance(id, "screencon", 1);
-            c_wait(40);
+            c_sel(qu);
+            c_sprite(spr_queen_chair_ohoho_1);
+            c_walkdirect(qu_actor.x + 400, 90, 40);
+            c_wait(30);
+            c_mus("free");
+            c_wait(20);
+            c_sel(no);
+            c_facing("r");
             c_speaker("noelle");
             c_msgsetloc(0, "\\E6* ...I don't think I want to think about it./", "es_q_74");
             c_msgnextloc("\\E1* Let's find the way out^1, Kris./%", "es_q_75");
@@ -532,9 +618,77 @@ function scr_es_scene9_step()
     }
     if (con == 10 && !instance_exists(obj_cutscene_master))
     {
+        with (obj_actor_queenchair)
+            instance_destroy();
+        if (variable_instance_exists(id, "qu_flame_actor") && i_ex(qu_flame_actor))
+            with (qu_flame_actor)
+                instance_destroy();
         global.interact = 0;
         con = 11;
         global.plot = 51;
         scr_tempsave();
+    }
+}
+
+// Queen's screens for each beat: [x, y, frame of spr_queenscreen], in the original scene's
+// half-scale screen coordinates.
+function scr_es_qscreens(argument0)
+{
+    var g = [];
+    switch (argument0)
+    {
+        case 1: // her name
+        case 20:
+            g = [[117, 40, 0], [80, 40, 2], [210, 40, 1], [245, 40, 2]];
+            break;
+        case 2: // "Children Doing Work Together"
+            g = [[30, 35, 22], [63, 39, 23], [253, 39, 27], [284, 35, 31]];
+            break;
+        case 3: // zooming in on Noelle's data
+            g = [[28, 67, 7], [95, 74, 20], [224, 76, 9], [282, 78, 19]];
+            break;
+        case 4: // willing peon, robot face
+            g = [[94, 35, 7], [220, 35, 33], [253, 39, 8]];
+            break;
+        case 5: // rejected
+            g = [[73, 34, 24], [224, 76, 24]];
+            break;
+        case 6: // her citizens
+            g = [[30, 35, 15], [284, 35, 12], [63, 39, 13]];
+            break;
+        case 10: // she's back
+            g = [[117, 40, 0], [80, 40, 14], [210, 40, 1], [245, 40, 14]];
+            break;
+        case 11: // where are my Werewires
+            g = [[30, 35, 20], [94, 35, 20], [220, 35, 20], [284, 35, 20]];
+            break;
+        case 12: // not there anymore
+            g = [[28, 67, 11], [95, 74, 25], [224, 76, 25], [282, 78, 26]];
+            break;
+        case 13: // she changes her mind about you
+            g = [[63, 39, 21], [94, 74, 13], [253, 39, 6]];
+            break;
+        case 14: // warning to the whole city
+            g = [[30, 35, 24], [94, 35, 6], [220, 35, 6], [284, 35, 24], [28, 67, 38], [282, 78, 7]];
+            break;
+        case 21: // the offer still stands
+            g = [[28, 67, 7], [282, 78, 10]];
+            break;
+    }
+    // the entrance builds up a collage like the original; after the fight each beat replaces the last
+    if (argument0 >= 10)
+    {
+        with (obj_queenscreen)
+            dismiss = 1;
+        screencount = 0;
+        screenmax = 0;
+    }
+    for (var i = 0; i < array_length(g); i++)
+    {
+        var e = g[i];
+        screenx[screenmax] = e[0];
+        screeny[screenmax] = e[1];
+        screenimage[screenmax] = e[2];
+        screenmax++;
     }
 }

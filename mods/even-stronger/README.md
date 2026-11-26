@@ -37,7 +37,8 @@ it couldn't place, so send that list over.
 - **Queen's entrance** (the vanilla scene-9 room, rewritten for Noelle):
   - Queen comes to look at the two unregistered Lightners. She finds "something very cold" in Noelle's code and wants her as a peon.
   - Kris steps in, and she wires the two scared locals into Werewires.
-  - **After the fight:** if you killed them, Queen comes back to a field that's "Simply: Not There Anymore" and warns the whole city ("Do Not Engage... And Raise Your Guard"). Noelle talks about the ice, or about your sword.
+  - Her screens show what she's talking about: her name, stick-figure kids, Noelle's face and a "?" when she zooms in, a robot face for the peon offer, UH-OH when she's turned down.
+  - **After the fight:** if you killed them, Queen comes back in person to a field that's "Simply: Not There Anymore" and warns the whole city ("Do Not Engage... And Raise Your Guard"). Her screens go from "?" to static to UH-OH with Kris's and Noelle's faces. Noelle talks about the ice, or about your sword.
   - If nobody died, she leaves bored.
 - **Warned:** every enemy shows "(Warned)" next to its name, the label from Ralsei's Warn act in Chapter 1.
 - **FIGHT:** Kris always MISSes. Noelle's FIGHT barely scratches and can never land the kill.
