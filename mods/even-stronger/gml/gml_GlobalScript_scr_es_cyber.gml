@@ -50,14 +50,28 @@ function scr_es_roomstart()
 {
     var n = room_get_name(room);
     // the locals hid or fled: no NPCs in the Cyber Field or the city
-    if (string_pos("room_dw_cyber", n) == 1 || string_pos("room_dw_city", n) == 1)
+    // Hidden, not deleted: several cutscenes keep references to NPCs they spawned (and would
+    // crash reading a deleted one), so they're moved far off the map instead.
+    // Left alone: Queen's room before her scene (its two locals become the first Werewires)
+    // and the Cyber Field shop (its keeper is the shop).
+    var keep = (room == room_dw_cyber_intro_2 && global.plot < 51) || instance_exists(obj_ch2_room_cyber_shop);
+    if ((string_pos("room_dw_cyber", n) == 1 || string_pos("room_dw_city", n) == 1) && !keep)
     {
         with (obj_npc_room)
-            instance_destroy();
+        {
+            x -= 100000;
+            visible = 0;
+        }
         with (obj_npc_room_animated)
-            instance_destroy();
+        {
+            x -= 100000;
+            visible = 0;
+        }
         with (obj_npc_facing)
-            instance_destroy();
+        {
+            x -= 100000;
+            visible = 0;
+        }
     }
     // puzzles: Noelle freezes them (or already has)
     var pf = scr_es_puzzle_flags();

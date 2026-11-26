@@ -40,21 +40,33 @@ function scr_es_scene9_step()
         qu_flame_actor.visible = 0;
         qu_flame_actor.auto_depth = 0;
         qu_flame_actor.depth = qu_actor.depth + 100;
+        // the two locals the original scene spawned (fall back to their spots if they're gone)
+        var n1x = 260, n1y = 200, n2x = 380, n2y = 280;
+        if (variable_instance_exists(id, "npc1_o") && i_ex(npc1_o))
+        {
+            n1x = npc1_o.x;
+            n1y = npc1_o.y;
+        }
+        if (variable_instance_exists(id, "npc2_o") && i_ex(npc2_o))
+        {
+            n2x = npc2_o.x;
+            n2y = npc2_o.y;
+        }
         npc1 = actor_count + 4;
-        npc1_actor = scr_dark_marker(npc1_o.x, npc1_o.y, spr_plugboy_cower);
+        npc1_actor = scr_dark_marker(n1x, n1y, spr_plugboy_cower);
         scr_actor_setup_nofacing(npc1, npc1_actor, "npc1");
         with (npc1_actor)
             scr_depth();
         npc2 = actor_count + 5;
-        npc2_actor = scr_dark_marker(npc2_o.x, npc2_o.y, spr_plugboy_cower);
+        npc2_actor = scr_dark_marker(n2x, n2y, spr_plugboy_cower);
         scr_actor_setup_nofacing(npc2, npc2_actor, "npc2");
         with (npc2_actor)
             scr_depth();
         wire1 = actor_count + 6;
-        wire1_actor = scr_dark_marker(npc2_o.x, npc1_o.y - 400, spr_plugboy_plug);
+        wire1_actor = scr_dark_marker(n2x, n1y - 400, spr_plugboy_plug);
         scr_actor_setup_nofacing(wire1, wire1_actor, "wire1");
         wire2 = actor_count + 7;
-        wire2_actor = scr_dark_marker(npc2_o.x, npc2_o.y - 400, spr_plugboy_plug);
+        wire2_actor = scr_dark_marker(n2x, n2y - 400, spr_plugboy_plug);
         scr_actor_setup_nofacing(wire2, wire2_actor, "wire1");
         scr_actor_setup_nofacing(qu_flame, qu_flame_actor, "qu_flame");
         with (obj_npc_room)
