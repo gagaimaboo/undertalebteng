@@ -20,7 +20,9 @@ function scr_es_cyber_music_tick()
         exit;
     if (!scr_es_incyber() || scr_es_cyber_music_gone())
     {
-        if (scr_es_cyber_music_gone())
+        if (scr_es_cyber_music_gone() && global.es_cybersong == global.currentsong[1] && global.plot < 60)
+            audio_stop_sound(global.es_cybersong);
+        else if (global.plot >= 60 && global.es_cybersong == global.currentsong[1])
             audio_stop_sound(global.es_cybersong);
         exit;
     }

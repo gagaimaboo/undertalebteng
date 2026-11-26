@@ -34,6 +34,15 @@ if (instance_exists(obj_battlecontroller) && global.fighting == 1)
         if (global.monster[w] == 1 && global.monstercomment[w] != "(Warned)")
             global.monstercomment[w] = "(Warned)";
     }
+    // count the trio's turns (Kris snaps after three)
+    if (instance_exists(obj_sweet_enemy) && variable_global_exists("es_sweet_turns"))
+    {
+        if (!variable_instance_exists(id, "lastmn"))
+            lastmn = global.mnfight;
+        if (lastmn == 2 && global.mnfight != 2)
+            global.es_sweet_turns++;
+        lastmn = global.mnfight;
+    }
     // ...and attack 5% faster (3% for Queen)
     var want = (global.mnfight == 2) ? ((global.flag[2451] == 1) ? 30.9 : 31.5) : 30;
     if (room_speed != want && (want != 30 || fast == 1))

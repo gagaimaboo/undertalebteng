@@ -50,7 +50,15 @@ global.currentsong[1] = mus_loop_ext(global.currentsong[0], 1, 1);
 @replace
 if (scr_es_on())
 {
-    if (!scr_es_cyber_music_gone())
+    if (global.plot >= 60)
+    {
+        if (!snd_is_playing(global.currentsong[1]))
+        {
+            global.currentsong[0] = snd_init("spamton_neo_meeting.ogg");
+            global.currentsong[1] = mus_loop_ext(global.currentsong[0], 1, 1);
+        }
+    }
+    else if (!scr_es_cyber_music_gone())
     {
         if (!variable_global_exists("es_cybersong") || !audio_is_playing(global.es_cybersong))
         {
@@ -78,6 +86,15 @@ if (scr_es_on())
     if (global.plot < 55)
         instance_create(0, 0, obj_es_scene10);
     instance_destroy();
+    exit;
+}
+@end
+
+@@ gml_Object_obj_ch2_cyber01_Step_0  # Sweet Cap'n Cakes: Kris + Noelle, and the snap
+@prepend
+if (scr_es_on())
+{
+    scr_es_sweet_step();
     exit;
 }
 @end

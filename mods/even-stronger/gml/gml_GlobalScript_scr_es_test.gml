@@ -148,6 +148,13 @@ function scr_es_test_tick()
                     }
                 }
                 break;
+            case "sweetturns":
+                global.es_sweet_turns = real(n1);
+                break;
+            case "hp":
+                global.hp[1] = real(n1);
+                global.hp[4] = real(n1);
+                break;
             case "monhp":
                 for (var mi = 0; mi < 3; mi++)
                     if (global.monster[mi] == 1)

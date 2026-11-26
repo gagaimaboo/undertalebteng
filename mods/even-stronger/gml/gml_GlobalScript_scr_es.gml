@@ -44,7 +44,10 @@ function scr_es_fightdmg(argument0)
     if (global.flag[2451] == 1)
         return d;
     if (char == 1)
+    {
+        scr_es_try_snap();
         return 0;
+    }
     if (char == 4)
     {
         d = ceil(d * 0.12);
@@ -155,6 +158,8 @@ function scr_es_spell(argument0, argument1)
     }
     if (sp == 9)
         return 0;
+    if ((sp == 40 || sp == 41) && scr_es_try_snap())
+        return 1;
     var st = global.chartarget[argument1];
     cancelattack = 0;
     if (sp != 42 && global.monster[st] == 0)
