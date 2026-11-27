@@ -132,6 +132,9 @@ function scr_es_test_tick()
             case "flag":
                 global.flag[real(n1)] = real(n2);
                 break;
+            case "getflag":
+                scr_es_test_log("flag[" + n1 + "]=" + string(global.flag[real(n1)]));
+                break;
             case "char":
                 global.char[real(n1)] = real(n2);
                 break;
@@ -145,6 +148,20 @@ function scr_es_test_tick()
                         global.monsterhp[ki] = 0;
                         global.flag[51 + ki] = 6;
                         with (global.monsterinstance[ki])
+                            scr_monsterdefeat();
+                    }
+                }
+                break;
+            case "slashall":
+                // kill every enemy the way X-Slash does (a real kill, not a freeze)
+                if (instance_exists(obj_battlecontroller))
+                for (var si = 0; si < 3; si++)
+                {
+                    if (global.monster[si] == 1 && i_ex(global.monsterinstance[si]))
+                    {
+                        scr_es_markslashkill(si, global.monsterhp[si]);
+                        global.monsterhp[si] = 0;
+                        with (global.monsterinstance[si])
                             scr_monsterdefeat();
                     }
                 }

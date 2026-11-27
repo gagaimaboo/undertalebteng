@@ -164,3 +164,14 @@ function scr_text(arg0)
 if (scr_es_on() && scr_es_text(arg0))
     exit;
 @end
+
+@@ gml_GlobalScript_scr_monsterdefeat  # the whole mod is the weird route: a battle that ends in kills counts like an all-frozen one, so vanilla's city weird-route events still advance
+@find
+if (global.flag[50] == 6)
+{
+global.flag[926]++;
+}
+@before
+if (scr_es_on() && global.flag[50] == 1)
+    global.flag[50] = 6;
+@end
