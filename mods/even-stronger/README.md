@@ -76,7 +76,11 @@ it couldn't place, so send that list over.
   - Then it roars and draws its sword, with Chapter 3's own sprites and timing.
   - The fight plays "Nuzlocke". Party damage is 20% lower and FIGHT another 3% lower, so abilities are the way to hit it. It ends at 50% HP.
   - It flickers like at the end of the Chapter 3 fight, but there's no swoon this time: Kris cuts it down for real.
-- **BlackKnife:** the knight's sword, the point of no return. +20 ATK, +3 DEF, and it hits with Chapter 3's BlackShard slash.
+- **BlackKnife:** the knight's sword, the point of no return.
+  - +20 ATK, +3 DEF, and it hits with Chapter 3's BlackShard slash.
+  - Every battle starts at 40% TP.
+  - **SlayCyber:** Kris deals 1.5x damage to Darkners.
+  - Kris's FIGHT works again.
 - **Into the city:**
   - Noelle climbs out of the trash with you.
   - At the split nobody leaves.

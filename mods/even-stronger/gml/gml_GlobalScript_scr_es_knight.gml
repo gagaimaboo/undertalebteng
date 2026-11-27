@@ -16,7 +16,7 @@ function scr_es_knight_encounter()
 function scr_es_blackknife_info()
 {
     weaponnametemp = "BlackKnife";
-    weapondesctemp = "The Roaring Knight's sword.#It's still cold.";
+    weapondesctemp = "The Roaring Knight's sword. Starts#battles at 40% TP. Darkners take 1.5x.";
     wmessage2temp = "...Kris. Where'd you get that.";
     wmessage3temp = "That's... not yours, Kris...";
     wmessage4temp = "(It hums when I hold it...)";
@@ -32,8 +32,8 @@ function scr_es_blackknife_info()
     weaponchar3temp = 0;
     weaponchar4temp = 0;
     weaponicontemp = 1;
-    weaponabilityicontemp = 0;
-    weaponabilitytemp = " ";
+    weaponabilityicontemp = 7;
+    weaponabilitytemp = "SlayCyber";
     value = 0;
 }
 

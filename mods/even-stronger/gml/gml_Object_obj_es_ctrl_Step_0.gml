@@ -33,6 +33,9 @@ if (instance_exists(obj_battlecontroller) && global.fighting == 1)
             }
         }
         scr_es_setspells();
+        // BlackKnife: every battle starts at 40% TP
+        if (scr_es_blackknife())
+            global.tension = max(global.tension, round(global.maxtension * 0.4));
     }
     if (global.mnfight != 2)
         scr_es_addkrisacts();

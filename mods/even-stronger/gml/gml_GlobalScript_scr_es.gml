@@ -42,10 +42,15 @@ function scr_es_setspells()
 function scr_es_fightdmg(argument0)
 {
     var d = argument0;
+    // BlackKnife: Kris's FIGHT works again, and SlayCyber hits Darkners 1.5x
+    if (char == 1 && scr_es_blackknife() && scr_es_darkner(global.chartarget[myself]))
+        d = ceil(d * 1.5);
     // the Roaring Knight: FIGHT works, but the party hits 20% softer and FIGHT another 3% softer
     if (scr_es_knightfight())
         return max(1, round(d * 0.8 * 0.97));
     if (global.flag[2451] == 1)
+        return d;
+    if (char == 1 && scr_es_blackknife())
         return d;
     if (char == 1)
     {
@@ -211,7 +216,25 @@ function scr_es_spell(argument0, argument1)
 // X-Slash damage, straight from Spamton NEO's X-Slash act
 function scr_es_xslashdmg(argument0, argument1)
 {
-    return max(1, round(((((global.battleat[argument0] * 150) / 20) - (global.monsterdf[argument1] * 3)) * 1.25) * scr_es_abilitymul()));
+    var d = max(1, round(((((global.battleat[argument0] * 150) / 20) - (global.monsterdf[argument1] * 3)) * 1.25) * scr_es_abilitymul()));
+    if (global.char[argument0] == 1 && scr_es_blackknife() && scr_es_darkner(argument1))
+        d = ceil(d * 1.5);
+    return d;
+}
+
+// Kris is holding the knight's sword
+function scr_es_blackknife()
+{
+    return global.charweapon[1] == 23;
+}
+
+// SlayCyber: everyone in this world is a Darkner, except the Lightners (Berdly)
+function scr_es_darkner(argument0)
+{
+    if (argument0 < 0 || argument0 > 2 || !i_ex(global.monsterinstance[argument0]))
+        return true;
+    var o = global.monsterinstance[argument0].object_index;
+    return !(o == obj_berdlyb_enemy || o == obj_berdlyb2_enemy || o == obj_berdlyplug_enemy);
 }
 
 function scr_es_cast_after_pain(argument0, argument1, argument2)

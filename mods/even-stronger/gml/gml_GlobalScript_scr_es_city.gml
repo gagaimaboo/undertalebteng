@@ -431,18 +431,28 @@ function scr_es_berdly_rider_xy()
     return [cb.x + cb.sinerx + cb.character_offset_x, cb.y + cb.sinery + cb.character_offset_y, spr];
 }
 
-// a kart shows its rider's battle sprite (the knight fight happens on the ride)
+// a kart shows its rider's battle sprite (the knight fight happens on the ride). The hero keeps
+// drawing (its attacks run in its Draw), just invisibly, and the kart copies what it draws.
 function scr_es_coaster_rider(_c, _hero)
 {
     if (!i_ex(_c) || !instance_exists(_hero))
         exit;
     var h = instance_find(_hero, 0);
-    h.visible = 0;
+    h.image_alpha = 0;
+    var spr = variable_instance_exists(h, "thissprite") ? h.thissprite : -1;
+    var idx = variable_instance_exists(h, "index") ? h.index : 0;
+    if (h.hurt == 1)
+    {
+        spr = h.hurtsprite;
+        idx = h.hurtindex;
+    }
+    if (!sprite_exists(spr))
+        exit;
     _c.visible = 1;
     _c.animate = false;
-    _c.character_sprite = h.sprite_index;
+    _c.character_sprite = spr;
     if (_c.actor != -1 && i_ex(_c.actor))
-        _c.actor.image_index = h.image_index;
+        _c.actor.image_index = idx;
 }
 
 // the timed effects the cutscene switches on
