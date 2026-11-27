@@ -26,7 +26,7 @@ namespace EvenStronger;
 
 static class Program
 {
-    const string Version = "0.1.13";
+    const string Version = "0.1.14";
     const string BackupName = "data.win.even_stronger_backup";
     const string MarkerCode = "gml_GlobalScript_scr_es_version";
 
@@ -277,7 +277,7 @@ static class Program
                 }
                 Console.WriteLine($"  copied {transplanted.Objects.Count} objects, {transplanted.Functions} functions, {transplanted.Sprites} sprites, {transplanted.Sounds} sounds");
                 if (testBuild)
-                    Console.WriteLine("  " + string.Join(" ", transplanted.Code.Keys.Where(k => k.StartsWith("gml_GlobalScript_es3_")).Select(k => k.Substring(21))) + "\n  " + string.Join(" ", transplanted.Objects.Keys) + "\n  stubbed: " + string.Join(" ", transplanted.Stubbed) + "\n  own copies: " + string.Join(" ", transplanted.Owned));
+                    Console.WriteLine("  " + string.Join(" ", transplanted.Code.Keys.Where(k => k.StartsWith("gml_GlobalScript_es3_")).Select(k => k.Substring(21))) + "\n  " + string.Join(" ", transplanted.Objects.Keys) + "\n  stubbed: " + string.Join(" ", transplanted.Stubbed) + "\n  own copies: " + string.Join(" ", transplanted.Owned) + "\n  numbers -> names:\n    " + string.Join("\n    ", transplanted.NumFixes.Distinct()));
             }
         }
         int ok = 0;

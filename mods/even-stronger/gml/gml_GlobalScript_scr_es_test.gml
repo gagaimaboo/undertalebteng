@@ -13,6 +13,16 @@ function scr_es_test_tick()
         global.es_t_mash = 0;
         global.es_t_until = "";
         global.es_t_mashleft = 0;
+        // a crash writes its message to the log and quits, instead of sitting on an error box
+        exception_unhandled_handler(function(_ex)
+        {
+            var cf = file_text_open_append("es_log.txt");
+            file_text_write_string(cf, "CRASH: " + string_replace_all(string(_ex.longMessage), "\n", " | "));
+            file_text_writeln(cf);
+            file_text_close(cf);
+            game_end();
+            return 0;
+        });
         if (file_exists("es_test.txt"))
         {
             var f = file_text_open_read("es_test.txt");
@@ -25,6 +35,32 @@ function scr_es_test_tick()
         }
     }
     global.es_t_frame++;
+    // live commands: lines dropped into es_live.txt run right away, while the game keeps going
+    if ((global.es_t_frame mod 10) == 0 && file_exists("es_live.txt"))
+    {
+        var lf = file_text_open_read("es_live.txt");
+        var live = [];
+        while (!file_text_eof(lf))
+        {
+            array_push(live, string(file_text_read_string(lf)));
+            file_text_readln(lf);
+        }
+        file_text_close(lf);
+        file_delete("es_live.txt");
+        // run them next, ahead of whatever the script was doing
+        for (var li = array_length(live) - 1; li >= 0; li--)
+            array_insert(global.es_t_lines, global.es_t_i, live[li]);
+        global.es_t_wait = 0;
+        global.es_t_until = "";
+        global.es_t_mashleft = 0;
+    }
+    // heartbeat for the test runner
+    if ((global.es_t_frame mod 15) == 0)
+    {
+        var hb = file_text_open_write("es_hb.txt");
+        file_text_write_string(hb, string(global.es_t_frame));
+        file_text_close(hb);
+    }
     for (var r = array_length(global.es_t_release) - 1; r >= 0; r--)
     {
         var rel = global.es_t_release[r];
@@ -182,6 +218,23 @@ function scr_es_test_tick()
                 instance_create(0, 0, obj_berdly_encounter_setup);
                 with (obj_battleback)
                     instance_destroy();
+                global.es_t_wait = 30;
+                break;
+            case "save":
+                // save to slot n1 (copied out by the test runner for later tests)
+                global.filechoice = real(n1);
+                scr_save();
+                scr_es_test_log("saved slot " + n1);
+                break;
+            case "load":
+                // jump straight into a saved game (slot n1) from the title screen
+                global.filechoice = real(n1);
+                scr_load();
+                global.es_t_wait = 40;
+                break;
+            case "hold":
+                // stay alive and wait for live commands
+                global.es_t_i--;
                 global.es_t_wait = 30;
                 break;
             case "setg":

@@ -74,6 +74,13 @@ function scr_es_battle_teardown()
     instance_activate_object(obj_battlecontroller);
     with (obj_darkener)
         instance_destroy();
+    // the knight's own Chapter 3 ending fades to white: hold it, then fade back into the scene
+    if (instance_exists(obj_fadeout))
+    {
+        with (obj_fadeout)
+            instance_destroy();
+        instance_create(0, 0, obj_es_whitein);
+    }
     with (obj_es_kdbc)
         instance_destroy();
     with (obj_es_boomfx)

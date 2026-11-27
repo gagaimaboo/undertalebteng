@@ -51,3 +51,11 @@ if (!scr_es_on() && endcon == 1 && endtimer > 45)
 if (scr_es_on())
     scr_es_knight_stats();
 @end
+
+@@ gml_GlobalScript_scr_damage  # the knight's attacks are tuned for a Chapter 3 party (206 a hit): 30% against this one
+@find
+tdamage = ceil(tdamage * scr_element_damage_reduction(__element, global.char[target]));
+@after
+if (scr_es_knightfight())
+    tdamage = max(1, ceil(tdamage * 0.3));
+@end

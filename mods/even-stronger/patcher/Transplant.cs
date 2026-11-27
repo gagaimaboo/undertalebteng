@@ -31,6 +31,7 @@ sealed class TransplantResult
     public readonly List<(string from, string to)> Files = new();                 // streamed audio files to copy next to data.win
     public readonly List<string> Stubbed = new();
     public readonly List<string> Owned = new();
+    public readonly List<string> NumFixes = new();
     public int Sprites, Sounds, Functions;
 }
 
@@ -129,6 +130,33 @@ static class Transplant
                     return name == null ? m.Value : m.Groups[1].Value + m.Groups[2].Value + name;
                 });
             }
+            // and generally: "growtangle = 1517" where Chapter 3's asset #1517 is obj_growtangle
+            text = Regex.Replace(text, @"\b([A-Za-z_][A-Za-z0-9_]*)(\s*(?:==|!=|=)\s*)(\d{3,5})\b(?![.\d])", m =>
+            {
+                int i = int.Parse(m.Groups[3].Value);
+                // the asset with that index is named elsewhere in the same code: certainly that one
+                string o3n = i < d3.GameObjects.Count ? d3.GameObjects[i].Name?.Content : null;
+                string s3n = i < d3.Sprites.Count ? d3.Sprites[i].Name?.Content : null;
+                foreach (var named in new[] { o3n, s3n })
+                    if (named != null && Regex.IsMatch(text, @"\b" + Regex.Escape(named) + @"\b"))
+                    {
+                        res.NumFixes.Add($"{entry}: {m.Groups[1].Value} {m.Groups[3].Value} -> {named}");
+                        return m.Groups[1].Value + m.Groups[2].Value + named;
+                    }
+                string v = m.Groups[1].Value.ToLowerInvariant().Replace("_", "");
+                if (v.Length < 4) return m.Value;
+                foreach (var cand in new[] { i < d3.GameObjects.Count ? d3.GameObjects[i].Name?.Content : null, i < d3.Sprites.Count ? d3.Sprites[i].Name?.Content : null })
+                {
+                    if (cand == null) continue;
+                    string c = cand.ToLowerInvariant().Replace("obj_", "").Replace("spr_", "").Replace("_", "");
+                    if (c.Contains(v) || v.Contains(c))
+                    {
+                        res.NumFixes.Add($"{entry}: {m.Groups[1].Value} {m.Groups[3].Value} -> {cand}");
+                        return m.Groups[1].Value + m.Groups[2].Value + cand;
+                    }
+                }
+                return m.Value;
+            });
             return text;
         }
         var rootSet = new HashSet<string>(rootObjects);
