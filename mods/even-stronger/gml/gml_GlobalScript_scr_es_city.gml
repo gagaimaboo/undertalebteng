@@ -330,10 +330,10 @@ function scr_es_scene11a_step()
             c_msgside("bottom");
             // caught off guard: it flickers, like at the end of the Chapter 3 fight
             c_var_instance(id, "es_kflick", 1);
-            c_wait(70);
-            // Kris leaves the kart and cuts it down while it's like that
+            c_wait(80);
+            // Kris cuts it down while it's like that
             c_var_instance(id, "es_kstrike", 1);
-            c_wait(170);
+            c_wait(110);
             c_var_instance(id, "es_bk", 1);
             c_wait(40);
             c_soundplay(snd_item);
@@ -575,58 +575,35 @@ function scr_es_scene11a_fx()
         es_sword = 2;
         kn.draw_sword = true;
     }
-    // caught off guard: the Chapter 3 flicker between its body and the curled-up ball
+    // caught off guard: the Chapter 3 cutscene knight's own static flicker (state 3), wavering
     if (es_kflick == 1 && i_ex(kn))
     {
         if (es_kft == 0)
+        {
             es_kfx = kn.x;
+            kn.state = 3;
+            kn.static_timer = 0;
+        }
         es_kft++;
-        kn.state = 99;
-        kn.after_active = false;
-        if ((es_kft mod 3) == 0)
-        {
-            kn.sprite_index = spr_roaringknight_idle_overworld_sword;
-            kn.image_index = 0;
-        }
+        if (es_kft < 30)
+            kn.x = es_kfx + (sin(es_kft * 0.3) * 20);
         else
-        {
-            kn.sprite_index = spr_roaringknight_ball_transition;
-            kn.image_index = 7;
-        }
-        kn.x = es_kfx + ((es_kft < 60) ? (random_range(-1, 1) * 8 * (1 - (es_kft / 60))) : 0);
+            kn.x = scr_movetowards(kn.x, es_kfx, 2);
     }
-    // Kris jumps out of the kart and cuts it down
+    // Kris cuts it down from the kart
     if (es_kstrike == 1)
     {
         es_kstrike = 2;
         es_kst = 0;
-        es_kris_oy = coaster_kris.character_offset_y;
-        var kx = coaster_kris.x + coaster_kris.sinerx + coaster_kris.character_offset_x;
-        var ky = coaster_kris.y + coaster_kris.sinery + es_kris_oy;
-        coaster_kris.character_offset_y = 9999;
-        es_kmk = scr_dark_marker(kx, ky, spr_krisb_attackready);
-        es_kmk.depth = kn.depth - 5;
-        es_kmk.image_speed = 0;
-        es_kmk_x0 = kx;
-        es_kmk_y0 = ky;
-        snd_play(snd_jump);
+        coaster_kris.animate = true;
+        coaster_kris.character_sprite = spr_krisb_attackready;
     }
     if (es_kstrike == 2)
     {
         es_kst++;
-        var tx = kn.x - 70;
-        var ty = kn.y + 40;
-        if (es_kst <= 14)
+        if (es_kst == 14)
         {
-            var p = es_kst / 14;
-            es_kmk.x = lerp(es_kmk_x0, tx, p);
-            es_kmk.y = lerp(es_kmk_y0, ty, p) - (sin(p * pi) * 60);
-        }
-        if (es_kst == 16)
-        {
-            es_kmk.sprite_index = spr_krisb_attack;
-            es_kmk.image_index = 0;
-            es_kmk.image_speed = 0.5;
+            coaster_kris.character_sprite = spr_krisb_attack;
             snd_play(snd_laz_c);
             var sh = scr_dark_marker(kn.x + 10, kn.y + 20, spr_attack_shard);
             sh.image_speed = 0.334;
@@ -635,7 +612,7 @@ function scr_es_scene11a_fx()
             sh.image_yscale = 2.5;
             es_kshard = sh;
         }
-        if (es_kst == 24)
+        if (es_kst == 22)
         {
             var fx = instance_create(kn.x + 60, kn.y + 80, obj_es_boomfx);
             fx.ang = [45, -45];
@@ -647,13 +624,15 @@ function scr_es_scene11a_fx()
             scr_es_sndx(snd_damage, 1, 1);
             scr_es_shake(16, 16, 2);
         }
-        if (es_kst == 30 && i_ex(es_kshard))
+        if (es_kst == 28 && i_ex(es_kshard))
             with (es_kshard)
                 instance_destroy();
-        if (es_kst == 40)
+        if (es_kst == 38)
         {
             // it's gone. for real this time
             es_kflick = 2;
+            kn.state = 99;
+            snd_stop(snd_tv_static);
             var spr = kn.sprite_index;
             var d = instance_create(kn.x - (sprite_get_xoffset(spr) * 2), kn.y - (sprite_get_yoffset(spr) * 2), obj_deathanim);
             d.sprite_index = spr;
@@ -663,20 +642,10 @@ function scr_es_scene11a_fx()
             d.depth = kn.depth;
             kn.visible = 0;
             global.flag[2452] += 1;
-            es_kmk.sprite_index = spr_krisb_idle;
-            es_kmk.image_speed = 0;
         }
-        if (es_kst > 110 && es_kst <= 124)
+        if (es_kst == 60)
         {
-            var p = (es_kst - 110) / 14;
-            es_kmk.x = lerp(tx, es_kmk_x0, p);
-            es_kmk.y = lerp(ty, es_kmk_y0, p) - (sin(p * pi) * 60);
-        }
-        if (es_kst == 125)
-        {
-            with (es_kmk)
-                instance_destroy();
-            coaster_kris.character_offset_y = es_kris_oy;
+            coaster_kris.animate = false;
             coaster_kris.character_sprite = spr_krisr_dark;
             es_kstrike = 3;
         }
