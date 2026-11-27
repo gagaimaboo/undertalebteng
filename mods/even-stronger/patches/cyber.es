@@ -98,3 +98,32 @@ if (scr_es_on())
     exit;
 }
 @end
+
+@@ gml_Object_obj_controller_dw_cyber_music_final_Step_0  # the platform ride: park Noelle where Susie/Ralsei went
+@find
+c_sel(su);
+c_visible(false);
+c_setxy(1710, 174);
+c_sel(ra);
+c_visible(false);
+c_setxy(1812, 174);
+@replace
+if (scr_es_on())
+{
+    if (variable_instance_exists(id, "no"))
+    {
+        c_sel(no);
+        c_visible(false);
+        c_setxy(1710, 174);
+    }
+}
+else
+{
+    c_sel(su);
+    c_visible(false);
+    c_setxy(1710, 174);
+    c_sel(ra);
+    c_visible(false);
+    c_setxy(1812, 174);
+}
+@end

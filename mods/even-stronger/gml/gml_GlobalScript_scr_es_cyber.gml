@@ -39,7 +39,7 @@ function scr_es_puzzle_flags()
         case room_dw_cyber_keyboard_puzzle_1: return [390, 2460];
         case room_dw_cyber_keyboard_puzzle_2: return [333, 2461];
         case room_dw_cyber_keyboard_puzzle_3: return [420, 2462];
-        case room_dw_cyber_musical_door: return [332, 2463];
+        // (not the musical door: that's a shortcut gate opened by a switch past Sweet Cap'n Cakes)
         case room_dw_cyber_viro_ring: return [352, 2464];
     }
     return -1;

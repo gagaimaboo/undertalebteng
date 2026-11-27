@@ -1,8 +1,13 @@
-// Kris snaps: a storm of slashes across all three, then one giant X. Nothing survives it.
-for (i = 0; i < 10; i++)
-    _charactsprite[i] = noone;
+// Kris snaps. A cutscene, not real hits: the world goes red, everyone becomes a black silhouette,
+// Kris blinks between them cutting white lines through them, then one giant X. Nothing survives it.
 t = 0;
-depth = -500;
-dark = 0;
-flash = 0;
+depth = -99999;
+red = 0;
 killed = 0;
+caster = 0;
+kpos = 0;          // which enemy Kris is at (-1 = his own spot)
+slashes = [];      // [x1, y1, x2, y2, life]
+xslash = 0;
+// freeze the battle: no more turns from here on
+instance_deactivate_object(obj_battlecontroller);
+instance_deactivate_object(obj_dbulletcontroller);

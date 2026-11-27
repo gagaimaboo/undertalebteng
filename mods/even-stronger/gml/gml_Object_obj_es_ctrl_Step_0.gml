@@ -9,6 +9,14 @@ roomtimer++;
 if (roomtimer == 2)
     scr_es_roomstart();
 scr_es_cyber_music_tick();
+if (global.flag[2455] == 1)
+{
+    with (obj_caterpillarchara)
+    {
+        if (name == "noelle" && dsprite != spr_noelle_walk_down_sad_dw)
+            scr_es_noelle_sad_sprites();
+    }
+}
 // enemies come in with their guard up: +20% HP (Queen gets +10% in her own fight)
 if (instance_exists(obj_battlecontroller) && global.fighting == 1)
 {

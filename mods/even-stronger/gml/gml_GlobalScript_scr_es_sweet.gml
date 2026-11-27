@@ -154,14 +154,22 @@ function scr_es_sweet_step()
             __doom.alarm[0] = 25;
         }
     }
-    // after the snap: everything's gone
-    if (con == 30 && !i_ex(obj_battlecontroller) && global.interact == 0)
+    // after the snap (it tears the battle down itself): wait a moment, then the aftermath
+    if (con == 30 && variable_global_exists("es_snapped") && global.es_snapped == 2)
+    {
+        con = 31;
+        es_endt = 0;
+    }
+    if (con == 31)
+    {
+        es_endt++;
+        if (es_endt > 20)
+            con = 32;
+    }
+    if (con == 32)
     {
         con = 35;
         global.interact = 1;
-        nisekk.visible = false;
-        with (obj_marker)
-            instance_destroy();
         cutscene_master = scr_cutscene_make();
         scr_maincharacters_actors();
         c_mus("free_all");
@@ -215,4 +223,77 @@ function scr_es_try_snap()
     instance_create(0, 0, obj_es_snap);
     global.spelldelay = 99999;
     return 1;
+}
+
+// tears down the special battle by hand (like the original scene does), all in one step
+function scr_es_sweet_teardown()
+{
+    instance_activate_object(obj_battlecontroller);
+    instance_activate_object(obj_dbulletcontroller);
+    snd_free_all();
+    with (obj_dbulletcontroller)
+        instance_destroy();
+    with (obj_monsterparent)
+        instance_destroy();
+    with (obj_bulletparent)
+        instance_destroy();
+    with (obj_heroparent)
+        instance_destroy();
+    with (obj_marker)
+        instance_destroy();
+    with (obj_writer)
+        instance_destroy();
+    with (obj_growtangle)
+        instance_destroy();
+    with (obj_heart)
+        instance_destroy();
+    with (obj_tensionbar)
+        instance_destroy();
+    with (obj_battlealphaer)
+        instance_destroy();
+    with (obj_musicalfight_speakers)
+        instance_destroy();
+    with (obj_musical_controller)
+        instance_destroy();
+    with (obj_musicalbullet_controller)
+        instance_destroy();
+    with (obj_musicalbattlebullet)
+        instance_destroy();
+    with (obj_musicalbattlenote)
+        instance_destroy();
+    with (obj_musical_battle_end)
+        instance_destroy();
+    if (i_ex(obj_battleback))
+    {
+        with (obj_battleback)
+            destroy = 1;
+    }
+    with (obj_battlecontroller)
+        instance_destroy();
+    global.fighting = 0;
+    with (obj_mainchara)
+    {
+        visible = 1;
+        cutscene = 0;
+    }
+    with (obj_caterpillarchara)
+    {
+        visible = 1;
+        image_alpha = 1;
+    }
+    with (obj_kk_npc)
+        visible = false;
+    // the trio's stage show in this room: dancers, boomboxes, the dimming, the note section
+    // (not obj_overworldheart: that's Kris's own SOUL, obj_mainchara draws it every frame)
+    with (obj_musicenemy_dancer)
+        instance_destroy();
+    with (obj_musicenemy_boombox)
+        instance_destroy();
+    with (obj_darkener)
+        instance_destroy();
+    with (obj_battleLayerHighlight)
+        instance_destroy();
+    with (obj_cyber_music_battleBullets)
+        instance_destroy();
+    global.es_snapped = 2;
 }

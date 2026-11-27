@@ -6,6 +6,7 @@
 //   2452  kills this playthrough
 //   2453  opening done
 //   2454  freezes this playthrough
+//   2455  Noelle has killed (outside the opening fight): weird-route sprites from now on
 //
 // spells added: 40 X-Slash (Kris), 41 Slashrush (Kris), 42 FrostNova (Noelle)
 
@@ -83,7 +84,12 @@ function scr_es_countkill(argument0)
     if (global.flag[51 + argument0] == 1 || global.flag[51 + argument0] == 6)
         global.flag[2452] += 1;
     if (global.flag[51 + argument0] == 6)
+    {
         global.flag[2454] += 1;
+        // Noelle's first kill after the opening fight: she starts to change
+        if (global.plot >= 51)
+            global.flag[2455] = 1;
+    }
 }
 
 function scr_es_spellinfo(argument0)
@@ -316,4 +322,18 @@ function scr_es_text(argument0)
             return 1;
     }
     return 0;
+}
+
+// Noelle after her first kill: the weird route's sad overworld sprites
+function scr_es_noelle_changed()
+{
+    return scr_es_on() && global.flag[2455] == 1;
+}
+
+function scr_es_noelle_sad_sprites()
+{
+    dsprite = spr_noelle_walk_down_sad_dw;
+    rsprite = spr_noelle_walk_right_sad_dw;
+    lsprite = spr_noelle_walk_left_sad_dw;
+    usprite = spr_noelle_walk_up_dw;
 }
