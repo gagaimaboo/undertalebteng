@@ -76,7 +76,7 @@ draw_sprite_ext(spr_coaster_hero_hurt, HeroID, x, y + 8, image_xscale, image_ysc
 @replace
 if (scr_es_on() && HeroID == 1)
 {
-    draw_sprite_ext(spr_noelle_coaster_front, 0, x + 126, y - 58, -image_xscale, image_yscale, 0, hurt ? c_red : c_white, image_alpha);
+    draw_sprite_ext(spr_noelle_coaster_front, 0, x + 126, y - 42, -image_xscale, image_yscale, 0, hurt ? c_red : c_white, image_alpha);
 }
 else
 {

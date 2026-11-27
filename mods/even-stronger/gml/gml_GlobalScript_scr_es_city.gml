@@ -26,6 +26,13 @@ function scr_es_scene11a_step()
         es_si = 0;
         es_stimer = 0;
         kn = noone;
+        es_kflick = 0;
+        es_kft = 0;
+        es_kfx = 0;
+        es_kstrike = 0;
+        es_kst = 0;
+        es_bk = 0;
+        es_kshard = noone;
         // Kris and Noelle take the first two cars; Berdly's car waits offscreen
         coaster_ralsei.x = -2000;
         coaster_berdly.x = -2000;
@@ -39,7 +46,7 @@ function scr_es_scene11a_step()
     if (i_ex(coaster_susie) && coaster_susie.init)
     {
         coaster_susie.character_sprite = es_shock ? spr_noelle_shocked_dw : scr_es_noelle_rsprite();
-        coaster_susie.character_offset_y = 14;
+        coaster_susie.character_offset_y = -2;
         coaster_susie.character_offset_x = 4;
         coaster_susie.es_sleigh = 1;
     }
@@ -269,9 +276,9 @@ function scr_es_scene11a_step()
             // the roar, then the sword
             c_mus("free_all");
             c_var_instance(id, "es_roar", 1);
-            c_wait(110);
+            c_wait(265);
             c_var_instance(id, "es_sword", 1);
-            c_wait(90);
+            c_wait(140);
             c_var_instance(id, "con", 20);
         }
     }
@@ -281,9 +288,6 @@ function scr_es_scene11a_step()
         con = 21;
         global.es_kfight = 1;
         global.es_kdone = 0;
-        coaster_kris.visible = 0;
-        coaster_susie.visible = 0;
-        coaster_berdly.visible = 0;
         global.flag[9] = 2;
         global.batmusic[0] = snd_init("es_knight.ogg");
         global.flag[54] = 0;
@@ -293,6 +297,12 @@ function scr_es_scene11a_step()
         with (obj_battleback)
             instance_destroy();
         global.flag[9] = 1;
+    }
+    // during the fight Kris and Noelle stay in their karts: the karts show their battle sprites
+    if (con == 21 && instance_exists(obj_battlecontroller))
+    {
+        scr_es_coaster_rider(coaster_kris, obj_herokris);
+        scr_es_coaster_rider(coaster_susie, obj_heronoelle);
     }
     if (con == 21 && variable_global_exists("es_kdone") && global.es_kdone == 1 && !instance_exists(obj_battlecontroller))
     {
@@ -312,12 +322,19 @@ function scr_es_scene11a_step()
             con = 23;
             coaster_kris.visible = 1;
             coaster_susie.visible = 1;
-            with (kn)
-                instance_destroy();
-            scr_es_get_blackknife();
+            coaster_kris.character_sprite = spr_krisr_dark;
+            coaster_susie.character_sprite = scr_es_noelle_rsprite();
+            kn.visible = 1;
             global.interact = 1;
             cutscene_master = scr_cutscene_make();
             c_msgside("bottom");
+            // caught off guard: it flickers, like at the end of the Chapter 3 fight
+            c_var_instance(id, "es_kflick", 1);
+            c_wait(70);
+            // Kris leaves the kart and cuts it down while it's like that
+            c_var_instance(id, "es_kstrike", 1);
+            c_wait(170);
+            c_var_instance(id, "es_bk", 1);
             c_wait(40);
             c_soundplay(snd_item);
             c_speaker("no_name");
@@ -414,6 +431,20 @@ function scr_es_berdly_rider_xy()
     return [cb.x + cb.sinerx + cb.character_offset_x, cb.y + cb.sinery + cb.character_offset_y, spr];
 }
 
+// a kart shows its rider's battle sprite (the knight fight happens on the ride)
+function scr_es_coaster_rider(_c, _hero)
+{
+    if (!i_ex(_c) || !instance_exists(_hero))
+        exit;
+    var h = instance_find(_hero, 0);
+    h.visible = 0;
+    _c.visible = 1;
+    _c.animate = false;
+    _c.character_sprite = h.sprite_index;
+    if (_c.actor != -1 && i_ex(_c.actor))
+        _c.actor.image_index = h.image_index;
+}
+
 // the timed effects the cutscene switches on
 function scr_es_scene11a_fx()
 {
@@ -440,12 +471,18 @@ function scr_es_scene11a_fx()
         if (es_boomt == 60)
         {
             blackall.image_alpha = 0;
-            coaster_berdly.character_sprite = spr_berdlyb_shocked;
             coaster_berdly.animate = false;
-            scr_es_shake(12, 12, 1);
-            snd_play(snd_damage);
+            coaster_berdly.character_sprite = spr_berdlyb_idle_serious;
+            // Chapter 3's swoon hit: the big shake and its sound stack
+            scr_es_shake(14, 14, 1);
+            scr_es_sndx(snd_impact, 1, 1);
+            scr_es_sndx(snd_closet_impact, 1, 1);
+            scr_es_sndx(snd_closet_impact, 1, 0.5);
+            scr_es_sndx(snd_bageldefeat, 0.8, 0.8);
+            scr_es_sndx(snd_damage, 1, 1);
+            scr_es_sndx(snd_glassbreak, 0.8, 0.4);
             var r = scr_es_berdly_rider_xy();
-            var sw = instance_create(r[0] + 40, r[1] + 20, obj_es_swoon);
+            instance_create(r[0] + 20, r[1] + 30, obj_es_swoon);
             es_boom = 2;
         }
     }
@@ -463,17 +500,19 @@ function scr_es_scene11a_fx()
         coaster_berdly.character_offset_y = 9999;
         global.flag[2452] += 1;
     }
-    // the knight: rolls in as a ball, unrolls, hovers
+    // the knight (Chapter 3's own cutscene knight): rolls in as a ball, unrolls, hovers
     if (es_kin == 1)
     {
         es_kin = 2;
         es_kt = 0;
-        kn = scr_dark_marker(camerax() + 700, coaster_berdly.y - 70, scr_es_spr("es_rk_ballfly"));
+        kn = instance_create(camerax() + 700, coaster_berdly.y - 70, obj_ch3_PTB02_roaringknight);
+        kn.sprite_index = spr_roaringknight_ball_fly;
+        kn.image_index = 0;
         kn.image_speed = 0.4;
+        kn.ystart = kn.y;
         kn.depth = coaster_berdly.depth - 10;
         es_kx0 = kn.x;
         es_kx1 = coaster_berdly.x - 70;
-        es_ky = kn.y;
         snd_play(snd_wing);
     }
     if (es_kin == 2 && i_ex(kn))
@@ -486,80 +525,169 @@ function scr_es_scene11a_fx()
         }
         if (es_kt == 31)
         {
-            kn.sprite_index = scr_es_spr("es_rk_balltrans");
+            kn.sprite_index = spr_roaringknight_ball_transition;
             kn.image_index = 0;
             kn.image_speed = 0.4;
             snd_play(snd_impact);
         }
-        if (es_kt == 56)
+        if (es_kt == 53)
         {
-            kn.sprite_index = scr_es_spr("es_rk_idle_ow");
+            kn.sprite_index = spr_roaringknight_idle_overworld;
             kn.image_index = 0;
             kn.image_speed = 0;
             es_kin = 3;
         }
     }
-    if (es_kin == 3 && i_ex(kn) && es_roar == 0 && es_sword == 0)
-        kn.y = es_ky + (sin(current_time / 400) * 6);
-    // the roar
+    // the roar: Chapter 3's own (obj_knight_roaring_fx), the knight hidden while it plays
     if (es_roar == 1)
     {
         es_roar = 2;
         es_rt = 0;
-        kn.sprite_index = scr_es_spr("es_rk_roar");
-        kn.image_index = 0;
-        kn.image_speed = 0.25;
-        kn.x += 70;
-        kn.y += 60;
-        scr_es_snd("es_snd_knight_roar", 1, 1);
+        kn.state = 99;
+        kn.visible = 0;
+        with (obj_knight_roaring_fx)
+            instance_destroy();
+        instance_create(kn.x + 20, kn.y - 20, obj_knight_roaring_fx);
     }
     if (es_roar == 2)
     {
         es_rt++;
-        if ((es_rt mod 4) == 0 && es_rt < 80)
+        if (es_rt == 255)
         {
-            scr_es_shake(6, 6, 2);
-        }
-        if (es_rt == 95)
-        {
-            kn.x -= 70;
-            kn.y -= 60;
-            kn.sprite_index = scr_es_spr("es_rk_idle_ow");
-            kn.image_speed = 0;
+            kn.visible = 1;
+            kn.state = 0;
             es_roar = 3;
         }
     }
-    // the sword is drawn (Chapter 3's frames and timing)
+    // the sword: the cutscene knight's own draw-sword sequence
     if (es_sword == 1)
     {
         es_sword = 2;
-        es_si = 0;
-        es_stimes = [8, 1, 6, 6, 6, 6, 1, 2, 2, 6, 2, 8];
-        es_stimer = es_stimes[0];
-        kn.sprite_index = scr_es_spr("es_rk_swordappear");
-        kn.image_speed = 0;
-        kn.image_index = 7;
+        kn.draw_sword = true;
     }
-    if (es_sword == 2)
+    // caught off guard: the Chapter 3 flicker between its body and the curled-up ball
+    if (es_kflick == 1 && i_ex(kn))
     {
-        es_stimer--;
-        if (es_stimer <= 0)
+        if (es_kft == 0)
+            es_kfx = kn.x;
+        es_kft++;
+        kn.state = 99;
+        kn.after_active = false;
+        if ((es_kft mod 3) == 0)
         {
-            es_si++;
-            if (es_si >= array_length(es_stimes))
-            {
-                es_sword = 3;
-                kn.sprite_index = scr_es_spr("es_rk_idle_ow_sword");
-                kn.image_index = 0;
-                scr_es_snd("es_snd_knight_cut", 0.8, 0.8);
-            }
-            else
-            {
-                es_stimer = es_stimes[es_si];
-                kn.image_index = 7 + es_si;
-            }
+            kn.sprite_index = spr_roaringknight_idle_overworld_sword;
+            kn.image_index = 0;
+        }
+        else
+        {
+            kn.sprite_index = spr_roaringknight_ball_transition;
+            kn.image_index = 7;
+        }
+        kn.x = es_kfx + ((es_kft < 60) ? (random_range(-1, 1) * 8 * (1 - (es_kft / 60))) : 0);
+    }
+    // Kris jumps out of the kart and cuts it down
+    if (es_kstrike == 1)
+    {
+        es_kstrike = 2;
+        es_kst = 0;
+        es_kris_oy = coaster_kris.character_offset_y;
+        var kx = coaster_kris.x + coaster_kris.sinerx + coaster_kris.character_offset_x;
+        var ky = coaster_kris.y + coaster_kris.sinery + es_kris_oy;
+        coaster_kris.character_offset_y = 9999;
+        es_kmk = scr_dark_marker(kx, ky, spr_krisb_attackready);
+        es_kmk.depth = kn.depth - 5;
+        es_kmk.image_speed = 0;
+        es_kmk_x0 = kx;
+        es_kmk_y0 = ky;
+        snd_play(snd_jump);
+    }
+    if (es_kstrike == 2)
+    {
+        es_kst++;
+        var tx = kn.x - 70;
+        var ty = kn.y + 40;
+        if (es_kst <= 14)
+        {
+            var p = es_kst / 14;
+            es_kmk.x = lerp(es_kmk_x0, tx, p);
+            es_kmk.y = lerp(es_kmk_y0, ty, p) - (sin(p * pi) * 60);
+        }
+        if (es_kst == 16)
+        {
+            es_kmk.sprite_index = spr_krisb_attack;
+            es_kmk.image_index = 0;
+            es_kmk.image_speed = 0.5;
+            snd_play(snd_laz_c);
+            var sh = scr_dark_marker(kn.x + 10, kn.y + 20, spr_attack_shard);
+            sh.image_speed = 0.334;
+            sh.depth = kn.depth - 20;
+            sh.image_xscale = 2.5;
+            sh.image_yscale = 2.5;
+            es_kshard = sh;
+        }
+        if (es_kst == 24)
+        {
+            var fx = instance_create(kn.x + 60, kn.y + 80, obj_es_boomfx);
+            fx.ang = [45, -45];
+            fx.sc = 3;
+            fx.depth = kn.depth - 30;
+            scr_es_snd("es_snd_knight_cut2", 1, 0.8);
+            scr_es_snd("es_snd_knight_cut2", 1, 1);
+            scr_es_snd("es_snd_knight_cut2", 1, 1.2);
+            scr_es_sndx(snd_damage, 1, 1);
+            scr_es_shake(16, 16, 2);
+        }
+        if (es_kst == 30 && i_ex(es_kshard))
+            with (es_kshard)
+                instance_destroy();
+        if (es_kst == 40)
+        {
+            // it's gone. for real this time
+            es_kflick = 2;
+            var spr = kn.sprite_index;
+            var d = instance_create(kn.x - (sprite_get_xoffset(spr) * 2), kn.y - (sprite_get_yoffset(spr) * 2), obj_deathanim);
+            d.sprite_index = spr;
+            d.image_index = kn.image_index;
+            d.image_xscale = 2;
+            d.image_yscale = 2;
+            d.depth = kn.depth;
+            kn.visible = 0;
+            global.flag[2452] += 1;
+            es_kmk.sprite_index = spr_krisb_idle;
+            es_kmk.image_speed = 0;
+        }
+        if (es_kst > 110 && es_kst <= 124)
+        {
+            var p = (es_kst - 110) / 14;
+            es_kmk.x = lerp(tx, es_kmk_x0, p);
+            es_kmk.y = lerp(ty, es_kmk_y0, p) - (sin(p * pi) * 60);
+        }
+        if (es_kst == 125)
+        {
+            with (es_kmk)
+                instance_destroy();
+            coaster_kris.character_offset_y = es_kris_oy;
+            coaster_kris.character_sprite = spr_krisr_dark;
+            es_kstrike = 3;
         }
     }
+    // the sword stays behind
+    if (es_bk == 1)
+    {
+        es_bk = 2;
+        with (kn)
+            instance_destroy();
+        scr_es_get_blackknife();
+    }
+}
+
+// play a sound at a volume and pitch
+function scr_es_sndx(_snd, _vol, _pitch)
+{
+    var s = snd_play(_snd);
+    snd_volume(s, _vol, 0);
+    snd_pitch(s, _pitch);
+    return s;
 }
 
 // ---------------------------------------------------------------- trash landing

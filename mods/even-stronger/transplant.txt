@@ -1,6 +1,14 @@
 # Copied from the player's own Chapter 3 at patch time (see patcher/Transplant.cs). Names only.
 # The Roaring Knight, its attacks, and everything they use.
 object obj_knight_enemy
+# Chapter 3's cutscene knight (hover, afterimages, its sword draw) and its cutscene roar
+object obj_ch3_PTB02_roaringknight
+object obj_knight_roaring_fx
+sprite spr_roaringknight_ball_fly
+sprite spr_roaringknight_ball_transition
+sprite spr_roaringknight_idle_overworld
+sprite spr_roaringknight_idle_overworld_sword
+sprite spr_attack_shard
 # its pattern types, in a controller of its own (Chapter 2 keeps its obj_dbulletcontroller)
 dbc obj_es_kdbc 98 99 101 102 103 104 105 106 107 108 109 151 152 153 154
 rename obj_dbulletcontroller obj_es_kdbc
@@ -18,7 +26,6 @@ allow obj_block_vfx
 allow obj_afterimage
 allow obj_particle_generic
 allow obj_fake_gt
-allow obj_bgfountaintest
 # numbers the decompiler couldn't type: they're Chapter 3 asset indices
 assetvar knight object
 assetvar new_knight object
@@ -41,3 +48,9 @@ keep scr_speaker
 keep scr_spellmenu_setup
 keep scr_tensionheal
 keep snd_play
+assetvar knightsprite sprite
+# numbers passed as asset arguments
+argfix scr_var 1 sprite
+argfix scr_var_delayed 1 sprite
+argfix scr_draw_beam_color 4 sprite
+argfix scr_script_repeat 5 object

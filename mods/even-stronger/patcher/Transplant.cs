@@ -10,6 +10,8 @@
 //                                  Chapter 3 asset indices: put the asset's name back (only in that entry, if given)
 //   keep <function>                use Chapter 2's version of a function even if Chapter 3's differs
 //                                  (by default, a same-named function that differs is copied as es3_<name>)
+//   argfix <function> <arg#> object|sprite|sound   a plain number passed as that argument (counting from 0) is a
+//                                  Chapter 3 asset index: put its name back
 //   allow <prefix>                 only Chapter 3 objects starting with one of these are copied; any other
 //                                  Chapter 3-only object the code mentions is stubbed (only if allow is used)
 //   sprite <name> / sound <name>   copy one asset explicitly
@@ -52,6 +54,7 @@ static class Transplant
         var allow = new List<string>();
         var assetVars = new List<(string var, string kind, string entry)>();
         var keep = new HashSet<string>();
+        var argFixes = new List<(string fn, int arg, string kind)>();
         foreach (var raw in spec.Split('\n'))
         {
             var l = raw.Trim();
@@ -66,6 +69,7 @@ static class Transplant
                 case "sound": wantSounds.Add(a[1]); break;
                 case "allow": allow.Add(a[1]); break;
                 case "keep": keep.Add(a[1]); break;
+                case "argfix": argFixes.Add((a[1], int.Parse(a[2]), a[3])); break;
                 case "assetvar": assetVars.Add((a[1], a[2], a.Length > 3 ? a[3] : null)); break;
                 case "dbc": dbcs.Add((a[1], a.Skip(2).Select(int.Parse).ToHashSet())); break;
             }
@@ -129,6 +133,48 @@ static class Transplant
                                 : (i < d3.GameObjects.Count ? d3.GameObjects[i].Name?.Content : null);
                     return name == null ? m.Value : m.Groups[1].Value + m.Groups[2].Value + name;
                 });
+            }
+            // numbers passed as a known asset argument of a function
+            foreach (var (fn, argi, kind) in argFixes)
+            {
+                int pos = 0;
+                while (true)
+                {
+                    var m = Regex.Match(text.Substring(pos), @"\b" + Regex.Escape(fn) + @"\s*\(");
+                    if (!m.Success) break;
+                    int open = pos + m.Index + m.Length - 1;
+                    int depth = 0, argStart = open + 1, n = 0, close = -1;
+                    var args = new List<(int s, int e)>();
+                    for (int k = open; k < text.Length; k++)
+                    {
+                        char ch = text[k];
+                        if (ch == '"') { for (k++; k < text.Length && text[k] != '"'; k++) { } continue; }
+                        if (ch == '(' || ch == '[') depth++;
+                        else if (ch == ')' || ch == ']') { depth--; if (depth == 0) { args.Add((argStart, k)); close = k; break; } }
+                        else if (ch == ',' && depth == 1) { args.Add((argStart, k)); argStart = k + 1; n++; }
+                    }
+                    if (close < 0) break;
+                    if (argi < args.Count)
+                    {
+                        var (as0, ae) = args[argi];
+                        string arg = text.Substring(as0, ae - as0).Trim();
+                        if (Regex.IsMatch(arg, @"^\d+$"))
+                        {
+                            int i = int.Parse(arg);
+                            string name = kind == "sprite" ? (i < d3.Sprites.Count ? d3.Sprites[i].Name?.Content : null)
+                                        : kind == "sound" ? (i < d3.Sounds.Count ? d3.Sounds[i].Name?.Content : null)
+                                        : (i < d3.GameObjects.Count ? d3.GameObjects[i].Name?.Content : null);
+                            if (name != null)
+                            {
+                                res.NumFixes.Add($"{entry}: {fn} arg {argi} {i} -> {name}");
+                                int lead = text.Substring(as0, ae - as0).IndexOf(arg);
+                                text = text.Substring(0, as0 + lead) + name + text.Substring(as0 + lead + arg.Length);
+                                close += name.Length - arg.Length;
+                            }
+                        }
+                    }
+                    pos = close + 1;
+                }
             }
             // and generally: "growtangle = 1517" where Chapter 3's asset #1517 is obj_growtangle
             text = Regex.Replace(text, @"\b([A-Za-z_][A-Za-z0-9_]*)(\s*(?:==|!=|=)\s*)(\d{3,5})\b(?![.\d])", m =>
@@ -287,6 +333,23 @@ static class Transplant
             while (fnQueue.Count > 0) Function(fnQueue.Dequeue());
         }
 
+        if (Environment.GetEnvironmentVariable("ES_NUMSCAN") == "1")
+        {
+            var hint = new Regex("knight|rk_|sword|star|slash|roar|crescent|bullet|heart|box|ball|spark|beam|warp|circle|stream", RegexOptions.IgnoreCase);
+            foreach (var kv in res.Code)
+                foreach (Match m in Regex.Matches(kv.Value, @"(?<![\w.])(\d{2,5})(?![\w.])"))
+                {
+                    int i = int.Parse(m.Groups[1].Value);
+                    string sn = i < d3.Sprites.Count ? d3.Sprites[i].Name?.Content : null;
+                    string on = i < d3.GameObjects.Count ? d3.GameObjects[i].Name?.Content : null;
+                    if (on != null && hint.IsMatch(on)) sn = (sn ?? "") + " / OBJ " + on;
+                    if (sn != null && hint.IsMatch(sn))
+                    {
+                        int ls = kv.Value.LastIndexOf('\n', m.Index) + 1; int le = kv.Value.IndexOf('\n', m.Index); if (le < 0) le = kv.Value.Length;
+                        Console.WriteLine($"NUM {kv.Key.Replace("gml_Object_", "")}: {i}={sn} | {kv.Value.Substring(ls, le - ls).Trim()}");
+                    }
+                }
+        }
         // anything we chose not to copy points at an empty object; Chapter 3's own versions of
         // functions Chapter 2 also has are called by their es3_ names
         if (stubs.Count > 0 || own.Count > 0)

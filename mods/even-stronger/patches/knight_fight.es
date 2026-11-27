@@ -37,12 +37,18 @@ if (haveusedroaring == true && end_cutscene_version == 0 && global.monsterhp[mys
 if (haveusedroaring == true && end_cutscene_version == 0 && global.monsterhp[myself] <= (global.monstermaxhp[myself] * (scr_es_on() ? 0.5 : 0.8)) && endcon != 1)
 @end
 
-@@ gml_Object_obj_knight_enemy_Step_0  # no swoon: once it starts flickering, Kris cuts it down (obj_es_kend)
+@@ gml_Object_obj_knight_enemy_Step_0  # 50% catches it off guard: the fight ends (Kris cuts it down afterwards, on the track)
 @find
 if (endcon == 1 && endtimer > 45)
 @replace
-if (scr_es_on() && endcon == 1 && !instance_exists(obj_es_kend))
-    instance_create(0, 0, obj_es_kend);
+if (scr_es_on() && endcon == 1 && endtimer > 45)
+{
+    endcon = 2;
+    global.es_kfight = 0;
+    global.es_kdone = 1;
+    scr_es_battle_teardown();
+    exit;
+}
 if (!scr_es_on() && endcon == 1 && endtimer > 45)
 @end
 
