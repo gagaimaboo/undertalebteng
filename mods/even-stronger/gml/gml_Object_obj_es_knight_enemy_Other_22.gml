@@ -1,0 +1,17 @@
+global.monsterx[myself] = x + 110;
+global.monstery[myself] = y + 90;
+scr_monster_actreset(myself);
+global.monstername[myself] = "Roaring Knight";
+global.monstermaxhp[myself] = 2700;
+global.monsterhp[myself] = 2700;
+global.monsterat[myself] = 15;
+global.monsterdf[myself] = 2;
+global.monsterexp[myself] = 0;
+global.monstergold[myself] = 0;
+global.sparepoint[myself] = 0;
+global.mercymod[myself] = 0;
+global.mercymax[myself] = 100;
+global.canact[myself][0] = 1;
+global.actname[myself][0] = "Check";
+global.actdesc[myself][0] = "";
+global.actcost[myself][0] = 0;

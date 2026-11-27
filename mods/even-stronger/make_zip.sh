@@ -15,7 +15,7 @@ cp "$DR/chapter2_windows/"*.ogg "$D/"
 [ -f "$DR/chapter2_windows/snd_power" ] && cp "$DR/chapter2_windows/snd_power" "$D/"
 SRC="$DR/chapter2_windows/data.win"
 [ -f "$DR/chapter2_windows/data.win.even_stronger_backup" ] && SRC="$DR/chapter2_windows/data.win.even_stronger_backup"
-patcher/bin/Release/net10.0/EvenStrongerPatcher "$SRC" --mod . --out "$D/data.win" --own-saves --no-pause
+patcher/bin/Release/net10.0/EvenStrongerPatcher "$SRC" --mod . --out "$D/data.win" --own-saves --no-pause --assets-from "$DR"
 # only the music Chapter 2 actually streams (every name is a string literal in its code)
 for f in $(strings -n 5 "$D/data.win" | grep -oE '^[A-Za-z0-9_-]+\.ogg$' | sort -u); do
   [ -f "$DR/mus/$f" ] && cp "$DR/mus/$f" "$D/mus/"

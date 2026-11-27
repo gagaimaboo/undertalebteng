@@ -5,6 +5,6 @@ t = 0;
 star = 0;
 caster = 0;
 hits = 0;
-maxhits = 18;
+maxhits = 12;
 window = 75;
 flip = 1;

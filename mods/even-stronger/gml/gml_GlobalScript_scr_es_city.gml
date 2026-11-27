@@ -7,16 +7,28 @@ function scr_es_noelle_rsprite()
 }
 
 // ---------------------------------------------------------------- rollercoaster
-// runs instead of obj_ch2_scene11a's Step (its Create still builds the coasters and the track)
+// runs instead of obj_ch2_scene11a's Step (its Create still builds the coasters and the track).
+// Queen calls in Berdly; his car fight can't be won; the Roaring Knight ends it, and then Kris ends the knight.
 function scr_es_scene11a_step()
 {
     if (!variable_instance_exists(id, "es_init"))
     {
         es_init = 1;
-        // nobody else rides today: Kris and Noelle take the first two cars
+        es_shock = 0;
+        es_boom = 0;
+        es_boomt = 0;
+        es_bdie = 0;
+        es_kin = 0;
+        es_kt = 0;
+        es_roar = 0;
+        es_rt = 0;
+        es_sword = 0;
+        es_si = 0;
+        es_stimer = 0;
+        kn = noone;
+        // Kris and Noelle take the first two cars; Berdly's car waits offscreen
         coaster_ralsei.x = -2000;
         coaster_berdly.x = -2000;
-        coaster_berdly.visible = 0;
         coaster_noelle.x = -2000;
         coaster_noelle.visible = 0;
         nise_berdly.visible = 0;
@@ -26,16 +38,14 @@ function scr_es_scene11a_step()
     // the second car carries Noelle (after its own init picked Susie's sprite)
     if (i_ex(coaster_susie) && coaster_susie.init)
     {
-        coaster_susie.character_sprite = scr_es_noelle_rsprite();
+        coaster_susie.character_sprite = es_shock ? spr_noelle_shocked_dw : scr_es_noelle_rsprite();
         coaster_susie.character_offset_y = 14;
         coaster_susie.character_offset_x = 4;
-        if (variable_instance_exists(id, "es_shock") && es_shock)
-            coaster_susie.character_sprite = spr_noelle_shocked_dw;
+        coaster_susie.es_sleigh = 1;
     }
     if (con == -1 && obj_mainchara.x > 400 && obj_mainchara.y < 300)
     {
         con = 1;
-        es_shock = 0;
         global.interact = 1;
         global.facing = 1;
         cutscene_master = scr_cutscene_make();
@@ -96,7 +106,7 @@ function scr_es_scene11a_step()
         c_var_instance(id, "loopcity", true);
         c_wait(60);
 
-        // Queen catches up. No capsules.
+        // Queen catches up. No capsules: she brought Berdly instead.
         c_sel(qu);
         c_setxy(1790, 90);
         c_sel(qu_flame);
@@ -120,56 +130,232 @@ function scr_es_scene11a_step()
         c_msgsetloc(0, "\\E1* My Field Is Empty/", "es_rc_9");
         c_msgnextloc("\\E9* Sweet Is Not Answering His Phone/", "es_rc_10");
         c_msgnextloc("\\E6* My Capsules Would Only Become Two More Things You Broke/", "es_rc_11");
-        c_msgnextloc("\\E1* So Here Is The New Plan/", "es_rc_12");
-        c_msgnextloc("\\ED* You Ride^1. Very Fast^1. Far Away From My Citizens/%", "es_rc_13");
+        c_msgnextloc("\\E1* So I Brought Something Better/", "es_rc_b1");
+        c_msgnextloc("\\ED* Backup/%", "es_rc_b2");
         c_talk_wait();
-        c_speaker("noelle");
-        if (scr_es_noelle_changed())
-        {
-            c_msgsetloc(0, "\\E1* ...she's scared of us^1, Kris./", "es_rc_14");
-            c_msgnextloc("\\E0* ...good./%", "es_rc_15");
-        }
-        else
-        {
-            c_msgsetloc(0, "\\E1* ...she's scared of us^1, Kris./", "es_rc_16");
-            c_msgnextloc("\\E6* I don't..^1. like that./%", "es_rc_17");
-        }
+        // Berdly rides in, weird-route serious
+        c_var_instance(coaster_berdly, "character_sprite", spr_berdlyb_idle_serious);
+        c_var_instance(coaster_berdly, "character_offset_x", -52);
+        c_var_lerp_instance(coaster_berdly, "x", 1890, 1490, 15);
+        c_wait(10);
+        c_soundplay(snd_impact);
+        c_shake();
+        c_var_instance(coaster_berdly, "siner_add0", 0.1);
+        c_wait(20);
+        c_speaker("berdly");
+        c_msgsetloc(0, "\\E2* Fear not^1, my Queen!!/", "es_rc_b3");
+        c_msgnextloc("\\E6* Lord Berdly has studied the footage!/", "es_rc_b4");
+        c_msgnextloc("\\E0* ...Kris. Noelle./", "es_rc_b5");
+        c_msgnextloc("\\E7* I won't let you two touch ANYONE else!!/%", "es_rc_b6");
         c_talk_wait();
         c_speaker("queen");
-        c_msgsetloc(0, "\\E1* Oh And One More Thing/", "es_rc_18");
-        c_msgnextloc("\\EA* This \"Roller\"^1, \"Coaster\"/", "es_rc_19");
-        c_msgnextloc("\\E9* Is Not \"Finished\"/%", "es_rc_20");
+        c_msgsetloc(0, "\\E1* Wonderful Berdly I Will Be Watching/", "es_rc_b7");
+        c_msgnextloc("\\E9* From Very Far Away/%", "es_rc_b8");
         c_talk_wait();
         c_sel(qu);
         c_walk("u", 10, 30);
-        c_mus2("volume", 0, 30);
-        c_wait(45);
-        c_mus("free_all");
-        c_soundplay(snd_cardrive);
-        c_var_instance(id, "es_shock", 1);
-        c_var_instance(coaster_entry, "visible", 0);
-        c_var_instance(coaster_entry_hood, "visible", 0);
-        c_var_instance(id, "stoplooptrack", true);
-        c_var_lerp_instance(coaster_kris, "x", 1220, 1650, 40);
-        c_var_instance(coaster_kris, "siner_add0", 0);
-        c_var_lerp_instance(coaster_susie, "x", 1220, 1650, 40);
-        c_var_instance(coaster_susie, "siner_add0", 0);
-        c_panspeed(15, 0, 40);
-        c_wait(20);
-        c_var_instance(whiteall, "x", 0);
-        c_var_lerp_instance(whiteall, "image_alpha", 0, 1, 20);
-        c_wait(20);
-        c_soundplay(snd_badexplosion);
-        c_wait(60);
-        c_var_instance(blackall, "x", 0);
-        c_var_lerp_instance(blackall, "image_alpha", 0, 1, 80);
-        c_var_instance(id, "hide_border", true);
-        c_wait(60);
-        c_soundplay(snd_impact);
-        c_wait(90);
-        c_actortokris();
-        c_terminatekillactors();
-        con = 49;
+        c_wait(30);
+        c_speaker("noelle");
+        c_msgsetloc(0, "\\E1* ...Berdly^1, please. Just go home./%", "es_rc_b9");
+        c_talk_wait();
+        c_speaker("berdly");
+        c_msgsetloc(0, "\\E7* NEVER!!/%", "es_rc_b10");
+        c_talk_wait();
+        c_var_instance(id, "con", 10);
+    }
+    // Berdly's car fight: the weird-route Cyber City Berdly theme, and he can't be hurt
+    if (con == 10 && !instance_exists(obj_cutscene_master))
+    {
+        con = 11;
+        global.flag[9] = 2;
+        global.batmusic[0] = snd_init("berdly_battle_heartbeat_true.ogg");
+        global.es_bturns = 0;
+        es_bm = 0;
+        instance_create(0, 0, obj_berdly_encounter_setup);
+        with (obj_battleback)
+            instance_destroy();
+    }
+    if (con == 11 && instance_exists(obj_battlecontroller))
+    {
+        if (global.monster[0] == 1)
+        {
+            global.monstermaxhp[0] = 9999;
+            global.monsterhp[0] = 9999;
+            global.mercymod[0] = 0;
+        }
+        if (global.mnfight == 2 && es_bm != 2)
+            global.es_bturns++;
+        es_bm = global.mnfight;
+        // about five turns in, back at the menu: the fight stops
+        if (global.es_bturns >= 5 && global.mnfight == 0 && global.myfight == 0)
+        {
+            con = 12;
+            es_t = 0;
+            scr_es_coaster_teardown();
+            with (obj_mainchara)
+                visible = 0;
+            with (obj_caterpillarchara)
+                visible = 0;
+        }
+    }
+    // Berdly's last attack, the knight's slash, the knight
+    if (con == 12)
+    {
+        es_t++;
+        if (es_t == 20)
+        {
+            con = 13;
+            coaster_kris.visible = 1;
+            coaster_susie.visible = 1;
+            coaster_berdly.visible = 1;
+            coaster_berdly.character_sprite = spr_berdlyb_idle_serious;
+            global.interact = 1;
+            cutscene_master = scr_cutscene_make();
+            c_msgside("bottom");
+            c_wait(30);
+            c_speaker("berdly");
+            c_msgsetloc(0, "\\E8* ...heh. Heh heh./", "es_rc_c1");
+            c_msgnextloc("\\E9* Not a scratch on me./", "es_rc_c2");
+            c_msgnextloc("\\EA* Queen showed me everything. The field. The ice. Sweet's stage./", "es_rc_c3");
+            c_msgnextloc("\\E7* You'll never get to hurt anyone else!!/", "es_rc_c4");
+            c_msgnextloc("\\E7* Take THIS!! My ultimate--/%", "es_rc_c5");
+            c_talk_wait();
+            c_var_instance(coaster_berdly, "character_sprite", spr_berdlyb_tornado);
+            c_var_instance(coaster_berdly, "animate", true);
+            c_soundplay(snd_spearrise);
+            c_wait(35);
+            // BOOM
+            c_var_instance(id, "es_boom", 1);
+            c_wait(150);
+            c_speaker("berdly");
+            c_msgsetloc(0, "\\E8* ...wh..^1. what.../", "es_rc_c6");
+            c_msgnextloc("\\E3* That wasn't..^1. them.../", "es_rc_c7");
+            c_msgnextloc("\\E9* Queen..^1. I'm sorry^1. I really.../%", "es_rc_c8");
+            c_talk_wait();
+            c_wait(20);
+            c_var_instance(id, "es_bdie", 1);
+            c_wait(110);
+            // the knight rolls in along the track
+            c_var_instance(id, "es_kin", 1);
+            // Chapter 3's knight ambience, fading in
+            c_mus2("initloop", "knight_appears.ogg", 0);
+            c_mus2("volume", 0, 0);
+            c_mus2("volume", 1, 120);
+            c_wait(120);
+            c_speaker("noelle");
+            c_msgsetloc(0, "\\E6* ...Berdly?/", "es_rc_k1");
+            c_msgnextloc("\\E6* He's..^1. he's just..^1. gone./%", "es_rc_k2");
+            c_talk_wait();
+            c_wait(40);
+            c_msc(24510);
+            c_talk_wait();
+            c_wait(30);
+            c_speaker("noelle");
+            c_msgsetloc(0, "\\E1* It just..^1. killed him. Like it was nothing./", "es_rc_k3");
+            c_msgnextloc("\\E0* ...like it was us./%", "es_rc_k4");
+            c_talk_wait();
+            c_speaker("noelle");
+            c_msgsetloc(0, "\\E6* H-hey! You!/", "es_rc_k5");
+            c_msgnextloc("\\E6* Why did you--/%", "es_rc_k6");
+            c_talk_wait();
+            c_wait(90);
+            c_speaker("noelle");
+            c_msgsetloc(0, "\\E1* ...it's not going to answer^1, is it./%", "es_rc_k7");
+            c_talk_wait();
+            c_wait(30);
+            c_msc(24512);
+            c_talk_wait();
+            c_wait(40);
+            // the roar, then the sword
+            c_mus("free_all");
+            c_var_instance(id, "es_roar", 1);
+            c_wait(110);
+            c_var_instance(id, "es_sword", 1);
+            c_wait(90);
+            c_var_instance(id, "con", 20);
+        }
+    }
+    // the knight fight: "Nuzlocke" by wd gaster (photons_negative) and audacitation
+    if (con == 20 && !instance_exists(obj_cutscene_master))
+    {
+        con = 21;
+        global.es_kfight = 1;
+        global.es_kdone = 0;
+        coaster_kris.visible = 0;
+        coaster_susie.visible = 0;
+        coaster_berdly.visible = 0;
+        global.flag[9] = 2;
+        global.batmusic[0] = snd_init("es_knight.ogg");
+        global.flag[54] = 0;
+        var km = scr_dark_marker(kn.x, kn.y, kn.sprite_index);
+        kn.visible = 0;
+        scr_battle(240, 1, km, 0, 0);
+        with (obj_battleback)
+            instance_destroy();
+        global.flag[9] = 1;
+    }
+    if (con == 21 && variable_global_exists("es_kdone") && global.es_kdone == 1 && !instance_exists(obj_battlecontroller))
+    {
+        con = 22;
+        es_t = 0;
+        with (obj_mainchara)
+            visible = 0;
+        with (obj_caterpillarchara)
+            visible = 0;
+    }
+    // BlackKnife, then the unfinished track gives out
+    if (con == 22)
+    {
+        es_t++;
+        if (es_t == 40)
+        {
+            con = 23;
+            coaster_kris.visible = 1;
+            coaster_susie.visible = 1;
+            with (kn)
+                instance_destroy();
+            scr_es_get_blackknife();
+            global.interact = 1;
+            cutscene_master = scr_cutscene_make();
+            c_msgside("bottom");
+            c_wait(40);
+            c_soundplay(snd_item);
+            c_speaker("no_name");
+            c_msgsetloc(0, "* (The knight's sword stayed behind.)/", "es_rc_e1");
+            c_msgnextloc("* (Kris took it.)/", "es_rc_e2");
+            c_msgnextloc("* (Kris equipped the BlackKnife.)/%", "es_rc_e3");
+            c_talk_wait();
+            c_wait(30);
+            c_speaker("noelle");
+            c_msgsetloc(0, "\\E6* ...Kris^1, your hands.../", "es_rc_e4");
+            c_msgnextloc("\\E1* ...nevermind./%", "es_rc_e5");
+            c_talk_wait();
+            c_wait(30);
+            c_mus("free_all");
+            c_soundplay(snd_cardrive);
+            c_var_instance(id, "es_shock", 1);
+            c_var_instance(coaster_entry, "visible", 0);
+            c_var_instance(coaster_entry_hood, "visible", 0);
+            c_var_instance(id, "stoplooptrack", true);
+            c_var_lerp_instance(coaster_kris, "x", coaster_kris.x, coaster_kris.x + 430, 40);
+            c_var_instance(coaster_kris, "siner_add0", 0);
+            c_var_lerp_instance(coaster_susie, "x", coaster_susie.x, coaster_susie.x + 430, 40);
+            c_var_instance(coaster_susie, "siner_add0", 0);
+            c_panspeed(15, 0, 40);
+            c_wait(20);
+            c_var_instance(whiteall, "x", 0);
+            c_var_lerp_instance(whiteall, "image_alpha", 0, 1, 20);
+            c_wait(20);
+            c_soundplay(snd_badexplosion);
+            c_wait(60);
+            c_var_instance(blackall, "x", 0);
+            c_var_lerp_instance(blackall, "image_alpha", 0, 1, 80);
+            c_var_instance(id, "hide_border", true);
+            c_wait(60);
+            c_soundplay(snd_impact);
+            c_wait(90);
+            c_var_instance(id, "con", 49);
+        }
     }
     if (con == 49 && !i_ex(obj_cutscene_master))
     {
@@ -178,6 +364,14 @@ function scr_es_scene11a_step()
         global.plot = 64;
         room_goto(room_dw_city_intro);
     }
+    if (con >= 12 && !d_ex() && !instance_exists(obj_writer))
+    {
+        with (obj_face)
+            instance_destroy();
+        with (obj_smallface)
+            instance_destroy();
+    }
+    scr_es_scene11a_fx();
     // the track/city scrolling, same as vanilla
     if (loopcity)
     {
@@ -208,6 +402,162 @@ function scr_es_scene11a_step()
             coaster_bg_1.x_speed = 0;
             for (var i = 0; i < 3; i++)
                 coaster_track[i].x_speed = 0;
+        }
+    }
+}
+
+// where Berdly's rider is drawn (obj_coaster draws its actor at x + offset, scale 2)
+function scr_es_berdly_rider_xy()
+{
+    var cb = coaster_berdly;
+    var spr = cb.character_sprite;
+    return [cb.x + cb.sinerx + cb.character_offset_x, cb.y + cb.sinery + cb.character_offset_y, spr];
+}
+
+// the timed effects the cutscene switches on
+function scr_es_scene11a_fx()
+{
+    // BOOM: the screen goes black, the knight's white slash, five cuts, then SWOON
+    if (es_boom == 1)
+    {
+        es_boomt++;
+        if (es_boomt == 1)
+        {
+            blackall.x = 0;
+            blackall.image_alpha = 1;
+            blackall.depth = 60;
+            var r = scr_es_berdly_rider_xy();
+            es_slash = instance_create(r[0] + 40, r[1] + 50, obj_es_boomfx);
+            es_slash.ang = [0];
+            es_slash.grow = 0;
+            es_slash.sc = 2;
+            es_slash.life = 70;
+            es_slash.depth = 40;
+            scr_es_snd("es_snd_knight_cut2", 1, 1);
+        }
+        if (es_boomt == 3 || es_boomt == 5 || es_boomt == 6 || es_boomt == 8)
+            scr_es_snd("es_snd_knight_cut2", 0.9, 0.9 + (es_boomt * 0.04));
+        if (es_boomt == 60)
+        {
+            blackall.image_alpha = 0;
+            coaster_berdly.character_sprite = spr_berdlyb_shocked;
+            coaster_berdly.animate = false;
+            scr_es_shake(12, 12, 1);
+            snd_play(snd_damage);
+            var r = scr_es_berdly_rider_xy();
+            var sw = instance_create(r[0] + 40, r[1] + 20, obj_es_swoon);
+            es_boom = 2;
+        }
+    }
+    // Berdly turns to dust; his car keeps rolling, empty
+    if (es_bdie == 1)
+    {
+        es_bdie = 2;
+        var r = scr_es_berdly_rider_xy();
+        var d = instance_create(r[0] - (sprite_get_xoffset(r[2]) * 2), r[1] - (sprite_get_yoffset(r[2]) * 2), obj_deathanim);
+        d.sprite_index = r[2];
+        d.image_index = 0;
+        d.image_xscale = 2;
+        d.image_yscale = 2;
+        d.depth = coaster_berdly.depth - 1;
+        coaster_berdly.character_offset_y = 9999;
+        global.flag[2452] += 1;
+    }
+    // the knight: rolls in as a ball, unrolls, hovers
+    if (es_kin == 1)
+    {
+        es_kin = 2;
+        es_kt = 0;
+        kn = scr_dark_marker(camerax() + 700, coaster_berdly.y - 70, scr_es_spr("es_rk_ballfly"));
+        kn.image_speed = 0.4;
+        kn.depth = coaster_berdly.depth - 10;
+        es_kx0 = kn.x;
+        es_kx1 = coaster_berdly.x - 70;
+        es_ky = kn.y;
+        snd_play(snd_wing);
+    }
+    if (es_kin == 2 && i_ex(kn))
+    {
+        es_kt++;
+        if (es_kt <= 30)
+        {
+            var p = es_kt / 30;
+            kn.x = lerp(es_kx0, es_kx1, 1 - ((1 - p) * (1 - p)));
+        }
+        if (es_kt == 31)
+        {
+            kn.sprite_index = scr_es_spr("es_rk_balltrans");
+            kn.image_index = 0;
+            kn.image_speed = 0.4;
+            snd_play(snd_impact);
+        }
+        if (es_kt == 56)
+        {
+            kn.sprite_index = scr_es_spr("es_rk_idle_ow");
+            kn.image_index = 0;
+            kn.image_speed = 0;
+            es_kin = 3;
+        }
+    }
+    if (es_kin == 3 && i_ex(kn) && es_roar == 0 && es_sword == 0)
+        kn.y = es_ky + (sin(current_time / 400) * 6);
+    // the roar
+    if (es_roar == 1)
+    {
+        es_roar = 2;
+        es_rt = 0;
+        kn.sprite_index = scr_es_spr("es_rk_roar");
+        kn.image_index = 0;
+        kn.image_speed = 0.25;
+        kn.x += 70;
+        kn.y += 60;
+        scr_es_snd("es_snd_knight_roar", 1, 1);
+    }
+    if (es_roar == 2)
+    {
+        es_rt++;
+        if ((es_rt mod 4) == 0 && es_rt < 80)
+        {
+            scr_es_shake(6, 6, 2);
+        }
+        if (es_rt == 95)
+        {
+            kn.x -= 70;
+            kn.y -= 60;
+            kn.sprite_index = scr_es_spr("es_rk_idle_ow");
+            kn.image_speed = 0;
+            es_roar = 3;
+        }
+    }
+    // the sword is drawn (Chapter 3's frames and timing)
+    if (es_sword == 1)
+    {
+        es_sword = 2;
+        es_si = 0;
+        es_stimes = [8, 1, 6, 6, 6, 6, 1, 2, 2, 6, 2, 8];
+        es_stimer = es_stimes[0];
+        kn.sprite_index = scr_es_spr("es_rk_swordappear");
+        kn.image_speed = 0;
+        kn.image_index = 7;
+    }
+    if (es_sword == 2)
+    {
+        es_stimer--;
+        if (es_stimer <= 0)
+        {
+            es_si++;
+            if (es_si >= array_length(es_stimes))
+            {
+                es_sword = 3;
+                kn.sprite_index = scr_es_spr("es_rk_idle_ow_sword");
+                kn.image_index = 0;
+                scr_es_snd("es_snd_knight_cut", 0.8, 0.8);
+            }
+            else
+            {
+                es_stimer = es_stimes[es_si];
+                kn.image_index = 7 + es_si;
+            }
         }
     }
 }
@@ -383,8 +733,8 @@ function scr_es_scene12_step()
 }
 
 // ---------------------------------------------------------------- city01
-// vanilla: Noelle hides from Queen and joins Kris here. Now Queen and Berdly come looking,
-// see who's standing in the alley, and back away.
+// vanilla: Noelle hides from Queen and joins Kris here. Now Queen comes looking for her lackey,
+// sees who's standing in the alley, and backs away.
 function scr_es_city01_step()
 {
     if (i_ex(noellemarker))
@@ -400,10 +750,6 @@ function scr_es_city01_step()
         qu_actor = instance_create(camerax() + 645, cameray() + view_hport[0] + 200, obj_actor);
         scr_actor_setup(qu, qu_actor, "queen");
         qu_actor.sprite_index = spr_queen_walk_up;
-        be = actor_count + 2;
-        be_actor = instance_create(camerax() + 690, cameray() + view_hport[0] + 230, obj_actor);
-        scr_actor_setup(be, be_actor, "berdly");
-        be_actor.sprite_index = spr_berdly_walk_up_dw;
         var hasno = variable_instance_exists(id, "no");
         c_mus2("volume", 0, 30);
         c_sel(kr);
@@ -419,47 +765,34 @@ function scr_es_city01_step()
         c_panspeed_wait(5, 0, 18);
         c_mus("free_all");
         c_wait(20);
-        c_speaker("berdly");
-        c_msgsetloc(0, "\\E6* Queen!^1! My splendid Queen!^1! Wait for me!!/%", "es_c1_1");
+        c_speaker("queen");
+        c_msgsetloc(0, "\\E1* Berdly^1? Berdly Darling Where Are You/%", "es_c1_1");
         c_talk_wait();
         c_sel(qu);
         c_walkdirect_wait(645, 173, 40);
-        c_sel(be);
-        c_walkdirect_wait(700, 200, 30);
         c_wait(15);
-        c_sel(qu);
         c_facing("l");
         c_emote("!", 30, 15);
         c_wait(30);
         c_speaker("queen");
         c_msgsetloc(0, "\\ED* ..^1. Oh/", "es_c1_2");
-        c_msgnextloc("\\E1* Berdly^1. Stop Walking/%", "es_c1_3");
-        c_talk_wait();
-        c_sel(be);
-        c_facing("l");
-        c_speaker("berdly");
-        c_msgsetloc(0, "\\E0* Ah^1, Kris! And..^1. N-Noelle!?/", "es_c1_4");
-        c_msgnextloc("\\E2* My beloved Noelle! Have you finally come to recognize--/%", "es_c1_5");
+        c_msgnextloc("\\E1* Kris^1. Noelle/", "es_c1_3");
+        c_msgnextloc("\\E9* My Lackey Went To Stop You Two On The Rollercoaster/", "es_c1_4");
+        c_msgnextloc("\\E5* He Has Not Called Me Back/%", "es_c1_5");
         c_talk_wait();
         if (hasno)
         {
+            c_wait(20);
             c_speaker("noelle");
-            c_msgsetloc(0, "\\E1* Hi^1, Berdly./%", "es_c1_6");
+            c_msgsetloc(0, "\\E6* ...he's not going to./", "es_c1_6");
+            c_msgnextloc("\\E1* Something else got to him first./%", "es_c1_7");
             c_talk_wait();
         }
-        c_wait(20);
-        c_speaker("berdly");
-        c_msgsetloc(0, "\\E3* ..^1. why did it get so cold all of a sudden?/", "es_c1_7");
-        c_msgnextloc("\\E3* And Kris^1, why is your sword..^1. like THAT?/%", "es_c1_8");
-        c_talk_wait();
+        c_wait(30);
         c_speaker("queen");
-        c_msgsetloc(0, "\\E1* Berdly/", "es_c1_9");
-        c_msgnextloc("\\E9* Those Two Are What Happened To The Field/", "es_c1_10");
-        c_msgnextloc("\\E5* And To Sweet^1. And K_K^1. And Cap'n/", "es_c1_11");
-        c_msgnextloc("\\ED* Back Away Slowly/%", "es_c1_12");
-        c_talk_wait();
-        c_speaker("berdly");
-        c_msgsetloc(0, "\\EB* B-back away!? I^1, LORD Berdly^1, do NOT back away from--/%", "es_c1_13");
+        c_msgsetloc(0, "\\ED* ..^1. I See/", "es_c1_8");
+        c_msgnextloc("\\E1* I Am Going To Back Away Now/", "es_c1_9");
+        c_msgnextloc("\\E4* Slowly/%", "es_c1_10");
         c_talk_wait();
         if (hasno)
         {
@@ -467,27 +800,9 @@ function scr_es_city01_step()
             c_walk("r", 2, 10);
             c_wait(12);
         }
-        c_sel(be);
-        c_emote("!", 30, 15);
-        c_shakeobj();
-        c_wait(30);
-        c_speaker("berdly");
-        c_msgsetloc(0, "\\E8* ...backing away./%", "es_c1_14");
-        c_talk_wait();
         c_sel(qu);
-        c_autowalk(0);
-        c_walk("d", 2, 30);
-        c_sel(be);
         c_autowalk(0);
         c_walk_wait("d", 2, 30);
-        c_speaker("queen");
-        c_msgsetloc(0, "\\E1* We Are Forming An Uneasy Truce Berdly/", "es_c1_15");
-        c_msgnextloc("\\E4* The Kind Where We Run/%", "es_c1_16");
-        c_talk_wait();
-        c_sel(qu);
-        c_autowalk(1);
-        c_walk("d", 8, 40);
-        c_sel(be);
         c_autowalk(1);
         c_walk_wait("d", 8, 40);
         c_wait(40);
@@ -496,8 +811,8 @@ function scr_es_city01_step()
             c_sel(no);
             c_facing("l");
             c_speaker("noelle");
-            c_msgsetloc(0, "\\E6* ...he used to talk to me every single day./", "es_c1_17");
-            c_msgnextloc("\\E1* He couldn't even look at me./%", "es_c1_18");
+            c_msgsetloc(0, "\\E6* ...she didn't even ask what happened to him./", "es_c1_11");
+            c_msgnextloc("\\E1* I don't think she wanted to know./%", "es_c1_12");
             c_talk_wait();
         }
         c_panobj(kr_actor, 15);
@@ -867,7 +1182,7 @@ function scr_es_queen_death_scene()
     c_sprite(spr_queen_hurt);
     c_var_instance(qu_actor, "image_blend", c_white);
     c_speaker("queen");
-    c_msgsetloc(0, "\\E1* Tell Berdly He Was A Good Lackey. Do Not Tell Him I Said \"Good\"/", "es_qd_31");
+    c_msgsetloc(0, "\\E1* Berdly Was A Good Lackey. I Never Told Him I Said \"Good\"/", "es_qd_31");
     c_msgnextloc("\\E9* Tell Lancer's Dad..^1. Actually Do Not Tell Him Anything He Will Make It Weird/", "es_qd_32");
     c_msgnextloc("\\E1* And Tell The Boy With The Hat. The Small Salesman/", "es_qd_33");
     c_msgnextloc("\\E5* That He Was Right. About The Strings/%", "es_qd_34");

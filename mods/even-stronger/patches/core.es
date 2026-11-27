@@ -141,6 +141,12 @@ if (scr_es_on() && arg0 == "battle.ogg" && file_exists(working_directory + "even
     dir = working_directory + "even_stronger/";
     arg0 = "es_battle.ogg";
 }
+// the mod's own tracks (es_*.ogg) live in even_stronger/
+if (scr_es_on() && string_copy(arg0, 1, 3) == "es_" && file_exists(working_directory + "even_stronger/" + arg0))
+    dir = working_directory + "even_stronger/";
+// the city and the trash zone use the alternate Cyber City track
+if (scr_es_on() && arg0 == "cybercity.ogg")
+    arg0 = "cybercity_alt.ogg";
 @end
 
 @@ gml_Object_obj_battlecontroller_Step_0  # battle box text: Hold. / Its burning.. / You are filled with power.

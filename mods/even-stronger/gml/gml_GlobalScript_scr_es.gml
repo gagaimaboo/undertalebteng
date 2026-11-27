@@ -42,6 +42,9 @@ function scr_es_setspells()
 function scr_es_fightdmg(argument0)
 {
     var d = argument0;
+    // the Roaring Knight: FIGHT works, but the party hits 20% softer and FIGHT another 3% softer
+    if (scr_es_knightfight())
+        return max(1, round(d * 0.8 * 0.97));
     if (global.flag[2451] == 1)
         return d;
     if (char == 1)
@@ -62,7 +65,14 @@ function scr_es_fightdmg(argument0)
 // ability damage multiplier (Queen: extra damage)
 function scr_es_abilitymul()
 {
+    if (scr_es_knightfight())
+        return 0.8;
     return (global.flag[2451] == 1) ? 1.35 : 1;
+}
+
+function scr_es_knightfight()
+{
+    return variable_global_exists("es_kfight") && global.es_kfight == 1;
 }
 
 // a slash is about to hit monster slot argument0 for argument1 damage: make it a real kill
@@ -318,6 +328,56 @@ function scr_es_text(argument0)
                 msgsetloc(0, "\\E6* ..^1. yeah./", "es_lib_31");
                 msgnextloc("\\E1* You don't have to say anything^1. It's okay./", "es_lib_32");
                 msgnextloc("\\E4* It's kind of nice^1, actually./%", "es_lib_33");
+            }
+            return 1;
+        // the Roaring Knight, standing on the track. It never answers.
+        case 24510:
+            global.choicemsg[0] = "I know it";
+            global.choicemsg[1] = "(Say#nothing)";
+            global.choicemsg[2] = " ";
+            global.choicemsg[3] = " ";
+            scr_speaker("noelle");
+            msgsetloc(0, "\\E1* ...Kris. That thing.../", "es_rk_1");
+            msgnextloc("\\E1* It isn't looking at me./", "es_rk_2");
+            msgnextloc("\\E6* It's looking at you./", "es_rk_3");
+            msgnextloc("\\E9* ...do you know it?/", "es_rk_4");
+            msgnextloc("\\C2 ", "es_rk_5");
+            return 1;
+        case 24511:
+            scr_speaker("noelle");
+            if (global.choice == 0)
+            {
+                msgsetloc(0, "\\E6* ...of course you do./", "es_rk_6");
+                msgnextloc("\\E1* Everything weird in this town always knows you^1, doesn't it?/%", "es_rk_7");
+            }
+            else
+            {
+                msgsetloc(0, "\\E1* ...that's a yes^1, isn't it./", "es_rk_8");
+                msgnextloc("\\E6* You always go quiet when it's a yes./%", "es_rk_9");
+            }
+            return 1;
+        case 24512:
+            global.choicemsg[0] = "Stay";
+            global.choicemsg[1] = "(Say#nothing)";
+            global.choicemsg[2] = " ";
+            global.choicemsg[3] = " ";
+            scr_speaker("noelle");
+            msgsetloc(0, "\\E9* Kris^1, if it fights us.../", "es_rk_10");
+            msgnextloc("\\E1* ...will you stay with me?/", "es_rk_11");
+            msgnextloc("\\C2 ", "es_rk_12");
+            return 1;
+        case 24513:
+            scr_speaker("noelle");
+            if (global.choice == 0)
+            {
+                msgsetloc(0, "\\E4* ...okay./", "es_rk_13");
+                msgnextloc("\\E1* Then I'm not scared./", "es_rk_14");
+                msgnextloc("\\E0* ...I'm not./%", "es_rk_15");
+            }
+            else
+            {
+                msgsetloc(0, "\\E6* ...right./", "es_rk_16");
+                msgnextloc("\\E1* I'll stay anyway./%", "es_rk_17");
             }
             return 1;
     }

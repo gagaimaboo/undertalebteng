@@ -15,3 +15,5 @@ The "Chapter Select" button in the file menu doesn't go anywhere here
 Credits
 - DELTARUNE by Toby Fox. This package is built from your own copy of the game.
 - Encounter battle theme: "SWORD (FM Cover)" by plrusek.
+- Roaring Knight fight: "Nuzlocke" by wd gaster (photons_negative) and
+  audacitation. Go check them out, they make some very good fan tracks!

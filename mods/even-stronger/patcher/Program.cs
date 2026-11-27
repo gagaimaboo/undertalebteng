@@ -30,6 +30,7 @@ static class Program
     const string BackupName = "data.win.even_stronger_backup";
     const string MarkerCode = "gml_GlobalScript_scr_es_version";
 
+    static string assetsRoot;      // DELTARUNE folder to borrow Chapter 3/4 assets from (default: next to the game)
     static string modDir;          // dev override: read gml/ and patches/ from here
     static bool testBuild;
     static bool ownSaves;   // standalone zip: keep saves apart from the real DELTARUNE
@@ -52,6 +53,7 @@ static class Program
                 case "--mod": modDir = args[++i]; break;
                 case "--out": outFile = args[++i]; break;
                 case "--no-pause": pause = false; break;
+                case "--assets-from": assetsRoot = args[++i]; break;
                 default: target = args[i]; break;
             }
         }
@@ -288,6 +290,12 @@ static class Program
             if (props.TryGetValue("persistent", out var pv)) o.Persistent = pv == "1";
             if (props.TryGetValue("depth", out var dv)) o.Depth = int.Parse(dv);
             if (props.TryGetValue("visible", out var vv)) o.Visible = vv == "1";
+            if (props.TryGetValue("parent", out var pa))
+            {
+                var par = data.GameObjects.ByName(pa);
+                if (par == null) warnings.Add($"parent {pa} of {obj} not found");
+                else o.ParentId = par;
+            }
         }
     }
 
@@ -319,6 +327,7 @@ static class Program
 
     // ---------- the mod's own music (ships inside the exe) ----------
     // es_battle.ogg: encounter battle theme, "SWORD (FM Cover)" by plrusek
+    // es_knight.ogg: the Roaring Knight fight, "Nuzlocke" by wd gaster (photons_negative) and audacitation
     static void ExportMusic(string chDir)
     {
         string outDir = Path.Combine(chDir, "even_stronger");
@@ -341,7 +350,7 @@ static class Program
                 n++;
             }
         }
-        if (n > 0) Console.WriteLine($"Music: {n} track(s) -> {outDir}  (battle theme: SWORD FM cover by plrusek)");
+        if (n > 0) Console.WriteLine($"Music: {n} track(s) -> {outDir}  (SWORD FM cover by plrusek; Nuzlocke by wd gaster + audacitation)");
     }
 
     // ---------- borrowed assets from Chapters 3 and 4 ----------
@@ -354,7 +363,7 @@ static class Program
         if (lines.Count == 0) return;
         string outDir = Path.Combine(chDir, "even_stronger");
         Directory.CreateDirectory(outDir);
-        string root = Path.GetDirectoryName(chDir);
+        string root = assetsRoot ?? Path.GetDirectoryName(chDir);
         var cache = new Dictionary<string, UndertaleData>();
         UndertaleData chapter(string n)
         {

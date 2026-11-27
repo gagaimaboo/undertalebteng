@@ -176,10 +176,23 @@ function scr_es_test_tick()
                 with (obj_queenshield_enemy)
                     instance_destroy();
                 break;
+            case "berdlyfight":
+                // vanilla's coaster fight, started the way scene11a does
+                global.flag[9] = 1;
+                instance_create(0, 0, obj_berdly_encounter_setup);
+                with (obj_battleback)
+                    instance_destroy();
+                global.es_t_wait = 30;
+                break;
+            case "setg":
+                variable_global_set(n1, real(n2));
+                break;
             case "sweetturns":
                 global.es_sweet_turns = real(n1);
                 break;
             case "hp":
+                global.maxhp[1] = max(global.maxhp[1], real(n1));
+                global.maxhp[4] = max(global.maxhp[4], real(n1));
                 global.hp[1] = real(n1);
                 global.hp[4] = real(n1);
                 break;

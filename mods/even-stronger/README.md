@@ -23,6 +23,9 @@ so it's for your own use; it's never committed here.
 The patcher backs up the original as `chapter2_windows/data.win.even_stronger_backup`. Running it again re-patches from
 that clean backup. To uninstall run `EvenStrongerPatcher.exe --restore`.
 
+The Roaring Knight's sprites and sounds come from your own Chapter 3, so Chapter 3 has to be installed next to
+Chapter 2 (it is in any full DELTARUNE install).
+
 If a game update moves something the mod hooks into, the patcher still finishes. It prints a warning for each hook
 it couldn't place, so send that list over.
 
@@ -45,7 +48,7 @@ it couldn't place, so send that list over.
 - **No mercy:** every enemy's ACT list is just Check, X-Slash and Slashrush. The enemy's own mercy acts and everyone's S/N-Actions are gone. Spamton NEO keeps his own list.
 - **Abilities:**
   - **X-Slash** (Kris, 25% TP): Spamton NEO's X-Slash, on every enemy.
-  - **Slashrush** (Kris, 80% TP): mash Z, every press is a slash.
+  - **Slashrush** (Kris, 80% TP): mash Z, every press is a slash, up to 12 hits.
   - **IceShock** (Noelle): unchanged.
   - **FrostNova** (Noelle, 60% TP): a giant snowflake forms, splits, gets thrown down and rains on every enemy.
 - **Kills are real:**
@@ -63,11 +66,21 @@ it couldn't place, so send that list over.
   - Noelle rides the teacups too, with her own teacup sprites.
 - **Sweet Cap'n Cakes:** after a few turns of slashing, Kris snaps. Everything goes red and everyone turns into black silhouettes. A storm of slashes ends the fight on the spot. The stage is empty afterwards and the mansion's weird-route music plays.
 - **Noelle changes:** after her first kill (not counting the opening Werewires) she uses her weird-route sprites.
-- **Rollercoaster:** Kris and Noelle ride alone. Queen cancels her capture plan because her capsules "would only become two more things you broke". Then she blows up the unfinished ride anyway. No Berdly coaster fight.
+- **Rollercoaster:** Kris and Noelle ride alone, and Noelle rides her own ice sleigh. Queen cancels her capture plan and brings backup instead: Berdly.
+- **Berdly's car fight:**
+  - Berdly has his weird-route sprites and the weird-route Cyber City Berdly theme.
+  - He has 9999 HP and can't be hurt.
+  - About five turns in, he winds up a tornado and says you'll never hurt anyone else. Then the screen goes black and the Roaring Knight's slash cuts him down: SWOON. A few last words, then dust.
+- **The Roaring Knight:**
+  - It rolls in along the track as a ball and never says a word. Noelle talks to Kris, and you answer her through two choices.
+  - Then it roars and draws its sword, with Chapter 3's own sprites and timing.
+  - The fight plays "Nuzlocke". Party damage is 20% lower and FIGHT another 3% lower, so abilities are the way to hit it. It ends at 50% HP.
+  - It flickers like at the end of the Chapter 3 fight, but there's no swoon this time: Kris cuts it down for real.
+- **BlackKnife:** the knight's sword, the point of no return. +20 ATK, +3 DEF, and it hits with Chapter 3's BlackShard slash.
 - **Into the city:**
   - Noelle climbs out of the trash with you.
   - At the split nobody leaves.
-  - In the alley where vanilla Noelle joins, Queen and Berdly come looking, see who's standing there, and back away ("An Uneasy Truce. The Kind Where We Run").
+  - In the alley where vanilla Noelle joins, Queen comes looking for Berdly, sees who's standing there, and backs away. Slowly.
 - **The city:** it plays as vanilla's own weird route. Kills count the same as freezes for its events.
 - **The carnival:** Susie and Ralsei finally catch up, see Kris and Noelle, and back away. They'll find the Fountain themselves. Then Queen stops running.
 - **Early Queen fight:**
@@ -75,14 +88,16 @@ it couldn't place, so send that list over.
   - FIGHT works here, and abilities hit harder.
   - She has +10% HP and damage, and her attacks are 3% faster.
   - Her shields still soak damage until they break.
-  - Berdly isn't plugged in as her battery, because he already ran.
+  - Berdly isn't plugged in as her battery, because he's gone.
   - The fight ends the moment she hits 0.
-- **Queen's death:** a long last talk, with three of her memories shown as pictures: her lit-up city, the lights going out, then snow. Then she really dies. Berdly's fight is skipped.
+- **Queen's death:** a long last talk, with three of her memories shown as pictures: her lit-up city, the lights going out, then snow. Then she really dies. Berdly's city scenes are skipped.
+- **City music:** the city and the trash zone play the alternate Cyber City track.
 - **Battle theme:** regular encounters play **"SWORD (FM Cover)" by plrusek** instead of the normal battle music. Bosses keep theirs.
 
 ## Credits
 
 - Encounter battle theme: "SWORD (FM Cover)" by **plrusek**. It's a cover of SWORD from DELTARUNE Chapter 3.
+- Roaring Knight fight: "Nuzlocke" by **wd gaster (photons_negative)** and **audacitation**. Go check them out, they make some very good fan tracks!
 
 ## Building
 
@@ -101,7 +116,7 @@ Layout:
 | `patches/*.es` | Anchored edits to the game's own code (`@@ entry` / `@find` / `@after\|@before\|@replace\|@prepend\|@append` / `@end`). Indentation and blank lines are ignored when matching. |
 | `music/` | The mod's own music. It ships inside the exe and is written to `chapter2_windows/even_stronger/`. `snd_init` swaps it in whenever an encounter asks for `battle.ogg`. |
 | `objects.txt` | Object flags (persistent, depth) |
-| `assets.txt` | Sprites, sounds and music borrowed from Chapters 3 and 4, exported from the player's own install at patch time. Nothing is borrowed yet. |
+| `assets.txt` | Sprites and sounds borrowed from Chapter 3 (the Roaring Knight, SWOON, the BlackShard slash). They're exported from the player's own install at patch time to `chapter2_windows/even_stronger/` and loaded at run time. |
 | `patches/test_harness.es` + `gml/*_es_test.gml` | Dev-only test harness, compiled only with `--test` |
 
 Dev loop: `EvenStrongerPatcher <clean data.win> --mod . --out <test data.win> --test`. The test build reads
