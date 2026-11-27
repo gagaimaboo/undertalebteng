@@ -1,3 +1,4 @@
 # object  [persistent] [depth=N] [visible=0]
 obj_es_ctrl persistent visible=0
 obj_es_pain depth=-9000
+obj_es_portrayal depth=-500

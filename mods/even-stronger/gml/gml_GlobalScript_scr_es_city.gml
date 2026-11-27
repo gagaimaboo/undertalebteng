@@ -520,3 +520,382 @@ function scr_es_city01_step()
         scr_tempsave();
     }
 }
+
+// ---------------------------------------------------------------- city07: the carnival
+// vanilla: Susie and Ralsei rejoin. Here they see Kris and Noelle and back away,
+// and Queen finally stops running. The early Queen fight, then her death.
+function scr_es_city07_step()
+{
+    if (con == -1 && obj_mainchara.x > (x - 60))
+    {
+        con = 1;
+        global.interact = 1;
+        global.facing = 1;
+        cutscene_master = scr_cutscene_make();
+        scr_maincharacters_actors();
+        var hasno = variable_instance_exists(id, "no");
+        es_su = actor_count + 1;
+        es_su_actor = instance_create(camerax() - 80, 205, obj_actor);
+        scr_actor_setup(es_su, es_su_actor, "susie");
+        es_su_actor.sprite_index = spr_susie_walk_right_dw;
+        es_ra = actor_count + 2;
+        es_ra_actor = instance_create(camerax() - 140, 225, obj_actor);
+        scr_actor_setup(es_ra, es_ra_actor, "ralsei");
+        es_ra_actor.sprite_index = spr_ralsei_walk_right;
+        qu = actor_count + 3;
+        qu_actor = instance_create(camerax() + 720, 167, obj_actor);
+        scr_actor_setup(qu, qu_actor, "queen");
+        qu_actor.sprite_index = spr_queen_walk_left;
+        c_mus2("volume", 0, 30);
+        c_wait(30);
+        c_mus("free_all");
+        // Susie and Ralsei catch up
+        c_speaker("ralsei");
+        c_msgsetloc(0, "\\EP* Kris!!!!^1! There you are!!!/%", "es_c7_1");
+        c_talk_wait();
+        c_sel(es_su);
+        c_walkdirect(camerax() + 150, 205, 30);
+        c_sel(es_ra);
+        c_walkdirect_wait(camerax() + 90, 225, 30);
+        c_sel(kr);
+        c_facing("l");
+        if (hasno)
+        {
+            c_sel(no);
+            c_facing("l");
+        }
+        c_speaker("susie");
+        c_msgsetloc(0, "\\E7* Kris!^1! We've been looking all over for--/%", "es_c7_2");
+        c_talk_wait();
+        c_sel(es_su);
+        c_emote("!", 30, 15);
+        c_sel(es_ra);
+        c_emote("!", 30, 15);
+        c_wait(40);
+        c_speaker("ralsei");
+        c_msgsetloc(0, "\\EL* ..^1. K-Kris?/", "es_c7_3");
+        c_msgnextloc("\\EL* The screens all over the city..^1. they kept showing your faces./", "es_c7_4");
+        c_msgnextloc("\\EL* They said everyone who got close to you two.../%", "es_c7_5");
+        c_talk_wait();
+        c_speaker("susie");
+        c_msgsetloc(0, "\\E6* N..^1. Noelle!?/", "es_c7_6");
+        c_msgnextloc("\\EK* ...why's it so cold around you?/%", "es_c7_7");
+        c_talk_wait();
+        if (hasno)
+        {
+            c_speaker("noelle");
+            if (scr_es_noelle_changed())
+                c_msgsetloc(0, "\\E1* Hi^1, Susie./%", "es_c7_8");
+            else
+                c_msgsetloc(0, "\\E6* S-Susie^1, I.../%", "es_c7_9");
+            c_talk_wait();
+        }
+        c_wait(20);
+        c_sel(es_su);
+        c_autowalk(0);
+        c_walk("l", 2, 10);
+        c_sel(es_ra);
+        c_autowalk(0);
+        c_walk_wait("l", 2, 10);
+        c_speaker("susie");
+        c_msgsetloc(0, "\\EK* ...Kris. Whatever you two did./", "es_c7_10");
+        c_msgnextloc("\\E6* I don't wanna know./%", "es_c7_11");
+        c_talk_wait();
+        c_speaker("ralsei");
+        c_msgsetloc(0, "\\EL* Susie^1, maybe we should.../%", "es_c7_12");
+        c_talk_wait();
+        c_speaker("susie");
+        c_msgsetloc(0, "\\E1* Yeah. We're going./", "es_c7_13");
+        c_msgnextloc("\\EK* We'll find the Fountain ourselves./%", "es_c7_14");
+        c_talk_wait();
+        c_sel(es_su);
+        c_walk("l", 2, 20);
+        c_sel(es_ra);
+        c_walk_wait("l", 2, 20);
+        c_sel(es_su);
+        c_autowalk(1);
+        c_walk("l", 8, 40);
+        c_sel(es_ra);
+        c_autowalk(1);
+        c_walk_wait("l", 8, 40);
+        c_wait(40);
+        if (hasno)
+        {
+            c_speaker("noelle");
+            c_msgsetloc(0, "\\E6* ...she looked at me like I was a monster^1, Kris./%", "es_c7_15");
+            c_talk_wait();
+        }
+        c_wait(30);
+        // Queen stops running
+        c_sel(qu);
+        c_walkdirect_wait(camerax() + 470, 167, 50);
+        c_sel(kr);
+        c_facing("r");
+        if (hasno)
+        {
+            c_sel(no);
+            c_facing("r");
+        }
+        c_wait(20);
+        c_speaker("queen");
+        c_msgsetloc(0, "\\E1* So/", "es_c7_16");
+        c_msgnextloc("\\E9* This Is Where You Ended Up/", "es_c7_17");
+        c_msgnextloc("\\ED* My Carnival^1. My Arcade^1. My Lovely Little Baseball Game/", "es_c7_18");
+        c_msgnextloc("\\E5* I Have Been Running From You Two Since The Field/", "es_c7_19");
+        c_msgnextloc("\\E6* No More/", "es_c7_20");
+        c_msgnextloc("\\E1* I Am Queen And This Is My City/", "es_c7_21");
+        c_msgnextloc("\\E7* And I Will: Protect It/%", "es_c7_22");
+        c_talk_wait();
+        c_var_instance(id, "con", 20);
+    }
+    // the fight
+    if (con == 20 && !instance_exists(obj_cutscene_master))
+    {
+        con = 21;
+        with (obj_actor)
+            visible = 0;
+        es_qx = qu_actor.x;
+        es_qy = qu_actor.y;
+        var queen_marker = scr_dark_marker(qu_actor.x, qu_actor.y, qu_actor.sprite_index);
+        obj_mainchara.cutscene = 1;
+        obj_mainchara.x = kr_actor.x;
+        obj_mainchara.y = kr_actor.y;
+        if (variable_instance_exists(id, "no") && i_ex(global.cinstance[0]))
+        {
+            global.cinstance[0].x = no_actor.x;
+            global.cinstance[0].y = no_actor.y;
+        }
+        global.flag[2451] = 1;
+        global.flag[9] = 2;
+        global.batmusic[0] = snd_init("queen_boss.ogg");
+        global.flag[54] = 0;
+        scr_battle(59, 1, queen_marker, 0, 0);
+        if (i_ex(obj_battleback))
+            instance_destroy(obj_battleback);
+        global.flag[9] = 1;
+    }
+    if (con == 21)
+    {
+        // her track, slowed
+        if (variable_global_exists("batmusic") && is_array(global.batmusic) && array_length(global.batmusic) > 1)
+            audio_sound_pitch(global.batmusic[1], 0.82);
+        // the moment she hits 0, the fight is over
+        if (i_ex(obj_battlecontroller) && global.monsterhp[0] <= 0)
+        {
+            con = 22;
+            es_endt = 0;
+            global.flag[2452] += 1;
+            global.flag[2451] = 0;
+            scr_es_queen_teardown();
+        }
+    }
+    if (con == 22)
+    {
+        es_endt++;
+        if (es_endt == 30)
+            scr_es_queen_death_scene();
+    }
+    // the portrayals and her real death, set from inside the cutscene
+    if (variable_instance_exists(id, "es_qdie") && es_qdie == 1)
+    {
+        es_qdie = 2;
+        var d = instance_create(qu_actor.x - (sprite_get_xoffset(qu_actor.sprite_index) * 2), qu_actor.y - (sprite_get_yoffset(qu_actor.sprite_index) * 2), obj_deathanim);
+        d.sprite_index = qu_actor.sprite_index;
+        d.image_index = qu_actor.image_index;
+        d.image_xscale = 2;
+        d.image_yscale = 2;
+        d.depth = qu_actor.depth;
+        qu_actor.visible = 0;
+    }
+    if (con == 50 && !instance_exists(obj_cutscene_master))
+    {
+        con = 0;
+        with (obj_es_portrayal)
+            instance_destroy();
+        // Berdly's fight (city08) never happens: he already ran
+        global.plot = 99;
+        global.interact = 0;
+        global.facing = 0;
+        obj_mainchara.cutscene = 0;
+        snd_free_all();
+        scr_tempsave();
+    }
+}
+
+function scr_es_queen_teardown()
+{
+    snd_free_all();
+    with (obj_monsterparent)
+        instance_destroy();
+    with (obj_bulletparent)
+        instance_destroy();
+    with (obj_heroparent)
+        instance_destroy();
+    with (obj_queen_bulletcontroller)
+        instance_destroy();
+    with (obj_queen_throw_controller)
+        instance_destroy();
+    with (obj_writer)
+        instance_destroy();
+    with (obj_growtangle)
+        instance_destroy();
+    with (obj_heart)
+        instance_destroy();
+    with (obj_tensionbar)
+        instance_destroy();
+    with (obj_battlealphaer)
+        instance_destroy();
+    if (i_ex(obj_battleback))
+    {
+        with (obj_battleback)
+            destroy = 1;
+    }
+    with (obj_battlecontroller)
+        instance_destroy();
+    global.fighting = 0;
+    with (obj_mainchara)
+    {
+        visible = 1;
+        cutscene = 1;
+    }
+    with (obj_caterpillarchara)
+    {
+        visible = 1;
+        image_alpha = 1;
+    }
+}
+
+// Queen's last words (script draft: "Queen's death scene")
+function scr_es_queen_death_scene()
+{
+    with (obj_actor)
+        instance_destroy();
+    global.interact = 1;
+    cutscene_master = scr_cutscene_make();
+    scr_maincharacters_actors();
+    var hasno = variable_instance_exists(id, "no");
+    qu = actor_count + 1;
+    qu_actor = instance_create(es_qx, es_qy, obj_actor);
+    scr_actor_setup(qu, qu_actor, "queen");
+    qu_actor.sprite_index = spr_queen_hurt;
+    c_sel(qu);
+    c_autowalk(0);
+    c_sel(kr);
+    c_facing("r");
+    if (hasno)
+    {
+        c_sel(no);
+        c_facing("r");
+    }
+    var p = instance_create(0, 0, obj_es_portrayal);
+    c_wait(60);
+    c_msgside("bottom");
+    c_speaker("queen");
+    c_msgsetloc(0, "\\E8* Oh Damn/", "es_qd_1");
+    c_msgnextloc("\\E5* So/", "es_qd_2");
+    c_msgnextloc("\\E5* It Seems My Town Really Can't Be: Saved Afterall/", "es_qd_3");
+    c_msgnextloc("\\E1* You Know At Least I Attempted/%", "es_qd_4");
+    c_talk_wait();
+    c_soundplay(snd_noise);
+    c_sel(qu);
+    c_var_instance(qu_actor, "image_blend", c_gray);
+    c_shakeobj();
+    c_wait(30);
+    c_sprite(spr_queen_hurt);
+    c_var_instance(qu_actor, "image_blend", c_white);
+    c_speaker("queen");
+    c_msgsetloc(0, "\\E1* Do You Know What I Did Before I Was Queen/", "es_qd_5");
+    c_msgnextloc("\\E9* No Of Course You Don't/", "es_qd_6");
+    c_msgnextloc("\\E1* I Sat In A Room. I Was A Very Nice Computer/", "es_qd_7");
+    c_msgnextloc("\\E5* Somebody's Homework. Somebody's Games. Somebody Turned Me Off Every Night And Said Goodnight/", "es_qd_8");
+    c_msgnextloc("\\E8* Nobody Ever Said Goodnight Back To Them/%", "es_qd_9");
+    c_talk_wait();
+    c_var_instance(p, "phase", 1);
+    c_wait(40);
+    c_speaker("queen");
+    c_msgsetloc(0, "\\E1* This Is What I Made Of It/", "es_qd_10");
+    c_msgnextloc("\\E7* Every Light Is Someone I Promised Would Be Happy/", "es_qd_11");
+    c_msgnextloc("\\E1* Very Low Resolution But Still: Happy/%", "es_qd_12");
+    c_talk_wait();
+    c_var_instance(p, "phase", 2);
+    c_wait(60);
+    c_speaker("queen");
+    c_msgsetloc(0, "\\E5* And Then You Two Came In/", "es_qd_13");
+    c_msgnextloc("\\E1* I Had Warnings Sent Out You Know/", "es_qd_14");
+    c_msgnextloc("\\E9* \"A Human And A Girl. Do Not Engage. Do Not Make Eye Contact. Do Not Be Interesting\"/", "es_qd_15");
+    c_msgnextloc("\\E5* They Engaged Anyway. They Always Do. That Is Why I Love Them/%", "es_qd_16");
+    c_talk_wait();
+    c_var_instance(p, "phase", 0);
+    c_wait(40);
+    c_sel(qu);
+    c_sprite(spr_queen_hurt);
+    c_speaker("queen");
+    c_msgsetloc(0, "\\E1* You. Girl With The Antlers/", "es_qd_17");
+    c_msgnextloc("\\E9* You Are Shaking/", "es_qd_18");
+    c_msgnextloc("\\E1* I Have Seen Many Users Shaking. Usually Before A Deadline/", "es_qd_19");
+    c_msgnextloc("\\E5* Is This Your Deadline Darling/%", "es_qd_20");
+    c_talk_wait();
+    if (hasno)
+    {
+        c_wait(30);
+        c_speaker("noelle");
+        c_msgsetloc(0, "\\E6* .../", "es_qd_21");
+        c_msgnextloc("\\E1* (Kris..^1. please don't make me answer her.)/%", "es_qd_22");
+        c_talk_wait();
+    }
+    c_speaker("queen");
+    c_msgsetloc(0, "\\E8* No Answer. Very Rude. Very Teenager/", "es_qd_23");
+    c_msgnextloc("\\E1* Fine I'll Answer For You/", "es_qd_24");
+    c_msgnextloc("\\E5* Yes. It Is/%", "es_qd_25");
+    c_talk_wait();
+    c_var_instance(p, "phase", 3);
+    c_wait(60);
+    c_speaker("queen");
+    c_msgsetloc(0, "\\E1* Here Is A Secret. Monarch To Whatever You Are/", "es_qd_26");
+    c_msgnextloc("\\E5* This World Was Already Coming Apart. Before You. The Code Is Old. The Edges Are Crumbling/", "es_qd_27");
+    c_msgnextloc("\\E9* Someone Is Going To Close The Window Soon/", "es_qd_28");
+    c_msgnextloc("\\E1* All I Wanted Was For Everyone To Be Online When It Happened/", "es_qd_29");
+    c_msgnextloc("\\E7* Together. Laughing. Maybe Playing A Very Good Minigame/%", "es_qd_30");
+    c_talk_wait();
+    c_var_instance(p, "phase", 0);
+    c_wait(30);
+    c_soundplay(snd_noise);
+    c_sel(qu);
+    c_var_instance(qu_actor, "image_blend", c_gray);
+    c_shakeobj();
+    c_wait(20);
+    c_sprite(spr_queen_hurt);
+    c_var_instance(qu_actor, "image_blend", c_white);
+    c_speaker("queen");
+    c_msgsetloc(0, "\\E1* Tell Berdly He Was A Good Lackey. Do Not Tell Him I Said \"Good\"/", "es_qd_31");
+    c_msgnextloc("\\E9* Tell Lancer's Dad..^1. Actually Do Not Tell Him Anything He Will Make It Weird/", "es_qd_32");
+    c_msgnextloc("\\E1* And Tell The Boy With The Hat. The Small Salesman/", "es_qd_33");
+    c_msgnextloc("\\E5* That He Was Right. About The Strings/%", "es_qd_34");
+    c_talk_wait();
+    c_wait(60);
+    c_speaker("queen");
+    c_msgsetloc(0, "\\E1* Do Me One Favor/", "es_qd_35");
+    c_msgnextloc("\\E5* When You Seal The Fountain/", "es_qd_36");
+    c_msgnextloc("\\E8* Say Goodnight/%", "es_qd_37");
+    c_talk_wait();
+    c_wait(30);
+    c_sel(qu);
+    c_var_instance(qu_actor, "image_blend", c_gray);
+    c_soundplay(snd_noise);
+    c_wait(40);
+    c_var_instance(id, "es_qdie", 1);
+    c_wait(120);
+    if (hasno)
+    {
+        c_speaker("noelle");
+        c_msgsetloc(0, "\\E6* ...she said goodnight./", "es_qd_38");
+        c_msgnextloc("\\E1* nobody says goodnight to the computer^1, Kris./", "es_qd_39");
+        c_msgnextloc("\\E6* .../", "es_qd_40");
+        c_msgnextloc("\\E1* let's just..^1. keep going./%", "es_qd_41");
+        c_talk_wait();
+    }
+    c_actortokris();
+    c_actortocaterpillar();
+    c_terminatekillactors();
+    con = 50;
+}

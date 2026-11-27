@@ -166,6 +166,16 @@ function scr_es_test_tick()
                     }
                 }
                 break;
+            case "queenweak":
+                // Queen at her last phase with no shield up (so a test can finish her)
+                with (obj_queen_enemy)
+                {
+                    phase = 4;
+                    shieldhp = 0;
+                }
+                with (obj_queenshield_enemy)
+                    instance_destroy();
+                break;
             case "sweetturns":
                 global.es_sweet_turns = real(n1);
                 break;

@@ -68,6 +68,16 @@ it couldn't place, so send that list over.
   - Noelle climbs out of the trash with you.
   - At the split nobody leaves.
   - In the alley where vanilla Noelle joins, Queen and Berdly come looking, see who's standing there, and back away ("An Uneasy Truce. The Kind Where We Run").
+- **The city:** it plays as vanilla's own weird route. Kills count the same as freezes for its events.
+- **The carnival:** Susie and Ralsei finally catch up, see Kris and Noelle, and back away. They'll find the Fountain themselves. Then Queen stops running.
+- **Early Queen fight:**
+  - Her theme is slowed down.
+  - FIGHT works here, and abilities hit harder.
+  - She has +10% HP and damage, and her attacks are 3% faster.
+  - Her shields still soak damage until they break.
+  - Berdly isn't plugged in as her battery, because he already ran.
+  - The fight ends the moment she hits 0.
+- **Queen's death:** a long last talk, with three of her memories shown as pictures: her lit-up city, the lights going out, then snow. Then she really dies. Berdly's fight is skipped.
 - **Battle theme:** regular encounters play **"SWORD (FM Cover)" by plrusek** instead of the normal battle music. Bosses keep theirs.
 
 ## Credits
