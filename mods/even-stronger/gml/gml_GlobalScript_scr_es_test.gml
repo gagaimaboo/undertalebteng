@@ -115,6 +115,7 @@ function scr_es_test_tick()
             case "mashfor":
                 // press z every 12 frames for n1 frames
                 global.es_t_mashleft = real(n1);
+                global.es_t_wait = 1;
                 break;
             case "fight":
                 // start encounter n1 right here (overworld)

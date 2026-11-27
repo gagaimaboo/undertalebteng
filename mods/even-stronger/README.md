@@ -55,6 +55,19 @@ it couldn't place, so send that list over.
 - **Enemies:** +20% HP, and their attacks run 5% faster.
 - **Pain:** the first ability you ever use asks first.
 - **Battle text:** the box text in every battle is only "Hold.", "Its burning.." or "You are filled with power." (a new one each turn). Action results and victory text are unchanged.
+- **Cyber Field:**
+  - The music is slowed, and it's gone once every enemy is dead.
+  - Most NPCs are gone, like the hacker guy.
+  - Noelle freezes every puzzle before you can move on.
+  - The arcade machine only says "WHY AREN'T YOU MOVING ON?", then shuts off like an old CRT.
+  - Noelle rides the teacups too, with her own teacup sprites.
+- **Sweet Cap'n Cakes:** after a few turns of slashing, Kris snaps. Everything goes red and everyone turns into black silhouettes. A storm of slashes ends the fight on the spot. The stage is empty afterwards and the mansion's weird-route music plays.
+- **Noelle changes:** after her first kill (not counting the opening Werewires) she uses her weird-route sprites.
+- **Rollercoaster:** Kris and Noelle ride alone. Queen cancels her capture plan because her capsules "would only become two more things you broke". Then she blows up the unfinished ride anyway. No Berdly coaster fight.
+- **Into the city:**
+  - Noelle climbs out of the trash with you.
+  - At the split nobody leaves.
+  - In the alley where vanilla Noelle joins, Queen and Berdly come looking, see who's standing there, and back away ("An Uneasy Truce. The Kind Where We Run").
 - **Battle theme:** regular encounters play **"SWORD (FM Cover)" by plrusek** instead of the normal battle music. Bosses keep theirs.
 
 ## Credits
