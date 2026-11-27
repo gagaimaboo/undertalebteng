@@ -3,10 +3,10 @@
 // encounter 240 (called from scr_encountersetup, where xx/yy are the view corner)
 function scr_es_knight_encounter()
 {
-    global.monsterinstancetype[0] = obj_es_knight_enemy;
+    global.monsterinstancetype[0] = obj_knight_enemy;
     global.monstertype[0] = 240;
-    global.monstermakex[0] = xx + 390;
-    global.monstermakey[0] = yy + 60;
+    global.monstermakex[0] = xx + 425;
+    global.monstermakey[0] = yy + 78;
     global.monstertype[1] = 0;
     global.monstertype[2] = 0;
     global.battlemsg[0] = "* The Roaring Knight.";
@@ -49,81 +49,23 @@ function scr_es_get_blackknife()
     scr_weaponinfo_mine();
 }
 
-// ---- the knight's ending (runs in obj_es_knight_enemy) ----
-function scr_es_knight_endstart()
+// the knight's stats (its own Chapter 3 setup knows a different party): 3000 HP, so its 50% mark
+// is about as much damage as Chapter 3's 80% mark is there
+function scr_es_knight_stats()
 {
-    endcon = 1;
-    endtimer = 0;
-    global.monsterhp[myself] = ceil(global.monstermaxhp[myself] * 0.5);
-    instance_deactivate_object(obj_battlecontroller);
-    with (obj_es_knight_bullets)
-        instance_destroy();
-    with (obj_es_kbullet)
-        instance_destroy();
-    if (variable_global_exists("batmusic") && array_length(global.batmusic) > 1)
-        snd_volume(global.batmusic[1], 0, 30);
-    scr_es_shake(30, 8, 2);
-    scr_es_snd("es_snd_knight_hurt", 0.8, 1);
-    scr_es_snd("es_snd_knight_hurt", 0.8, 0.7);
-    scr_es_snd("es_snd_knight_hurt", 0.8, 1.3);
-}
-
-function scr_es_knight_endstep()
-{
-    endtimer++;
-    // Kris doesn't let it leave
-    if (endtimer == 100)
-    {
-        with (obj_herokris)
-        {
-            sprite_index = spr_krisb_attack;
-            image_index = 0;
-            image_speed = 0.5;
-        }
-        snd_play(snd_criticalswing);
-        var fx = instance_create(x + 110, y + 90, obj_es_boomfx);
-        fx.ang = [45, -45];
-        fx.sc = 3;
-    }
-    if (endtimer == 106)
-    {
-        var dm = instance_create(global.monsterx[myself], global.monstery[myself] - 20, obj_dmgwriter);
-        dm.damage = global.monsterhp[myself];
-        global.monsterhp[myself] = 0;
-        scr_es_snd("es_snd_knight_cut2", 1, 0.8);
-        scr_es_snd("es_snd_knight_cut2", 1, 1);
-        scr_es_snd("es_snd_knight_cut2", 1, 1.2);
-        scr_es_shake(20, 20, 2);
-    }
-    if (endtimer == 120)
-    {
-        endcon = 2;
-        var d = instance_create(x - 14, y - 46, obj_deathanim);
-        d.sprite_index = idlesprite;
-        d.image_index = 0;
-        d.image_xscale = 2;
-        d.image_yscale = 2;
-        d.depth = depth;
-        global.flag[2452] += 1;
-    }
-    if (endtimer == 240)
-    {
-        global.es_kfight = 0;
-        global.es_kdone = 1;
-        scr_es_battle_teardown();
-    }
-}
-
-function scr_es_knight_enddraw()
-{
-    if (endcon != 1)
-        exit;
-    var sx = (endtimer < 100) ? (random_range(-1, 1) * 10 * (1 - (endtimer / 110))) : 0;
-    // the Chapter 3 ending: idle and the curled-up ball, every few frames
-    if ((endtimer mod 3) == 0)
-        draw_sprite_ext(idlesprite, 0, x + sx, y, 2, 2, 0, image_blend, 1);
-    else
-        draw_sprite_ext(scr_es_spr("es_rk_balltrans"), 7, x + sx, y, 2, 2, 0, image_blend, 1);
+    global.monstername[myself] = "Knight";
+    global.monstermaxhp[myself] = 3000;
+    global.monsterhp[myself] = 3000;
+    global.monsterat[myself] = 22;
+    global.monsterdf[myself] = 0;
+    global.monsterexp[myself] = 0;
+    global.monstergold[myself] = 0;
+    global.sparepoint[myself] = 0;
+    global.mercymod[myself] = 0;
+    global.mercymax[myself] = 100;
+    global.canact[myself][0] = 1;
+    global.actname[myself][0] = "Check";
+    global.actdesc[myself][0] = "Useless#analysis";
 }
 
 // ---- tearing a battle down by hand ----
@@ -132,9 +74,7 @@ function scr_es_battle_teardown()
     instance_activate_object(obj_battlecontroller);
     with (obj_darkener)
         instance_destroy();
-    with (obj_es_knight_bullets)
-        instance_destroy();
-    with (obj_es_kbullet)
+    with (obj_es_kdbc)
         instance_destroy();
     with (obj_es_boomfx)
         instance_destroy();

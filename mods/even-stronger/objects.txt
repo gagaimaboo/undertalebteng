@@ -2,8 +2,6 @@
 obj_es_ctrl persistent visible=0
 obj_es_pain depth=-9000
 obj_es_portrayal depth=-500
-obj_es_knight_enemy parent=obj_monsterparent
-obj_es_knight_bullets depth=-50
-obj_es_kbullet parent=obj_collidebullet depth=-60
 obj_es_swoon depth=-1000
 obj_es_boomfx depth=-900
+obj_es_kend depth=-1000

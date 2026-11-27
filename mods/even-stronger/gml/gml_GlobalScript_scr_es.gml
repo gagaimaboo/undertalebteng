@@ -292,6 +292,21 @@ function scr_es_flavor()
     {
         global.es_flv_src = global.battlemsg[0];
         var lines = ["* Hold.", "* Its burning..", "* You are filled with power."];
+        // the Roaring Knight has its own lines, and says it when someone falls
+        if (scr_es_knightfight())
+        {
+            lines = ["* It's the end.", "* You feel a nearby breeze of dust hit your face.", "* It's fun^1, isn't it?"];
+            if (global.hp[1] <= 0)
+            {
+                global.es_flv = "* YOU WERE USED UP.";
+                return global.es_flv;
+            }
+            if (scr_havechar(4) && global.hp[4] <= 0)
+            {
+                global.es_flv = "* NOELLE WAS USED UP.";
+                return global.es_flv;
+            }
+        }
         var k = irandom(2);
         if (k == global.es_flv_last)
             k = (k + 1 + irandom(1)) mod 3;

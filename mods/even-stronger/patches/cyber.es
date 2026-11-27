@@ -137,3 +137,31 @@ if (scr_es_on())
     exit;
 }
 @end
+
+@@ gml_Object_obj_cyber_shadowMaker_fireworks_Step_2  # fireworks shadows: vanilla read Susie's position even when she isn't there (crash); Noelle gets her shadow
+@find
+var sus_x, sus_sprite, sus_y, sus_index, sus_depth, ral_x, ral_sprite, ral_y, ral_index, ral_depth;
+@replace
+var sus_x = 0, sus_sprite = 0, sus_y = 0, sus_index = 0, sus_depth = 0, ral_x = 0, ral_sprite = 0, ral_y = 0, ral_index = 0, ral_depth = 0;
+@end
+
+@@ gml_Object_obj_cyber_shadowMaker_fireworks_Step_2  # fireworks shadows: Noelle in Susie's slot
+@find
+if (name == "susie")
+@replace
+if (name == "susie" || (scr_es_on() && name == "noelle"))
+@end
+
+@@ gml_Object_obj_cyber_shadowMaker_fireworks_Draw_0  # fireworks reflections: same Susie/Ralsei read as the shadows
+@find
+var sus_x, sus_sprite, sus_index, sus_y, sus_height, ral_x, ral_sprite, ral_index, ral_y, ral_height;
+@replace
+var sus_x = 0, sus_sprite = 0, sus_index = 0, sus_y = 0, sus_height = 0, ral_x = 0, ral_sprite = 0, ral_index = 0, ral_y = 0, ral_height = 0;
+@end
+
+@@ gml_Object_obj_cyber_shadowMaker_fireworks_Draw_0  # fireworks reflections: Noelle in Susie's slot
+@find
+if (name == "susie")
+@replace
+if (name == "susie" || (scr_es_on() && name == "noelle"))
+@end

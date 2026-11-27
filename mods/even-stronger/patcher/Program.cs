@@ -30,6 +30,8 @@ static class Program
     const string BackupName = "data.win.even_stronger_backup";
     const string MarkerCode = "gml_GlobalScript_scr_es_version";
 
+    static string gameRoot;        // the DELTARUNE folder (chapter3_windows lives here)
+    static TransplantResult transplanted;
     static string assetsRoot;      // DELTARUNE folder to borrow Chapter 3/4 assets from (default: next to the game)
     static string modDir;          // dev override: read gml/ and patches/ from here
     static bool testBuild;
@@ -128,6 +130,7 @@ static class Program
             return 1;
         }
         string chDir = Path.GetDirectoryName(dataPath);
+        gameRoot = assetsRoot ?? Path.GetDirectoryName(chDir);
         string backup = Path.Combine(chDir, BackupName);
         Console.WriteLine("Game file: " + dataPath);
 
@@ -183,6 +186,9 @@ static class Program
         using (var fs = new FileStream(tmp, FileMode.Create))
             UndertaleIO.Write(fs, data);
         File.Move(tmp, dest, true);
+        if (transplanted != null)
+            foreach (var (from, to) in transplanted.Files)
+                File.Copy(from, Path.Combine(Path.GetDirectoryName(Path.GetFullPath(dest)), to), true);
 
         ExportMusic(Path.GetDirectoryName(Path.GetFullPath(dest)));
         ExportBorrowedAssets(Path.GetDirectoryName(Path.GetFullPath(dest)));
@@ -247,11 +253,38 @@ static class Program
             patches.AddRange(Patch.Parse(name, text));
         }
         var edited = new Dictionary<string, List<string>>();
+        // 0. code, sprites and sounds copied from the player's own Chapter 3 (the Roaring Knight's fight)
+        string spec = ModText("transplant.txt");
+        if (spec.Trim().Length > 0)
+        {
+            string ch3Dir = Path.Combine(gameRoot ?? ".", "chapter3_windows");
+            string p3 = Path.Combine(ch3Dir, "data.win");
+            if (!File.Exists(p3)) warnings.Add("Chapter 3 isn't installed next to Chapter 2, so the Roaring Knight's fight couldn't be copied");
+            else
+            {
+                Console.WriteLine("Reading Chapter 3 to copy the Roaring Knight's fight...");
+                var d3 = Load(p3);
+                transplanted = Transplant.Run(data, d3, ch3Dir, spec, warnings, gctx);
+                var skip = (Environment.GetEnvironmentVariable("ES_SKIP") ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries);
+                foreach (var kv in transplanted.Code)
+                    if (!skip.Contains(kv.Key))
+                        edited[kv.Key] = kv.Value.Split('\n').ToList();
+                string dumpDir = Environment.GetEnvironmentVariable("ES_TRANSPLANT_DUMP");
+                if (!string.IsNullOrEmpty(dumpDir))
+                {
+                    Directory.CreateDirectory(dumpDir);
+                    foreach (var kv in transplanted.Code) File.WriteAllText(Path.Combine(dumpDir, kv.Key + ".gml"), kv.Value);
+                }
+                Console.WriteLine($"  copied {transplanted.Objects.Count} objects, {transplanted.Functions} functions, {transplanted.Sprites} sprites, {transplanted.Sounds} sounds");
+                if (testBuild)
+                    Console.WriteLine("  " + string.Join(" ", transplanted.Code.Keys.Where(k => k.StartsWith("gml_GlobalScript_es3_")).Select(k => k.Substring(21))) + "\n  " + string.Join(" ", transplanted.Objects.Keys) + "\n  stubbed: " + string.Join(" ", transplanted.Stubbed) + "\n  own copies: " + string.Join(" ", transplanted.Owned));
+            }
+        }
         int ok = 0;
         foreach (var p in patches)
         {
             var code = data.Code.ByName(p.Code);
-            if (code == null)
+            if (code == null && !edited.ContainsKey(p.Code))
             {
                 Warn(p, "code entry not found in this version");
                 continue;
@@ -282,6 +315,7 @@ static class Program
             group.QueueReplace(kv.Key, string.Join("\n", kv.Value));
         Console.WriteLine($"Compiling {newCount} new code files and {edited.Count} edited ones...");
         group.Import(true);
+        if (transplanted != null) Transplant.FinishObjects(data, transplanted, warnings);
 
         foreach (var (obj, props) in objProps)
         {

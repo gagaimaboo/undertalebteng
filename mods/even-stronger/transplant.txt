@@ -1,0 +1,43 @@
+# Copied from the player's own Chapter 3 at patch time (see patcher/Transplant.cs). Names only.
+# The Roaring Knight, its attacks, and everything they use.
+object obj_knight_enemy
+# its pattern types, in a controller of its own (Chapter 2 keeps its obj_dbulletcontroller)
+dbc obj_es_kdbc 98 99 101 102 103 104 105 106 107 108 109 151 152 153 154
+rename obj_dbulletcontroller obj_es_kdbc
+# only the knight's own objects come along; other Chapter 3 things it mentions are stubbed
+allow obj_knight_
+allow obj_bullet_knight
+allow obj_roaringknight_
+allow obj_heart_follower
+allow obj_tracking_sword
+allow obj_diagonal_bullet
+allow obj_sword_tunnel
+allow obj_sword_vortex
+allow obj_fallingsword
+allow obj_block_vfx
+allow obj_afterimage
+allow obj_particle_generic
+allow obj_fake_gt
+allow obj_bgfountaintest
+# numbers the decompiler couldn't type: they're Chapter 3 asset indices
+assetvar knight object
+assetvar new_knight object
+assetvar knight_sprite sprite
+assetvar target object gml_Object_obj_heart_follower_Create_0
+# functions both chapters have that run Chapter 2's battle, party and dialogue: the knight uses Chapter 2's
+keep scr_attack_override
+keep scr_attackphase
+keep scr_damage
+keep scr_damage_all
+keep scr_debug
+keep scr_defeatrun
+keep scr_enemy_object_init
+keep scr_enemyblcon
+keep scr_gameover
+keep scr_guardpeek
+keep scr_monstersetup
+keep scr_moveheart
+keep scr_speaker
+keep scr_spellmenu_setup
+keep scr_tensionheal
+keep snd_play

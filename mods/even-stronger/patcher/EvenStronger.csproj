@@ -26,6 +26,7 @@
     <EmbeddedResource Include="../patches/**/*.es" LogicalName="patches/%(Filename)%(Extension)" />
     <EmbeddedResource Include="../objects.txt" LogicalName="objects.txt" />
     <EmbeddedResource Include="../assets.txt" LogicalName="assets.txt" />
+    <EmbeddedResource Include="../transplant.txt" LogicalName="transplant.txt" />
     <EmbeddedResource Include="../music/*.ogg" LogicalName="music/%(Filename)%(Extension)" />
     <!-- UTMT's per-game decompiler definitions, unpacked to a temp folder at run time -->
     <EmbeddedResource Include="$(UTMT)/UndertaleModLib/GameSpecificData/**/*.json" LogicalName="gsd/%(RecursiveDir)%(Filename)%(Extension)" />
