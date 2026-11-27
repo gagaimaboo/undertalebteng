@@ -127,3 +127,13 @@ else
     c_setxy(1812, 174);
 }
 @end
+
+@@ gml_Object_obj_controller_dw_cyber_post_music_boss_slide_Step_0  # after Sweet: no trio flyby (they're dead), no Susie/Ralsei catch-up (vanilla crashed reading realsus)
+@prepend
+if (scr_es_on())
+{
+    if (con == 0 && obj_mainchara.y > 700 && obj_mainchara.x > 1900 && global.flag[408] == 0)
+        global.flag[408] = 1;
+    exit;
+}
+@end

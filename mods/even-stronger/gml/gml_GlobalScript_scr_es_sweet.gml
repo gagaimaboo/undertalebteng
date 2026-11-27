@@ -87,12 +87,24 @@ function scr_es_sweet_step()
         c_msgsetloc(0, "\\m1\t\t*D-dead end...!/%", "es_sw_1");
         c_talk_wait();
         c_sel(sw);
-        c_facing("l");
+        c_sprite(spr_sweet_idle);
         c_msgsetloc(0, "\\m1\t\t*Y-you're them!^1! The Human&\tand the Girl!/", "es_sw_2");
         c_msgnextloc("\\m1\t\t*Queen put you on every&\tscreen in the city!/%", "es_sw_3");
         c_talk_wait();
         c_var_instance(hg_actor, "y", cameray() - 80);
         c_var_instance(nisekk, "y", cameray() - 180);
+        // Cap'n drops in next to Sweet, then K_K lands on the table (same moves as vanilla)
+        c_sel(hg);
+        c_imagespeed(0.25);
+        c_soundplay(snd_lancerwhistle);
+        c_walkdirect_wait(2200, 110, 15);
+        c_soundplay(snd_impact);
+        c_shake();
+        c_wait(10);
+        c_var_lerp_instance(nisekk, "y", cameray() - 180, 175, 15);
+        c_wait(15);
+        c_soundplay(snd_impact);
+        c_shake();
         c_wait(20);
         c_msgsetloc(0, "\\m3\t\t*\"Do not engage.\"&\tHeh. Funny word^1, engage./%", "es_sw_4");
         c_talk_wait();
