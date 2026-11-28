@@ -7,7 +7,7 @@ namespace UTBattle.Battle;
 
 // UNDERTALE's battle controller (obj_battlecontroller turn flow, menus, FIGHT bar, the SOUL,
 // the box, bullets, the writer), ported from the web build's NB engine. One step = 1/30 s.
-public class Fight
+public partial class Fight
 {
     // SCR_BORDERSETUP presets: [left, right, top, bottom]
     public static readonly Dictionary<int, int[]> Borders = new()
@@ -34,9 +34,8 @@ public class Fight
     public class Heart { public double X = 40, Y = 446, XPrev, YPrev, Frame; public bool Visible = true, Gtfo; public double Hs; public string Mode = "red"; }
     public class Item { public string Name = ""; public int Heal; }
     // Kind "vapor" dissolves sprite Key drawn at (X, Y, W, H); StepFn/DrawFn make a self-contained effect
-    public class Fx { public string Kind = ""; public double X, Y, W, H, Frame, Alpha = 1, Sc = 1, Sp, Dir, Isp, Cx, Cy; public int T, Wait, Line; public string? Key; public bool Dead; public List<double[]>? Parts; public List<(int x0, int n)>[]? Lines; public Action<Fx>? StepFn, DrawFn; }
-    public class DmgWriter { public double X, Y, YStart, Vy, Dmg, MaxHp, Apparent, Actual; public Monster M = null!; public int Life = -1, Tick; public bool Dead; }
-    public class FightBar { public double Tx, Ty, X, X0, Hs, Alpha = 1, Xs = 1, Blink; public bool Hit, Fade, CursorGone, Crit, Gone, Wait; }
+    public class Fx { public string Kind = ""; public double X, Y, W, H, Frame, Alpha = 1, Sc = 1, Sp, Dir, Isp, Cx, Cy; public int T, Wait, Line; public string? Key; public bool Dead; public List<double[]>? Parts; public List<(int x0, int n)>[]? Lines; public Action<Fx>? StepFn, DrawFn; public bool Top; }
+    public class DmgWriter { public double X, Y, YStart, Vy, Dmg, MaxHp, Apparent, Actual, Ox, Oy; public Monster M = null!; public int Life = -1, Tick; public bool Dead; }
     public class Bubble { public Monster? M; public double X, Y; public Writer W = null!; public bool Wide, Hold; public string? Img; }
 
     // ---- state (the JS S)
@@ -88,10 +87,13 @@ public class Fight
         return (lv == 20 ? 99 : 16 + lv * 4, (lv - 1) * 2, df[lv - 1]);
     }
 
-    public Fight(string[] monsters, int lv, string name, List<Item> items, double weaponAtk = 0, double armorDf = 0)
+    public Fight(string[] monsters, int lv, string name, List<Item> items, string weapon = "stick", double armorDf = 0)
     {
         var st = LvStats(lv);
-        Lv = lv; Hp = MaxHp = st.hp; At = st.at + 10; Df = st.df + 10 + armorDf; WStrength = weaponAtk;
+        Lv = lv; Hp = MaxHp = st.hp; At = st.at + 10; Df = st.df + 10 + armorDf;
+        Weapon = WeaponOf(weapon).Id; WStrength = WeaponOf(weapon).Atk;
+        // the Torn Notebook: you stay invincible half a second longer after a hit
+        if (Weapon == "tornnotebook") Inv += 15;
         PlayerName = name.ToUpperInvariant(); Items = items; MinHp = Hp;
         int n = monsters.Length;
         for (int i = 0; i < n; i++) Mons.Add(MakeMonster(monsters[i], i, n));
@@ -177,7 +179,7 @@ public class Fight
     string NamesText() => string.Join("&", Alive().Skip(Page * 3).Take(3).Select(m => (Spareable(m) ? "\\Y" : "\\W") + "   * " + m.Name + "\\W"));
     string ActText(Monster m)
     {
-        var a = m.Def.Acts(m).Take(6).ToArray();
+        var a = ActsOf(m).Take(6).ToArray();
         var rows = new List<string>();
         for (int r = 0; r < 3; r++)
         {
@@ -249,7 +251,7 @@ public class Fight
         }
         if (BMenuNo == 10)
         {
-            int n = Mons[Target].Def.Acts(Mons[Target]).Take(6).Count();
+            int n = ActsOf(Mons[Target]).Take(6).Count();
             int c = Coord[2];
             if (Pressed(K.Left) || Pressed(K.Right)) { int o = c % 2 == 0 ? c + 1 : c - 1; if (o < n) c = o; }
             int col = c % 2, rows = (int)Math.Ceiling((n - col) / 2.0);
@@ -283,46 +285,6 @@ public class Fight
             if (NoFlee()) Coord[4] = 0;
             h.X = Ideal[0] + 32; h.Y = Ideal[2] + 28 + Coord[4] * 32;
             if (Pressed(K.Confirm)) { Clear(K.Confirm); if (Coord[4] == 0) DoSpare(); else DoFlee(); }
-        }
-    }
-
-    // ---- FIGHT: obj_target + obj_targetchoice (the knife bar)
-    void StartFight()
-    {
-        MyFight = 1; H.Visible = false; Wr = null;
-        double tx = Ideal[0] + 6, ty = Ideal[2] + 6;
-        bool right = Math.Round(Rnd(1)) == 1;
-        double hs = 11 + Rnd(2);
-        double x = right ? tx + 570 : tx - 16;
-        Bar = new FightBar { Tx = tx, Ty = ty, X = x, X0 = x, Hs = right ? -hs : hs };
-    }
-
-    void FightStep()
-    {
-        if (FightWait > 0 && --FightWait == 0) HurtMonster();
-        var f = Bar; if (f == null || f.Wait) return;
-        if (f.Hit) { f.Blink += .4; return; }
-        f.X += f.Hs;
-        var m = Mons[Target];
-        bool Off(double x) => f.Hs > 0 ? x > f.Tx + 546 : x < f.Tx;
-        void Miss() { StatMisses++; f.Fade = true; f.Hit = true; f.CursorGone = true; SpawnDmgWriter(m, 0); Dmgw[^1].Life = 30; EndPlayerTurn(); }
-        if (Off(f.X)) { Miss(); return; }
-        if (Pressed(K.Confirm))
-        {
-            Clear(K.Confirm);
-            // scr_attackcalc + obj_targetchoice: x2.2 within 12px of the middle
-            double dmg = At + WStrength - m.Df + Rnd(2);
-            double myx = f.X + 7, perfect = f.Tx + 273, bonus = Math.Abs(myx - perfect);
-            if (bonus == 0) bonus = 1;
-            double stretch = (546 - bonus) / 546; f.Crit = bonus <= 12;
-            dmg = bonus <= 12 ? Math.Round(dmg * 2.2) : Math.Round(dmg * stretch * 2);
-            f.Hit = true;
-            dmg = m.Def.OnHitCalc(this, m, dmg);
-            m.TakeDamage = Math.Max(0, dmg); f.Fade = true;
-            double isp = Math.Max(.1, .5 - stretch / 4), sc = stretch * 2 - .5;
-            FxList.Add(new Fx { Kind = "slice", X = m.X + m.Wd / 2.0 - 5, Y = m.Y - 5, Cx = m.X + m.Wd / 2.0 + 5, Cy = m.Y + 45, Sc = sc, Isp = isp });
-            Assets.Play("laz");
-            f.Wait = true; FightWait = (int)Math.Round(1 / isp * 6 + 3);
         }
     }
 
@@ -390,7 +352,8 @@ public class Fight
     {
         StatActs++;
         MyFight = 2; H.Visible = false;
-        var name = m.Def.Acts(m)[i];
+        if (HasBones(m) && i == ActsOf(m).Length - 1) { BonesAct(m); return; }
+        var name = ActsOf(m)[i];
         string text; Action? then = null;
         if (i == 0 && name == "Check") text = m.Def.Check(m) ?? $"* {m.Name.ToUpperInvariant()} - ATK {m.Atk} DEF {m.Df}&* ...";
         else (text, then) = m.Def.Act(this, m, i, name);
@@ -403,7 +366,8 @@ public class Fight
         var it = Items[idx]; StatItems++;
         MyFight = 4; H.Visible = false; Talked = 91;
         Items.RemoveAt(idx);
-        double before = Hp; Hp = Math.Min(MaxHp, Hp + it.Heal);
+        // the Burnt Pan: items heal 4 more
+        double before = Hp; Hp = Math.Min(MaxHp, Hp + it.Heal + (Weapon == "burntpan" ? 4 : 0));
         var got = Hp >= MaxHp ? "&* Your HP was maxed out." : $"&* You recovered {Hp - before} HP!";
         Assets.Play("heal");
         Write($"* You ate the {it.Name}.{got}", "/", EndPlayerTurn);
@@ -693,6 +657,7 @@ public class Fight
         else if (MnFight == 3) ReturnStep();
         foreach (var m in Mons.ToList()) { CurMon = m; MonsterHurtStep(m); if (m.Alive && !Exited) m.Def.Step(this, m); }
         CurMon = null;
+        KrStep();
         HeartStep();
         FxStep();
         var f = Bar;
@@ -735,8 +700,10 @@ public class Fight
         DrawBullets();
         foreach (var m in Mons) if (m.Alive) m.Def.DrawOver(this, m);
         if (!Cinematic) { DrawHud(); DrawButtons(); DrawHeart(); }
+        foreach (var e in FxList) if (e.Top) e.DrawFn?.Invoke(e); // over the HUD (obj_fadebar)
         if (Fade > 0) Gfx.Rect(-40, -40, 720, 560, Gfx.A(Color.Black, Math.Min(1, Fade)));
         foreach (var w in Dmgw) DrawDmg(w);
+        foreach (var m in Mons) if (m.Alive && m.Kr > 0 && !Dmgw.Any(w => w.M == m)) DrawKrBar(m);
     }
 
     void DrawBox()
@@ -778,6 +745,13 @@ public class Fight
     void DrawBar()
     {
         var f = Bar; if (f == null) return;
+        if (f.Kind == "bolts")
+        {
+            // spr_dumbtarget + every bolt (white = the one that takes Z next)
+            Gfx.Draw(Assets.Tex("wpn_target_1"), f.Tx, f.Ty, 546 * f.Xs, 115, alpha: Math.Max(0, f.Alpha));
+            foreach (var b in f.Bolts) if (b.Alpha > 0) Gfx.Draw(Assets.Frame("targetChoice", b.Pri == 0 ? 0 : 1), Math.Round(b.X), f.Ty, 14, 128, alpha: Math.Max(0, b.Alpha));
+            return;
+        }
         Gfx.Draw(Assets.Tex("target"), f.Tx, f.Ty, 546 * f.Xs, 115, alpha: Math.Max(0, f.Alpha));
         if (!f.CursorGone)
         {
@@ -793,25 +767,28 @@ public class Fight
             Gfx.Rect(w.X - 1, w.YStart + 7, Math.Round(w.MaxHp * sf + 1) + 2, 15, Color.Black);
             Gfx.Rect(w.X, w.YStart + 8, Math.Round(w.MaxHp * sf) + 1, 13, Gfx.Hex("#404040"));
             if (w.Apparent > 0) Gfx.Rect(w.X, w.YStart + 8, Math.Round(w.Apparent * sf) + 1, 13, Gfx.Hex("#00ff00"));
+            double kr = Math.Min(w.M.Kr, w.Apparent);
+            if (kr > 0) { Gfx.Rect(w.X + Math.Round((w.Apparent - kr) * sf), w.YStart + 8, Math.Round(kr * sf) + 1, 13, Gfx.Hex("#ff00ff")); Gfx.Draw(Assets.Tex("snsKr"), w.X + Math.Round(w.MaxHp * sf) + 8, w.YStart + 10); }
             var s = ((long)Math.Floor(w.Dmg)).ToString(); int place = s.Length - 1;
             for (int i = place; i >= 0; i--)
             {
                 int d = s[place - i] - '0';
-                double x = (w.M.Wd <= 120 ? w.X + 30 - i * 32 + place * 16 : w.X - 30 + w.M.Wd / 2.0 - i * 32 + place * 16);
-                Gfx.Draw(Assets.Frame("damageDigits", 9 - d), x, w.Y - 28, tint: Gfx.Hex("#ff0000"));
+                double x = (w.M.Wd <= 120 ? w.X + 30 - i * 32 + place * 16 : w.X - 30 + w.M.Wd / 2.0 - i * 32 + place * 16) + w.Ox;
+                Gfx.Draw(Assets.Frame("damageDigits", 9 - d), x, w.Y - 28 + w.Oy, tint: Gfx.Hex("#ff0000"));
             }
         }
-        else Gfx.Draw(Assets.Tex("dmgMiss"), w.X - 10, w.Y - 16, tint: Gfx.Hex("#c0c0c0"));
+        else Gfx.Draw(Assets.Tex("dmgMiss"), w.X - 10 + w.Ox, w.Y - 16 + w.Oy, tint: Gfx.Hex("#c0c0c0"));
     }
     void DrawFx()
     {
         foreach (var e in FxList)
         {
-            if (e.DrawFn != null) { e.DrawFn(e); continue; }
+            if (e.DrawFn != null) { if (!e.Top) e.DrawFn(e); continue; }
             if (e.Kind == "slice")
             {
-                var im = Assets.Frame("strike", Math.Min(5, Math.Floor(e.Frame)));
-                if (im is { } t) { double s = Math.Max(.5, e.Sc) * 2; Gfx.Draw(t, e.Cx - t.Width * s / 2, e.Cy - t.Height * s / 2, t.Width * s, t.Height * s); }
+                // the weapon sheet's knife frames (spr_strike), centred, one every 1/isp steps
+                int idx = (int)Math.Floor(e.T * e.Isp);
+                if (idx < 6) WFrame("knife", idx, e.Cx, e.Cy, Math.Max(.5, e.Sc));
             }
             else if (e.Kind == "gen") Gfx.Draw(Assets.Frame("nbBulletGen", Math.Min(2, Math.Floor(e.Frame))), e.X, e.Y);
             else if (e.Kind == "dust") Gfx.Draw(Assets.Frame("dustCloud", Math.Min(2, Math.Floor(e.Frame))), e.X, e.Y, 16 * e.Sc, 16 * e.Sc, alpha: Math.Max(0, e.Alpha));

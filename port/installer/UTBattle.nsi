@@ -5,7 +5,8 @@
 Unicode true
 !include "MUI2.nsh"
 
-!define APP "Undertale Battle Engine (C#)"
+!define APP "Innertale Engine (C#)"
+!define VER "1.4.1"
 !define REG "Software\Microsoft\Windows\CurrentVersion\Uninstall\UTBattleCSharp"
 
 Name "${APP}"
@@ -15,6 +16,14 @@ InstallDirRegKey HKCU "${REG}" "InstallLocation"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
 ManifestDPIAware true
+; the installer's own version info (unsigned installers without any are flagged more often)
+VIProductVersion "${VER}.0"
+VIAddVersionKey "ProductName" "${APP}"
+VIAddVersionKey "CompanyName" "Innertale Engine"
+VIAddVersionKey "FileDescription" "${APP} setup"
+VIAddVersionKey "FileVersion" "${VER}"
+VIAddVersionKey "ProductVersion" "${VER}"
+VIAddVersionKey "LegalCopyright" "Fan project; UNDERTALE and DELTARUNE by Toby Fox"
 
 !define MUI_ABORTWARNING
 !define MUI_FINISHPAGE_RUN "$INSTDIR\UTBattle.exe"
@@ -30,6 +39,7 @@ ManifestDPIAware true
 Section "Install"
   SetOutPath "$INSTDIR"
   File "../UTBattle/publish/win-x64/UTBattle.exe"
+  File "../UTBattle/publish/win-x64/raylib.dll"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   CreateDirectory "$SMPROGRAMS\${APP}"
   CreateShortcut "$SMPROGRAMS\${APP}\${APP}.lnk" "$INSTDIR\UTBattle.exe"
@@ -37,6 +47,8 @@ Section "Install"
   CreateShortcut "$DESKTOP\${APP}.lnk" "$INSTDIR\UTBattle.exe"
   WriteRegStr HKCU "${REG}" "DisplayName" "${APP}"
   WriteRegStr HKCU "${REG}" "DisplayIcon" "$INSTDIR\UTBattle.exe"
+  WriteRegStr HKCU "${REG}" "Publisher" "Innertale Engine"
+  WriteRegStr HKCU "${REG}" "DisplayVersion" "${VER}"
   WriteRegStr HKCU "${REG}" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "${REG}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
   WriteRegDWORD HKCU "${REG}" "NoModify" 1

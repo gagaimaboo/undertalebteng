@@ -1,0 +1,25 @@
+# kind chapter name [outname]
+# Borrowed from the player's own Chapter 3 at patch time, loaded at run time with scr_es_spr / scr_es_snd.
+# the knight's "SWOON" (frame 13) and white slash
+sprite 3 spr_battlemsg es_battlemsg3
+sprite 3 spr_roaringknight_slash_white_horizontal es_rk_whiteslash
+# BlackKnife hits with the BlackShard slash
+sprite 3 spr_attack_shard es_attack_shard
+# the Roaring Knight in the overworld
+sprite 3 spr_roaringknight_ball_fly es_rk_ballfly
+sprite 3 spr_roaringknight_ball_transition es_rk_balltrans
+sprite 3 spr_roaringknight_idle_overworld es_rk_idle_ow
+sprite 3 spr_roaringknight_idle_overworld_sword es_rk_idle_ow_sword
+sprite 3 spr_roaringknight_sword_appear_new es_rk_swordappear
+sprite 3 spr_roaringknight_front_roar es_rk_roar
+# the knight in battle
+sprite 3 spr_roaringknight_idle es_rk_idle
+sprite 3 spr_roaringknight_hurt es_rk_hurt
+sprite 3 spr_bullet_knightcrescent es_rk_crescent
+sprite 3 spr_knight_bullet_star es_rk_star
+# sounds
+sound 3 snd_knight_cut2 es_snd_knight_cut2
+sound 3 snd_knight_cut es_snd_knight_cut
+sound 3 snd_knight_roar es_snd_knight_roar
+sound 3 snd_knight_hurt es_snd_knight_hurt
+sound 3 snd_knight_hurtb es_snd_knight_hurtb

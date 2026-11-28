@@ -1,0 +1,8 @@
+# object  [persistent] [depth=N] [visible=0] [parent=obj_x]
+obj_es_ctrl persistent visible=0
+obj_es_pain depth=-9000
+obj_es_portrayal depth=-500
+obj_es_swoon depth=-1000
+obj_es_boomfx depth=-900
+obj_es_whitein depth=-12000
+obj_es_swoonatk depth=-9500
