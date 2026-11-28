@@ -112,6 +112,18 @@ function scr_es_spellinfo(argument0)
     switch (argument0)
     {
         case 40:
+            if (scr_es_blackknife())
+            {
+                // BlackKnife turns X-Slash into the knight's SWOON
+                spellname = "SWOON";
+                spellnameb = "SWOON";
+                spelldescb = "Knight's#cut";
+                spelldesc = "The Roaring Knight's cut.#Depends on Attack.";
+                spelltarget = 2;
+                cost = 13;
+                spellusable = 0;
+                return 1;
+            }
             spellname = "X-Slash";
             spellnameb = "X-Slash";
             spelldescb = "Physical#damage";
@@ -148,7 +160,7 @@ function scr_es_spelltext(argument0, argument1)
     switch (argument0)
     {
         case 40:
-            global.msg[0] = "* " + nm + " used X-SLASH!/%";
+            global.msg[0] = "* " + nm + (scr_es_blackknife() ? " used SWOON!/%" : " used X-SLASH!/%");
             return 1;
         case 41:
             global.msg[0] = "* " + nm + " used SLASHRUSH!&* (Mash Z!)/%";
@@ -192,10 +204,10 @@ function scr_es_spell(argument0, argument1)
     switch (sp)
     {
         case 40:
-            e = instance_create(0, 0, obj_es_xslash);
+            e = instance_create(0, 0, scr_es_blackknife() ? obj_es_swoonatk : obj_es_xslash);
             e.star = st;
             e.caster = argument1;
-            global.spelldelay = 50;
+            global.spelldelay = scr_es_blackknife() ? 85 : 50;
             break;
         case 41:
             e = instance_create(0, 0, obj_es_slashrush);
@@ -256,8 +268,10 @@ function scr_es_addkrisacts()
     {
         if (global.monster[i] != 1 || global.monstertype[i] == 50)
             continue;
+        var xn = scr_es_blackknife() ? "SWOON" : "X-Slash";
+        var xc = scr_es_blackknife() ? 13 : 62;
         // already in shape?
-        if (global.canact[i][1] == 1 && global.actname[i][1] == "X-Slash" && global.canact[i][2] == 1 && global.actname[i][2] == "Slashrush" && global.canact[i][3] == 0)
+        if (global.canact[i][1] == 1 && global.actname[i][1] == xn && global.canact[i][2] == 1 && global.actname[i][2] == "Slashrush" && global.canact[i][3] == 0)
             continue;
         var hascheck = (global.canact[i][0] == 1 && global.actname[i][0] == "Check");
         for (var k = 0; k < 6; k++)
@@ -270,9 +284,9 @@ function scr_es_addkrisacts()
         }
         var at = hascheck ? 1 : 0;
         global.canact[i][at] = 1;
-        global.actname[i][at] = "X-Slash";
-        global.actdesc[i][at] = "Physical#damage";
-        global.actcost[i][at] = 62;
+        global.actname[i][at] = xn;
+        global.actdesc[i][at] = scr_es_blackknife() ? "Knight's#cut" : "Physical#damage";
+        global.actcost[i][at] = xc;
         global.actactor[i][at] = 1;
         global.actsimul[i][at] = 0;
         global.canact[i][at + 1] = 1;
@@ -290,14 +304,14 @@ function scr_es_actselect(argument0, argument1)
     if (global.char[global.charturn] != 1)
         return 0;
     var an = global.actname[argument0][argument1];
-    if (an != "X-Slash" && an != "Slashrush")
+    if (an != "X-Slash" && an != "SWOON" && an != "Slashrush")
         return 0;
     if (i_ex(global.monsterinstance[argument0]) && global.monstertype[argument0] == 50)
         return 0;
     global.chartarget[global.charturn] = argument0;
     global.faceaction[global.charturn] = 2;
     global.charaction[global.charturn] = 2;
-    global.charspecial[global.charturn] = (an == "X-Slash") ? 40 : 41;
+    global.charspecial[global.charturn] = (an == "Slashrush") ? 41 : 40;
     return 1;
 }
 

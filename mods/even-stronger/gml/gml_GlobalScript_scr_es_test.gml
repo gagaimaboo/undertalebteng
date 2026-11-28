@@ -237,6 +237,9 @@ function scr_es_test_tick()
                 global.es_t_i--;
                 global.es_t_wait = 30;
                 break;
+            case "blackknife":
+                scr_es_get_blackknife();
+                break;
             case "setg":
                 variable_global_set(n1, real(n2));
                 break;

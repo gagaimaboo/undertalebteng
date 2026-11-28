@@ -81,6 +81,7 @@ it couldn't place, so send that list over.
   - Every battle starts at 40% TP.
   - **SlayCyber:** Kris deals 1.5x damage to Darkners.
   - Kris's FIGHT works again.
+  - X-Slash becomes **SWOON** (5% TP): the Roaring Knight's swoon. The screen goes black, one white slash, five cuts, the big hit and a red SWOON.
 - **Into the city:**
   - Noelle climbs out of the trash with you.
   - At the split nobody leaves.
